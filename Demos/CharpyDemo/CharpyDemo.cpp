@@ -33,9 +33,10 @@ void	CharpyDemo::initPhysics()
 	setShadows(true);
 
 	setDebugMode(btIDebugDraw::DBG_DrawText|btIDebugDraw::DBG_NoHelpText);
-
-	setCameraDistance(btScalar(0.3));
-	m_frustumZNear=btScalar(0.1);
+	// we look at quite small object
+	setCameraDistance(btScalar(0.5));
+	m_frustumZNear=btScalar(0.01);
+	m_frustumZFar=btScalar(10);
 
 	///collision configuration contains default setup for memory, collision setup
 	m_collisionConfiguration = new btDefaultCollisionConfiguration();
@@ -57,8 +58,8 @@ void	CharpyDemo::initPhysics()
 	//m_splitImpulse removes the penetration resolution from the applied impulse, otherwise objects might fracture due to deep penetrations.
 	m_dynamicsWorld->getSolverInfo().m_splitImpulse = true;
 
+	// floor
 	{
-		///create a few basic rigid bodies
 		btCollisionShape* groundShape = new btBoxShape(btVector3(5,0.1,5));
 		m_collisionShapes.push_back(groundShape);
 		btTransform groundTransform;
@@ -67,10 +68,50 @@ void	CharpyDemo::initPhysics()
 		localCreateRigidBody(0.f,groundTransform,groundShape);
 	}
 
+	// support anvils leaving 40 mm open space between them
 	{
-		///create chary specimen using two halfs
+		btCollisionShape* shape = 
+			new btBoxShape(btVector3(0.05,0.1,0.02));
+		m_collisionShapes.push_back(shape);
+		// symmetrically around z=0 and x=0
+		// top at y=0.2
+		for (int i=0;i<2;i++)
+		{	
+			btTransform tr;
+			tr.setIdentity();
+			btVector3 pos(0,btScalar(0.1),btScalar((i==0?-1:1)*0.04));
+			tr.setOrigin(pos);
+			localCreateRigidBody(0.f,tr,shape);
+		}
+	}
+	{
+		btCollisionShape* shape = 
+			new btBoxShape(btVector3(0.025,0.02,0.02));
+		m_collisionShapes.push_back(shape);
+		// symmetrically around z=0
+		// bottom at y=0.2
+		// frontsize at x=0
+		for (int i=0;i<2;i++)
+		{	
+			btTransform tr;
+			tr.setIdentity();
+			btVector3 pos(btScalar(-0.025),
+				btScalar(0.22),
+				btScalar((i==0?-1:1)*0.04));
+			tr.setOrigin(pos);
+			localCreateRigidBody(0.f,tr,shape);
+		}
+	}
+
+	// charpy specimen using two halfs, 
+	// symmetrically around z=0
+	// bottom at y=0.2
+	// backside at x=0
+	{
 		btScalar sMass=0.01*0.01*0.0275*7800;
-		btCollisionShape* shape = new btBoxShape(btVector3(0.005,0.005,0.01375));
+		btScalar halfLength=0.01375;
+		btCollisionShape* shape = 
+			new btBoxShape(btVector3(0.005,0.005,halfLength));
 		m_collisionShapes.push_back(shape);
 		btVector3 localInertia(0,0,0);
 		shape->calculateLocalInertia(sMass,localInertia);
@@ -78,7 +119,7 @@ void	CharpyDemo::initPhysics()
 		{	
 			btTransform tr;
 			tr.setIdentity();
-			btVector3 pos(0,0.2,i*0.0275);
+			btVector3 pos(0.005,0.205,(i==0?-1:1)*halfLength);
 			tr.setOrigin(pos);
 			btDefaultMotionState* myMotionState = new btDefaultMotionState(tr);
 			btRigidBody::btRigidBodyConstructionInfo rbInfo(sMass,myMotionState,shape,localInertia);
@@ -88,8 +129,6 @@ void	CharpyDemo::initPhysics()
 	}
 
 	fractureWorld->stepSimulation(1./60.,0);
-	fractureWorld->glueCallback();
-
 }
 
 void	CharpyDemo::clientResetScene()
@@ -133,28 +172,14 @@ void CharpyDemo::showMessage()
 		setOrthographicProjection();
 		glDisable(GL_LIGHTING);
 		glColor3f(0, 0, 0);
-		char buf[124];
 
 		int lineWidth=380;
 		int xStart = m_glutScreenWidth - lineWidth;
 		int yStart = 20;
 
 		btFractureDynamicsWorld* world = (btFractureDynamicsWorld*)m_dynamicsWorld;
-		if (world->getFractureMode())
-		{
-			sprintf(buf,"Fracture mode");
-		} else
-		{
-			sprintf(buf,"Glue mode");
-		}
-		GLDebugDrawString(xStart,yStart,buf);
-		sprintf(buf,"f to toggle fracture/glue mode");		
 		yStart+=20;
-		GLDebugDrawString(xStart,yStart,buf);
-		sprintf(buf,"space to restart, mouse to pick/shoot");
-		yStart+=20;
-		GLDebugDrawString(xStart,yStart,buf);
-
+		GLDebugDrawString(xStart,yStart,"space to restart");
 		resetPerspectiveProjection();
 		glEnable(GL_LIGHTING);
 	}
@@ -181,63 +206,12 @@ void CharpyDemo::displayCallback(void) {
 
 void CharpyDemo::keyboardUpCallback(unsigned char key, int x, int y)
 {
-	if (key=='f')
-	{
-		btFractureDynamicsWorld* world = (btFractureDynamicsWorld*)m_dynamicsWorld;
-		world->setFractureMode(!world->getFractureMode());
-	}
-
 	PlatformDemoApplication::keyboardUpCallback(key,x,y);
-
 }
 
-
+// no-op
 void	CharpyDemo::shootBox(const btVector3& destination)
 {
-
-	if (m_dynamicsWorld)
-	{
-		btScalar mass = .01f;
-		btTransform startTransform;
-		startTransform.setIdentity();
-		btVector3 camPos = getCameraPosition();
-		startTransform.setOrigin(camPos);
-
-		setShootBoxShape ();
-
-		btAssert((!m_shootBoxShape || m_shootBoxShape->getShapeType() != INVALID_SHAPE_PROXYTYPE));
-
-		//rigidbody is dynamic if and only if mass is non zero, otherwise static
-		bool isDynamic = (mass != 0.f);
-
-		btVector3 localInertia(0,0,0);
-		if (isDynamic)
-			m_shootBoxShape->calculateLocalInertia(mass,localInertia);
-
-		//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-
-		btFractureBody* body = new btFractureBody(mass,0,m_shootBoxShape,localInertia,&mass,1,m_dynamicsWorld);
-
-		body->setWorldTransform(startTransform);
-
-		m_dynamicsWorld->addRigidBody(body);
-
-
-		body->setLinearFactor(btVector3(1,1,1));
-		//body->setRestitution(1);
-
-		btVector3 linVel(destination[0]-camPos[0],destination[1]-camPos[1],destination[2]-camPos[2]);
-		linVel.normalize();
-		linVel*=m_ShootBoxInitialSpeed;
-
-		body->getWorldTransform().setOrigin(camPos);
-		body->getWorldTransform().setRotation(btQuaternion(0,0,0,1));
-		body->setLinearVelocity(linVel);
-		body->setAngularVelocity(btVector3(0,0,0));
-		body->setCcdMotionThreshold(1.);
-		body->setCcdSweptSphereRadius(0.2f);
-
-	}
 }
 
 
