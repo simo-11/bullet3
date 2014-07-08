@@ -68,6 +68,7 @@ void	CharpyDemo::initPhysics()
 		localCreateRigidBody(0.f,groundTransform,groundShape);
 	}
 
+
 	// support anvils leaving 40 mm open space between them
 	{
 		btCollisionShape* shape = 
@@ -126,6 +127,43 @@ void	CharpyDemo::initPhysics()
 			btFractureBody* body = new btFractureBody(rbInfo, m_dynamicsWorld);
 			m_dynamicsWorld->addRigidBody(body);
 		}
+	}
+	// hammer with arm
+	// hammer should be able to provide impact of about 500 J
+	// m*g*h=500
+	// m~500/2/10~25 kg
+	{
+		btCompoundShape* compound = new btCompoundShape();
+		btCollisionShape* hammer = 
+			new btBoxShape(btVector3(0.25,0.125,0.01));
+		btScalar hMass=0.5*0.25*0.02*7800;
+		btTransform hTr;
+		hTr.setIdentity();
+		btVector3 hPos(btScalar(0),btScalar(0),btScalar(0));
+		hTr.setOrigin(hPos);
+		compound->addChildShape(hTr,hammer);
+		btCollisionShape* arm = 
+			new btBoxShape(btVector3(0.02,0.4,0.02));
+		btScalar aMass=0.04*0.8*0.04*7800;
+		btTransform aTr;
+		aTr.setIdentity();
+		btVector3 aPos(btScalar(0),btScalar(0.4+0.125),btScalar(0));
+		aTr.setOrigin(aPos);
+		compound->addChildShape(aTr,arm);
+		btTransform cTr;
+		cTr.setIdentity();
+		btVector3 cPos(btScalar(0),btScalar(2),btScalar(0));
+		cTr.setOrigin(cPos);
+		btQuaternion cRot;
+		btVector3 axis(btScalar(0),btScalar(0),btScalar(1));
+		cRot.setRotation(axis,btScalar(3));
+		cTr.setRotation(cRot);
+		btRigidBody *hBody=localCreateRigidBody(hMass+aMass,cTr,compound);
+		const btVector3 pivot(btScalar(0),btScalar(0),btScalar(0));
+		btVector3 pivotAxis(btScalar(0),btScalar(0),btScalar(1)); 
+		btHingeConstraint *hammerHinge=
+			new btHingeConstraint( *hBody, pivot, pivotAxis );
+		m_dynamicsWorld->addConstraint(hammerHinge, true);
 	}
 
 	fractureWorld->stepSimulation(1./60.,0);
@@ -221,11 +259,16 @@ void	CharpyDemo::shootBox(const btVector3& destination)
 
 void	CharpyDemo::exitPhysics()
 {
+	int i;
 
 	//cleanup in the reverse order of creation/initialization
-
+	for (i=m_dynamicsWorld->getNumConstraints()-1; i>=0 ;i--)
+	{
+		btTypedConstraint* constraint = m_dynamicsWorld->getConstraint(i);
+		m_dynamicsWorld->removeConstraint(constraint);
+		delete constraint;
+	}
 	//remove the rigidbodies from the dynamics world and delete them
-	int i;
 	for (i=m_dynamicsWorld->getNumCollisionObjects()-1; i>=0 ;i--)
 	{
 		btCollisionObject* obj = m_dynamicsWorld->getCollisionObjectArray()[i];
