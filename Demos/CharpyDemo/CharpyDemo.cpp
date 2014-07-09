@@ -18,6 +18,7 @@ Simo Nikula 2014 based on bullet3 App_FractureDemo
 
 
 int sFrameNumber = 0;
+bool firstRun=true;
 
 #include "btFractureBody.h"
 #include "btFractureDynamicsWorld.h"
@@ -28,16 +29,16 @@ int sFrameNumber = 0;
 
 void	CharpyDemo::initPhysics()
 {
-
-	setTexturing(true);
-	setShadows(true);
-
-	setDebugMode(btIDebugDraw::DBG_DrawText|btIDebugDraw::DBG_NoHelpText);
-	// we look at quite small object
-	setCameraDistance(btScalar(0.5));
-	m_frustumZNear=btScalar(0.01);
-	m_frustumZFar=btScalar(10);
-
+	if(firstRun){
+		setTexturing(true);
+		setShadows(true);
+		setDebugMode(btIDebugDraw::DBG_DrawText|btIDebugDraw::DBG_NoHelpText);
+		// we look at quite small object
+		setCameraDistance(btScalar(0.5));
+		m_frustumZNear=btScalar(0.01);
+		m_frustumZFar=btScalar(10);
+		firstRun=false;
+	}
 	///collision configuration contains default setup for memory, collision setup
 	m_collisionConfiguration = new btDefaultCollisionConfiguration();
 	//m_collisionConfiguration->setConvexConvexMultipointIterations();
@@ -128,7 +129,7 @@ void	CharpyDemo::initPhysics()
 			m_dynamicsWorld->addRigidBody(body);
 		}
 	}
-	// hammer with arm
+	// hammer with arm and hinge
 	// hammer should be able to provide impact of about 500 J
 	// m*g*h=500
 	// m~500/2/10~25 kg
@@ -143,11 +144,11 @@ void	CharpyDemo::initPhysics()
 		hTr.setOrigin(hPos);
 		compound->addChildShape(hTr,hammer);
 		btCollisionShape* arm = 
-			new btBoxShape(btVector3(0.02,0.4,0.02));
-		btScalar aMass=0.04*0.8*0.04*7800;
+			new btBoxShape(btVector3(0.02,0.5,0.02));
+		btScalar aMass=0.04*1.0*0.04*7800;
 		btTransform aTr;
 		aTr.setIdentity();
-		btVector3 aPos(btScalar(0),btScalar(0.4+0.125),btScalar(0));
+		btVector3 aPos(btScalar(0),btScalar(0.5+0.125),btScalar(0));
 		aTr.setOrigin(aPos);
 		compound->addChildShape(aTr,arm);
 		btTransform cTr;
@@ -156,13 +157,25 @@ void	CharpyDemo::initPhysics()
 		cTr.setOrigin(cPos);
 		btQuaternion cRot;
 		btVector3 axis(btScalar(0),btScalar(0),btScalar(1));
-		cRot.setRotation(axis,btScalar(3));
+		cRot.setRotation(axis,btScalar(3.1));
 		cTr.setRotation(cRot);
 		btRigidBody *hBody=localCreateRigidBody(hMass+aMass,cTr,compound);
-		const btVector3 pivot(btScalar(0),btScalar(0),btScalar(0));
+		btVector3 aDims(btScalar(0.01),btScalar(0.01),btScalar(0.05));
+		btCollisionShape* axil = 
+		new btCylinderShapeZ(aDims);
+		m_collisionShapes.push_back(axil);
+		btTransform axTr;
+		axTr.setIdentity();
+		btVector3 pos(0,btScalar(1.2),btScalar(0.005));
+		axTr.setOrigin(pos);
+		btRigidBody *axilBody=localCreateRigidBody(btScalar(0),axTr,axil);
+		const btVector3 armPivot(btScalar(0),
+			btScalar(0.75+0.125+0.1),btScalar(0));
+		const btVector3 axilPivot(btScalar(0),btScalar(0),btScalar(0));
 		btVector3 pivotAxis(btScalar(0),btScalar(0),btScalar(1)); 
 		btHingeConstraint *hammerHinge=
-			new btHingeConstraint( *hBody, pivot, pivotAxis );
+			new btHingeConstraint( *hBody,*axilBody, 
+			armPivot, axilPivot, pivotAxis,pivotAxis, false );
 		m_dynamicsWorld->addConstraint(hammerHinge, true);
 	}
 
