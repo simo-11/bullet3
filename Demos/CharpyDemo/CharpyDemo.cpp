@@ -1,5 +1,10 @@
 /*
 Simo Nikula 2014 based on bullet3 App_FractureDemo
+Lots of details are described so that newcomers 
+missing graphics 
+or structural analysis background should be able to follow.
+
+It also helps myself as this work has had many long pauses
 */
 
 
@@ -20,6 +25,7 @@ Simo Nikula 2014 based on bullet3 App_FractureDemo
 int sFrameNumber = 0;
 bool firstRun=true;
 btScalar startAngle(1);
+btScalar btZero(0);
 
 #include "btFractureBody.h"
 #include "btFractureDynamicsWorld.h"
@@ -166,7 +172,7 @@ void	CharpyDemo::initPhysics()
 		}
 		for (int i=0;i<6;i++)
 		{	
-			sc->setDamping(i,btScalar(0));
+			sc->setDamping(i,btZero);
 		}
 		sc->setEquilibriumPoint();
 	}
@@ -181,39 +187,50 @@ void	CharpyDemo::initPhysics()
 		btScalar hMass=0.5*0.25*0.02*7800;
 		btTransform hTr;
 		hTr.setIdentity();
-		btVector3 hPos(btScalar(0),btScalar(0),btScalar(0));
-		hTr.setOrigin(hPos);
+		// create hammer at y=0
 		compound->addChildShape(hTr,hammer);
 		btCollisionShape* arm = 
 			new btBoxShape(btVector3(0.02,0.5,0.02));
 		btScalar aMass=0.04*1.0*0.04*7800;
 		btTransform aTr;
 		aTr.setIdentity();
-		btVector3 aPos(btScalar(0),btScalar(0.5+0.125),btScalar(0));
+		// arm above hammer
+		btVector3 aPos(btZero,btScalar(0.5+0.125),btZero);
 		aTr.setOrigin(aPos);
 		compound->addChildShape(aTr,arm);
 		btTransform cTr;
-		cTr.setIdentity();
-		btVector3 cPos(btScalar(0),btScalar(1.8),btScalar(0));
-		cTr.setOrigin(cPos);
+		// move compound down so that axis-position
+		// corresponding to armPivot is at y=0
+		// rotate and then move back up
+		// up so that center of hammer is about y=0.2
+		const btVector3 armPivot(btZero,
+			btScalar(1),btZero);
+		btVector3 cPos(btZero,btScalar(1.2),btZero);
+		btTransform downTr;
+		btTransform upTr;
+		upTr.setIdentity();
+		upTr.setOrigin(cPos);
+		downTr.setIdentity();
+		downTr.setOrigin(btScalar(-1)*armPivot);
 		btQuaternion cRot;
-		btVector3 axis(btScalar(0),btScalar(0),btScalar(1));
+		btVector3 axis(btZero,btZero,btScalar(1));
 		cRot.setRotation(axis,btScalar(startAngle)); // pi means up
-		cTr.setRotation(cRot);
+		btTransform axTr;
+		axTr.setIdentity();
+		axTr.setOrigin(cPos);
+		// multiply transformations in reverse order
+		cTr.setIdentity();
+		cTr*=upTr;
+		cTr*=btTransform(cRot);
+		cTr*=downTr;
 		btRigidBody *hBody=localCreateRigidBody(hMass+aMass,cTr,compound);
 		btVector3 aDims(btScalar(0.01),btScalar(0.01),btScalar(0.05));
 		btCollisionShape* axil = 
 		new btCylinderShapeZ(aDims);
 		m_collisionShapes.push_back(axil);
-		btTransform axTr;
-		axTr.setIdentity();
-		btVector3 pos(0,btScalar(1.2),btScalar(0.005));
-		axTr.setOrigin(pos);
-		btRigidBody *axilBody=localCreateRigidBody(btScalar(0),axTr,axil);
-		const btVector3 armPivot(btScalar(0),
-			btScalar(0.75+0.125+0.1),btScalar(0));
-		const btVector3 axilPivot(btScalar(0),btScalar(0),btScalar(0));
-		btVector3 pivotAxis(btScalar(0),btScalar(0),btScalar(1)); 
+		btRigidBody *axilBody=localCreateRigidBody(btZero,axTr,axil);
+		const btVector3 axilPivot(btZero,btZero,btZero);
+		btVector3 pivotAxis(btZero,btZero,btScalar(1)); 
 		btHingeConstraint *hammerHinge=
 			new btHingeConstraint( *hBody,*axilBody, 
 			armPivot, axilPivot, pivotAxis,pivotAxis, false );
