@@ -152,7 +152,7 @@ void	CharpyDemo::initPhysics()
 		btScalar E(200e9);
 		btScalar fu(400e6);
 		btScalar b(0.01);
-		btScalar h(0.08);
+		btScalar h(0.008);
 		btScalar I1(b*h*h*h/12);
 		btScalar I2(h*b*b*b/12);
 		btScalar k0(E*b*h/l/2);
