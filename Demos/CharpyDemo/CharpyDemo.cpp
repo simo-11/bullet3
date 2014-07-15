@@ -25,6 +25,7 @@ It also helps myself as this work has had many long pauses
 int sFrameNumber = 0;
 bool firstRun=true;
 btScalar startAngle(1);
+btScalar timeStep(1./60);
 btScalar btZero(0);
 
 #include "btFractureBody.h"
@@ -237,7 +238,7 @@ void	CharpyDemo::initPhysics()
 		m_dynamicsWorld->addConstraint(hammerHinge, true);
 	}
 
-	fractureWorld->stepSimulation(1./60.,0);
+	fractureWorld->stepSimulation(timeStep,0);
 }
 
 void	CharpyDemo::clientResetScene()
@@ -281,8 +282,9 @@ void CharpyDemo::showMessage()
 		setOrthographicProjection();
 		glDisable(GL_LIGHTING);
 		glColor3f(0, 0, 0);
+		char buf[100];
 
-		int lineWidth=380;
+		int lineWidth=580;
 		int xStart = m_glutScreenWidth - lineWidth;
 		int yStart = 20;
 
@@ -290,7 +292,11 @@ void CharpyDemo::showMessage()
 		yStart+=20;
 		GLDebugDrawString(xStart,yStart,"space to restart");
 		yStart+=20;
-		GLDebugDrawString(xStart,yStart,"+/- to change start angle");
+		sprintf(buf,"+/- to change start angle, now=%1.1f",startAngle);
+		GLDebugDrawString(xStart,yStart,buf);
+		yStart+=20;
+		sprintf(buf,"./: to change timeStep, now=%2.4f ms",timeStep*1000);
+		GLDebugDrawString(xStart,yStart,buf);
 		resetPerspectiveProjection();
 		glEnable(GL_LIGHTING);
 	}
@@ -328,6 +334,18 @@ void CharpyDemo::keyboardUpCallback(unsigned char key, int x, int y)
 	case '-':
 		{
 			startAngle-=0.1;
+			clientResetScene();
+			break;
+		}
+	case '.':
+		{
+			timeStep/=0.8;
+			clientResetScene();
+			break;
+		}
+	case ':':
+		{
+			timeStep*=0.8;
 			clientResetScene();
 			break;
 		}
