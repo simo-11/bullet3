@@ -48,6 +48,7 @@ void	CharpyDemo::initPhysics()
 		m_frustumZFar=btScalar(10);
 		firstRun=false;
 	}
+	printf("startAngle=%f timeStep=%f\n",startAngle,timeStep);
 	///collision configuration contains default setup for memory, collision setup
 	m_collisionConfiguration = new btDefaultCollisionConfiguration();
 	//m_collisionConfiguration->setConvexConvexMultipointIterations();
