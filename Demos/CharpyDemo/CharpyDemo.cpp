@@ -22,18 +22,70 @@ It also helps myself as this work has had many long pauses
 #include <stdio.h> //printf debugging
 
 
-int sFrameNumber = 0;
-bool firstRun=true;
-btScalar startAngle(1);
-btScalar timeStep(1./60);
-btScalar btZero(0);
 
 #include "btFractureBody.h"
 #include "btFractureDynamicsWorld.h"
 
+int sFrameNumber = 0;
+bool firstRun=true;
+btScalar startAngle(0.3);
+btScalar timeStep(1./60);
+int mode=0;
+const char *modes[]=
+{"single object",
+"two objects and springConstraints",
+"two objects and constraints with limits"};
+btScalar btZero(0);
+btScalar l=0.055;
+btDynamicsWorld* dw;
 
+void addSpringConstraints(btAlignedObjectArray<btRigidBody*> ha,
+		btAlignedObjectArray<btTransform> ta){
+	btGeneric6DofSpringConstraint *sc=
+				new btGeneric6DofSpringConstraint(*ha[0],*ha[1], 
+	ta[0], ta[1],true);
+	btScalar E(200e9);
+	btScalar fu(400e6);
+	btScalar b(0.01);
+	btScalar h(0.008);
+	btScalar I1(b*h*h*h/12);
+	btScalar I2(h*b*b*b/12);
+	btScalar k0(E*b*h/l/2);
+	btScalar k1(48*E*I1/l/l/l);
+	btScalar k2(48*E*I1/l/l/l);
+	btScalar w1(fu*b*h*h/4);
+	btScalar w2(fu*b*b*h/4);
+	sc->setStiffness(0,k0);
+	sc->setStiffness(1,k1);
+	sc->setStiffness(2,k2);
+	sc->setStiffness(3,w1); // not very exact
+	sc->setStiffness(4,w2); 
+	sc->setStiffness(5,w1); 
+	dw->addConstraint(sc, true);
+	for (int i=0;i<6;i++)
+	{	
+		sc->enableSpring(i,true);
+		if(mode==2){
+			sc->setLimit(i,0,0); // make fixed
+		}
+	}
+	for (int i=0;i<6;i++)
+	{	
+		sc->setDamping(i,btZero);
+	}
+	sc->setEquilibriumPoint();	
+}
 
-
+void addFixedConstraints(btAlignedObjectArray<btRigidBody*> ha,
+		btAlignedObjectArray<btTransform> ta){
+	btGeneric6DofConstraint *sc=
+				new btGeneric6DofConstraint(*ha[0],*ha[1], 
+	ta[0], ta[1],true);
+	dw->addConstraint(sc, true);
+	for (int i=0;i<6;i++){	
+		sc->setLimit(i,0,0); // make fixed
+	}
+}
 
 void	CharpyDemo::initPhysics()
 {
@@ -64,8 +116,10 @@ void	CharpyDemo::initPhysics()
 
 	//m_dynamicsWorld = new btDiscreteDynamicsWorld(m_dispatcher,m_broadphase,m_solver,m_collisionConfiguration);
 
-	btFractureDynamicsWorld* fractureWorld = new btFractureDynamicsWorld(m_dispatcher,m_broadphase,m_solver,m_collisionConfiguration);
+	btFractureDynamicsWorld* fractureWorld = 
+		new btFractureDynamicsWorld(m_dispatcher,m_broadphase,m_solver,m_collisionConfiguration);
 	m_dynamicsWorld = fractureWorld;
+	dw=m_dynamicsWorld;
 	//m_splitImpulse removes the penetration resolution from the applied impulse, otherwise objects might fracture due to deep penetrations.
 	m_dynamicsWorld->getSolverInfo().m_splitImpulse = true;
 
@@ -120,63 +174,49 @@ void	CharpyDemo::initPhysics()
 	// bottom at y=0.2
 	// backside at x=0
 	{
-		btScalar sMass=0.01*0.01*0.0275*7800;
-		btScalar l=0.055;
 		btScalar halfLength=l/4;
+		if(mode==0){
+			halfLength=l/2;
+		}
+		btScalar sMass(0.01f*0.01f*halfLength*2.0f*7800.0f);
+		btAlignedObjectArray<btRigidBody*> ha;
+		btAlignedObjectArray<btTransform> ta;
 		btCollisionShape* shape = 
 			new btBoxShape(btVector3(0.005,0.005,halfLength));
 		m_collisionShapes.push_back(shape);
 		btVector3 localInertia(0,0,0);
 		shape->calculateLocalInertia(sMass,localInertia);
-		btAlignedObjectArray<btRigidBody*> ha;
-		btAlignedObjectArray<btTransform> ta;
-		for (int i=0;i<2;i++)
+		// Only one object in mode 0
+		for (int i=0;(mode>0?i<2:i<1);i++)
 		{	
 			btTransform tr;
 			tr.setIdentity();
-			btVector3 pos(0.005,0.205,(i==0?-1:1)*halfLength);
+			btVector3 pos(0.005,0.205,
+				(mode>0?(i==0?-1:1)*halfLength:0));
 			tr.setOrigin(pos);
-			btDefaultMotionState* myMotionState = new btDefaultMotionState(tr);
-			btRigidBody::btRigidBodyConstructionInfo rbInfo(sMass,myMotionState,shape,localInertia);
-			btFractureBody* body = new btFractureBody(rbInfo, m_dynamicsWorld);
+			btDefaultMotionState* myMotionState 
+				= new btDefaultMotionState(tr);
+			btRigidBody::btRigidBodyConstructionInfo 
+				rbInfo(sMass,myMotionState,shape,localInertia);
+			btFractureBody* body = 
+				new btFractureBody(rbInfo, m_dynamicsWorld);
 			m_dynamicsWorld->addRigidBody(body);
 			ha.push_back(body);
 			btTransform ctr;
 			ctr.setIdentity();
-			btVector3 cpos(0,0,(i==0?1:-1)*halfLength);
+			btVector3 cpos(0,0,
+				(mode>0?(i==0?1:-1)*halfLength:0));
 			ctr.setOrigin(cpos);
 			ta.push_back(ctr);
 		}
-		btGeneric6DofSpringConstraint *sc=
-						new btGeneric6DofSpringConstraint(*ha[0],*ha[1], 
-			ta[0], ta[1],true);
-		btScalar E(200e9);
-		btScalar fu(400e6);
-		btScalar b(0.01);
-		btScalar h(0.008);
-		btScalar I1(b*h*h*h/12);
-		btScalar I2(h*b*b*b/12);
-		btScalar k0(E*b*h/l/2);
-		btScalar k1(48*E*I1/l/l/l);
-		btScalar k2(48*E*I1/l/l/l);
-		btScalar w1(fu*b*h*h/4);
-		btScalar w2(fu*b*b*h/4);
-		sc->setStiffness(0,k0);
-		sc->setStiffness(1,k1);
-		sc->setStiffness(2,k2);
-		sc->setStiffness(3,w1); // not very exact
-		sc->setStiffness(4,w2); 
-		sc->setStiffness(5,w1); 
-		m_dynamicsWorld->addConstraint(sc, true);
-		for (int i=0;i<6;i++)
-		{	
-			sc->enableSpring(i,true);
+		switch(mode) {
+		case 1:
+			addSpringConstraints(ha,ta);
+			break;
+		case 2:
+			addFixedConstraints(ha,ta);
+			break;
 		}
-		for (int i=0;i<6;i++)
-		{	
-			sc->setDamping(i,btZero);
-		}
-		sc->setEquilibriumPoint();
 	}
 	// hammer with arm and hinge
 	// hammer should be able to provide impact of about 500 J
@@ -242,6 +282,7 @@ void	CharpyDemo::initPhysics()
 	fractureWorld->stepSimulation(timeStep,0);
 }
 
+
 void	CharpyDemo::clientResetScene()
 {
 	exitPhysics();
@@ -298,6 +339,9 @@ void CharpyDemo::showMessage()
 		yStart+=20;
 		sprintf(buf,"./: to change timeStep, now=%2.4f ms",timeStep*1000);
 		GLDebugDrawString(xStart,yStart,buf);
+		yStart+=20;
+		sprintf(buf,"mode=%d: %s",mode,modes[mode]);
+		GLDebugDrawString(xStart,yStart,buf);
 		resetPerspectiveProjection();
 		glEnable(GL_LIGHTING);
 	}
@@ -347,6 +391,14 @@ void CharpyDemo::keyboardUpCallback(unsigned char key, int x, int y)
 	case ':':
 		{
 			timeStep*=0.8;
+			clientResetScene();
+			break;
+		}
+	case '0':
+	case '1':
+	case '2':
+		{
+			mode=key-'0';
 			clientResetScene();
 			break;
 		}
