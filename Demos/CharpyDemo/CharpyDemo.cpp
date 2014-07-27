@@ -29,7 +29,9 @@ It also helps myself as this work has had many long pauses
 int sFrameNumber = 0;
 bool firstRun=true;
 btScalar startAngle(0.3);
-btScalar timeStep(1./60);
+btScalar defaultTimeStep(1./60);
+btScalar timeStep(defaultTimeStep);
+btScalar simulationTimeStep(timeStep);
 int mode=0;
 const char *modes[]=
 {"single object",
@@ -293,28 +295,22 @@ void	CharpyDemo::clientResetScene()
 void CharpyDemo::clientMoveAndDisplay()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
-
-	//simple dynamics world doesn't handle fixed-time-stepping
-	float ms = getDeltaTimeMicroseconds();
-
 	///step the simulation
-	if (m_dynamicsWorld)
-	{
-		m_dynamicsWorld->stepSimulation(ms / 1000000.f);
+	if (m_dynamicsWorld)	{
+		if(timeStep!=defaultTimeStep){
+			simulationTimeStep=timeStep;
+		}else{
+			float ms = getDeltaTimeMicroseconds();
+			simulationTimeStep=ms/1e6;
+		}
+		m_dynamicsWorld->stepSimulation(simulationTimeStep);
 		//optional but useful: debug drawing
 		m_dynamicsWorld->debugDrawWorld();
 	}
-
-
-
 	renderme(); 
-
 	showMessage();
-
 	glFlush();
-
 	swapBuffers();
-
 }
 
 void CharpyDemo::showMessage()
@@ -337,7 +333,8 @@ void CharpyDemo::showMessage()
 		sprintf(buf,"+/- to change start angle, now=%1.1f",startAngle);
 		GLDebugDrawString(xStart,yStart,buf);
 		yStart+=20;
-		sprintf(buf,"./: to change timeStep, now=%2.4f ms",timeStep*1000);
+		sprintf(buf,"./:/, to change timeStep, now=%2.4f ms",
+			simulationTimeStep*1000);
 		GLDebugDrawString(xStart,yStart,buf);
 		yStart+=20;
 		sprintf(buf,"mode=%d: %s",mode,modes[mode]);
@@ -383,17 +380,14 @@ void CharpyDemo::keyboardUpCallback(unsigned char key, int x, int y)
 			break;
 		}
 	case '.':
-		{
-			timeStep/=0.8;
-			clientResetScene();
+			timeStep=simulationTimeStep/0.8;
 			break;
-		}
 	case ':':
-		{
-			timeStep*=0.8;
-			clientResetScene();
+			timeStep=simulationTimeStep*0.8;
 			break;
-		}
+	case ',':
+			timeStep=defaultTimeStep;
+			break;
 	case '0':
 	case '1':
 	case '2':
