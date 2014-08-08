@@ -29,6 +29,7 @@ It also helps myself as this work has had many long pauses
 int sFrameNumber = 0;
 bool firstRun=true;
 btScalar startAngle(0.3);
+btScalar ccdMotionThreshHold(0.001);
 btScalar defaultTimeStep(1./60);
 btScalar timeStep(defaultTimeStep);
 btScalar simulationTimeStep(timeStep);
@@ -202,6 +203,7 @@ void	CharpyDemo::initPhysics()
 				rbInfo(sMass,myMotionState,shape,localInertia);
 			btFractureBody* body = 
 				new btFractureBody(rbInfo, m_dynamicsWorld);
+			body->setCcdMotionThreshold(ccdMotionThreshHold);
 			m_dynamicsWorld->addRigidBody(body);
 			ha.push_back(body);
 			btTransform ctr;
@@ -301,7 +303,7 @@ void CharpyDemo::clientMoveAndDisplay()
 			simulationTimeStep=timeStep;
 		}else{
 			float ms = getDeltaTimeMicroseconds();
-			simulationTimeStep=ms/1e6;
+			simulationTimeStep=btScalar(ms/1e6);
 		}
 		m_dynamicsWorld->stepSimulation(simulationTimeStep);
 		//optional but useful: debug drawing
@@ -337,6 +339,10 @@ void CharpyDemo::showMessage()
 			simulationTimeStep*1000);
 		GLDebugDrawString(xStart,yStart,buf);
 		yStart+=20;
+		sprintf(buf,"</> to change ccdMotionThreshHold, now=%1.8f m",
+			ccdMotionThreshHold);
+		GLDebugDrawString(xStart,yStart,buf);
+		yStart+=20;
 		sprintf(buf,"mode=%d: %s",mode,modes[mode]);
 		GLDebugDrawString(xStart,yStart,buf);
 		resetPerspectiveProjection();
@@ -362,28 +368,45 @@ void CharpyDemo::displayCallback(void) {
 	swapBuffers();
 }
 
+void resetCcdMotionThreshHold()
+{
+	for (int i=dw->getNumCollisionObjects()-1; i>=0 ;i--)
+	{
+		btCollisionObject* obj = dw->getCollisionObjectArray()[i];
+		btRigidBody* body = btRigidBody::upcast(obj);
+		if (body && body->getMotionState())
+		{
+			body->setCcdMotionThreshold(ccdMotionThreshHold);
+		}
+	}
+}
+
 
 void CharpyDemo::keyboardUpCallback(unsigned char key, int x, int y)
 {
 	switch (key)
 	{
 	case '+':
-		{
 			startAngle+=0.1;
 			clientResetScene();
 			break;
-		}
 	case '-':
-		{
 			startAngle-=0.1;
 			clientResetScene();
 			break;
-		}
+	case '<':
+			ccdMotionThreshHold*=0.8;
+			resetCcdMotionThreshHold();
+			break;
+	case '>':
+			ccdMotionThreshHold/=0.8;
+			resetCcdMotionThreshHold();
+			break;
 	case '.':
-			timeStep=simulationTimeStep/0.8;
+			timeStep=btScalar(simulationTimeStep/0.8);
 			break;
 	case ':':
-			timeStep=simulationTimeStep*0.8;
+			timeStep=btScalar(simulationTimeStep*0.8);
 			break;
 	case ',':
 			timeStep=defaultTimeStep;
@@ -406,11 +429,6 @@ void CharpyDemo::keyboardUpCallback(unsigned char key, int x, int y)
 void	CharpyDemo::shootBox(const btVector3& destination)
 {
 }
-
-
-
-
-
 
 void	CharpyDemo::exitPhysics()
 {
