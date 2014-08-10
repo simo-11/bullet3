@@ -30,6 +30,7 @@ int sFrameNumber = 0;
 bool firstRun=true;
 btScalar startAngle(0.3);
 btScalar ccdMotionThreshHold(0.001);
+btScalar margin(0.01);
 btScalar defaultTimeStep(1./60);
 btScalar timeStep(defaultTimeStep);
 btScalar simulationTimeStep(timeStep);
@@ -87,6 +88,24 @@ void addFixedConstraints(btAlignedObjectArray<btRigidBody*> ha,
 	dw->addConstraint(sc, true);
 	for (int i=0;i<6;i++){	
 		sc->setLimit(i,0,0); // make fixed
+	}
+}
+
+/**
+http://www.bulletphysics.org/mediawiki-1.5.8/index.php?title=Anti_tunneling_by_Motion_Clamping
+*/
+void resetCcdMotionThreshHold()
+{
+	btScalar radius(ccdMotionThreshHold/5.);
+	for (int i=dw->getNumCollisionObjects()-1; i>=0 ;i--)
+	{
+		btCollisionObject* obj = dw->getCollisionObjectArray()[i];
+		btRigidBody* body = btRigidBody::upcast(obj);
+		if (body && body->getMotionState())
+		{
+			body->setCcdMotionThreshold(ccdMotionThreshHold);
+			body->setCcdSweptSphereRadius(radius);
+		}
 	}
 }
 
@@ -203,7 +222,6 @@ void	CharpyDemo::initPhysics()
 				rbInfo(sMass,myMotionState,shape,localInertia);
 			btFractureBody* body = 
 				new btFractureBody(rbInfo, m_dynamicsWorld);
-			body->setCcdMotionThreshold(ccdMotionThreshHold);
 			m_dynamicsWorld->addRigidBody(body);
 			ha.push_back(body);
 			btTransform ctr;
@@ -282,7 +300,7 @@ void	CharpyDemo::initPhysics()
 			armPivot, axilPivot, pivotAxis,pivotAxis, false );
 		m_dynamicsWorld->addConstraint(hammerHinge, true);
 	}
-
+	resetCcdMotionThreshHold();
 	fractureWorld->stepSimulation(timeStep,0);
 }
 
@@ -343,6 +361,10 @@ void CharpyDemo::showMessage()
 			ccdMotionThreshHold);
 		GLDebugDrawString(xStart,yStart,buf);
 		yStart+=20;
+		sprintf(buf,"m/M to change margin, now=%1.8f m",
+			margin);
+		GLDebugDrawString(xStart,yStart,buf);
+		yStart+=20;
 		sprintf(buf,"mode=%d: %s",mode,modes[mode]);
 		GLDebugDrawString(xStart,yStart,buf);
 		resetPerspectiveProjection();
@@ -368,15 +390,15 @@ void CharpyDemo::displayCallback(void) {
 	swapBuffers();
 }
 
-void resetCcdMotionThreshHold()
+
+void resetCollisionMargin()
 {
 	for (int i=dw->getNumCollisionObjects()-1; i>=0 ;i--)
 	{
 		btCollisionObject* obj = dw->getCollisionObjectArray()[i];
-		btRigidBody* body = btRigidBody::upcast(obj);
-		if (body && body->getMotionState())
+		if (obj)
 		{
-			body->setCcdMotionThreshold(ccdMotionThreshHold);
+			obj->getCollisionShape()->setMargin(margin);
 		}
 	}
 }
@@ -402,10 +424,18 @@ void CharpyDemo::keyboardUpCallback(unsigned char key, int x, int y)
 			ccdMotionThreshHold/=0.8;
 			resetCcdMotionThreshHold();
 			break;
-	case '.':
-			timeStep=btScalar(simulationTimeStep/0.8);
+	case 'm':
+			margin*=0.8;
+			resetCollisionMargin();
+			break;
+	case 'M':
+			margin/=0.8;
+			resetCollisionMargin();
 			break;
 	case ':':
+			timeStep=btScalar(simulationTimeStep/0.8);
+			break;
+	case '.':
 			timeStep=btScalar(simulationTimeStep*0.8);
 			break;
 	case ',':
