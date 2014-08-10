@@ -31,6 +31,7 @@ bool firstRun=true;
 btScalar startAngle(0.3);
 btScalar ccdMotionThreshHold(0.001);
 btScalar margin(0.01);
+btScalar floorHE(0.1);
 btScalar defaultTimeStep(1./60);
 btScalar timeStep(defaultTimeStep);
 btScalar simulationTimeStep(timeStep);
@@ -147,11 +148,11 @@ void	CharpyDemo::initPhysics()
 
 	// floor
 	{
-		btCollisionShape* groundShape = new btBoxShape(btVector3(5,0.1,5));
+		btCollisionShape* groundShape = new btBoxShape(btVector3(5,floorHE,5));
 		m_collisionShapes.push_back(groundShape);
 		btTransform groundTransform;
 		groundTransform.setIdentity();
-		groundTransform.setOrigin(btVector3(0,-0.1,0));
+		groundTransform.setOrigin(btVector3(0,-floorHE,0));
 		localCreateRigidBody(0.f,groundTransform,groundShape);
 	}
 
@@ -361,8 +362,12 @@ void CharpyDemo::showMessage()
 			ccdMotionThreshHold);
 		GLDebugDrawString(xStart,yStart,buf);
 		yStart+=20;
-		sprintf(buf,"m/M to change margin, now=%1.8f m",
+		sprintf(buf,"e/E to change margin, now=%1.8f m",
 			margin);
+		GLDebugDrawString(xStart,yStart,buf);
+		yStart+=20;
+		sprintf(buf,"j/J to change floor half extents, now=%1.8f m",
+			floorHE);
 		GLDebugDrawString(xStart,yStart,buf);
 		yStart+=20;
 		sprintf(buf,"mode=%d: %s",mode,modes[mode]);
@@ -404,6 +409,7 @@ void resetCollisionMargin()
 }
 
 
+/** k anf v are free */
 void CharpyDemo::keyboardUpCallback(unsigned char key, int x, int y)
 {
 	switch (key)
@@ -424,13 +430,21 @@ void CharpyDemo::keyboardUpCallback(unsigned char key, int x, int y)
 			ccdMotionThreshHold/=0.8;
 			resetCcdMotionThreshHold();
 			break;
-	case 'm':
+	case 'e':
 			margin*=0.8;
 			resetCollisionMargin();
 			break;
-	case 'M':
+	case 'E':
 			margin/=0.8;
 			resetCollisionMargin();
+			break;
+	case 'j':
+			floorHE*=0.8;
+			clientResetScene();
+			break;
+	case 'J':
+			floorHE/=0.8;
+			clientResetScene();
 			break;
 	case ':':
 			timeStep=btScalar(simulationTimeStep/0.8);
