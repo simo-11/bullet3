@@ -6,6 +6,8 @@
 #include "../GpuDemos/gwenUserInterface.h"
 #include "BulletDemoEntries.h"
 #include "../../btgui/Timing/b3Clock.h"
+#include "GwenParameterInterface.h"
+
 #define DEMO_SELECTION_COMBOBOX 13
 const char* startFileName = "bulletDemo.txt";
 static SimpleOpenGL3App* app=0;
@@ -14,6 +16,7 @@ static int sCurrentDemoIndex = 0;
 static int sCurrentHightlighted = 0;
 static BulletDemoInterface* sCurrentDemo = 0;
 static b3AlignedObjectArray<const char*> allNames;
+double motorA=0,motorB=0;
 
 
 bool drawGUI=true;
@@ -64,9 +67,9 @@ void MyKeyboardCallback(int key, int state)
 	{
 		app->m_window->setRequestExit();
 	}
-	
+
 	b3DefaultKeyboardCallback(key,state);
-	
+
 }
 
 static void MyMouseMoveCallback( float x, float y)
@@ -98,10 +101,12 @@ static void MyMouseButtonCallback(int button, int state, float x, float y)
 void selectDemo(int demoIndex)
 {
 	sCurrentDemoIndex = demoIndex;
+	sCurrentHightlighted = demoIndex;
 	int numDemos = sizeof(allDemos)/sizeof(BulletDemoEntry);
 	if (demoIndex>numDemos)
+	{
 		demoIndex = 0;
-
+	}
 	if (sCurrentDemo)
 	{
 		sCurrentDemo->exitPhysics();
@@ -109,19 +114,21 @@ void selectDemo(int demoIndex)
 		delete sCurrentDemo;
 		sCurrentDemo=0;
 	}
-
 	if (allDemos[demoIndex].m_createFunc && app)
 	{
+		app->m_parameterInterface->removeAllParameters();
 		sCurrentDemo = (*allDemos[demoIndex].m_createFunc)(app);
 		if (sCurrentDemo)
+		{
 			sCurrentDemo->initPhysics();
-
+		} 
 	}
+
 }
 
 void	MyComboBoxCallback(int comboId, const char* item)
 {
-	printf("comboId = %d, item = %s\n",comboId, item);
+	//printf("comboId = %d, item = %s\n",comboId, item);
 	if (comboId==DEMO_SELECTION_COMBOBOX)
 	{
 		//find selected item
@@ -135,7 +142,7 @@ void	MyComboBoxCallback(int comboId, const char* item)
 			}
 		}
 	}
-	
+
 }
 
 
@@ -215,13 +222,17 @@ struct MyMenuItemHander :public Gwen::Event::Handler
 		//printf("onButtonG !\n");
 	}
 
-	
+
 
 };
 
 
+
+extern float shadowMapWorldSize;
 int main(int argc, char* argv[])
 {
+    shadowMapWorldSize = 25;
+
 	b3Clock clock;
 
 	float dt = 1./120.f;
@@ -235,17 +246,25 @@ int main(int argc, char* argv[])
 	app->m_window->setMouseMoveCallback(MyMouseMoveCallback);
 	app->m_window->setMouseButtonCallback(MyMouseButtonCallback);
 	app->m_window->setKeyboardCallback(MyKeyboardCallback);
+	
 
 	GLint err = glGetError();
     assert(err==GL_NO_ERROR);
-	
+
 	sth_stash* fontstash=app->getFontStash();
 	gui = new GwenUserInterface;
 	gui->init(width,height,fontstash,app->m_window->getRetinaScale());
 //	gui->getInternalData()->m_explorerPage
 	Gwen::Controls::TreeControl* tree = gui->getInternalData()->m_explorerTreeCtrl;
-	int numDemos = sizeof(allDemos)/sizeof(BulletDemoEntry);
+
 	
+	
+	app->m_parameterInterface = new GwenParameterInterface(gui->getInternalData());
+
+	//gui->getInternalData()->m_demoPage;
+
+	int numDemos = sizeof(allDemos)/sizeof(BulletDemoEntry);
+
 	char nodeText[1024];
 	int curDemo = 0;
 	int selectedDemo = loadCurrentDemoEntry(startFileName);
@@ -292,11 +311,11 @@ int main(int argc, char* argv[])
 	{
 		allNames.push_back(allDemos[i].m_name);
 	}
-	*/	
+	*/
 	//selectDemo(loadCurrentDemoEntry(startFileName));
 	/*
 	gui->registerComboBox(DEMO_SELECTION_COMBOBOX,allNames.size(),&allNames[0],sCurrentDemoIndex);
-		
+
 	//const char* names2[] = {"comboF", "comboG","comboH"};
 	//gui->registerComboBox(2,3,&names2[0],0);
 
@@ -304,25 +323,28 @@ int main(int argc, char* argv[])
 	*/
 	unsigned long int	prevTimeInMicroseconds = clock.getTimeMicroseconds();
 
+	
 	do
 	{
 
 		GLint err = glGetError();
 		assert(err==GL_NO_ERROR);
 		app->m_instancingRenderer->init();
-		app->m_instancingRenderer->updateCamera();
+        DrawGridData dg;
+        dg.upAxis = app->getUpAxis();
 		
-		app->drawGrid();
-		
+		app->m_instancingRenderer->updateCamera(dg.upAxis);
+        app->drawGrid(dg);
+
 		static int frameCount = 0;
 		frameCount++;
 
 		if (0)
 		{
 		char bla[1024];
-		
+
 		sprintf(bla,"Simple test frame %d", frameCount);
-		
+
 		app->drawText(bla,10,10);
 		}
 
@@ -340,6 +362,7 @@ int main(int argc, char* argv[])
 				prevTimeInMicroseconds = curTimeInMicroseconds;
 			}
 			sCurrentDemo->renderScene();
+			sCurrentDemo->physicsDebugDraw();
 		}
 
 		static int toggle = 1;
@@ -348,6 +371,7 @@ int main(int argc, char* argv[])
 		gui->draw(app->m_instancingRenderer->getScreenWidth(),app->m_instancingRenderer->getScreenHeight());
 		}
 		toggle=1-toggle;
+		app->m_parameterInterface->syncParameters();
 		app->swapBuffer();
 	} while (!app->m_window->requestedExit());
 

@@ -5,6 +5,8 @@
 #include "BulletDemoInterface.h"
 #include "../bullet2/BasicDemo/BasicDemo.h"
 #include "../bullet2/BasicDemo/HingeDemo.h"
+#include "../bullet2/BasicDemo/HingeDemo.h"
+
 #include "../bullet2/FeatherstoneMultiBodyDemo/BulletMultiBodyDemos.h"
 #include "../bullet2/FeatherstoneMultiBodyDemo/MultiDofDemo.h"
 
@@ -12,6 +14,11 @@
 #include "../bullet2/LuaDemo/LuaDemo.h"
 #include "../bullet2/ChainDemo/ChainDemo.h"
 #include "../../Demos/CcdPhysicsDemo/CcdPhysicsSetup.h"
+#include "../../Demos/ConstraintDemo/ConstraintPhysicsSetup.h"
+#include "../ImportURDFDemo/ImportURDFSetup.h"
+#include "../ImportObjDemo/ImportObjSetup.h"
+#include "../ImportSTLDemo/ImportSTLSetup.h"
+
 
 static BulletDemoInterface* MyCcdPhysicsDemoCreateFunc(SimpleOpenGL3App* app)
 {
@@ -24,6 +31,29 @@ static BulletDemoInterface* MyKinematicObjectCreateFunc(SimpleOpenGL3App* app)
 	CommonPhysicsSetup* physicsSetup = new KinematicObjectSetup();
 	return new BasicDemo(app, physicsSetup);
 }
+
+static BulletDemoInterface* MyConstraintCreateFunc(SimpleOpenGL3App* app)
+{
+	CommonPhysicsSetup* physicsSetup = new ConstraintPhysicsSetup();
+	return new BasicDemo(app, physicsSetup);
+}
+
+static BulletDemoInterface* MyImportUrdfCreateFunc(SimpleOpenGL3App* app)
+{
+    CommonPhysicsSetup* physicsSetup = new ImportUrdfDemo();
+	return new BasicDemo(app, physicsSetup);
+}
+static BulletDemoInterface* MyImportObjCreateFunc(SimpleOpenGL3App* app)
+{
+    CommonPhysicsSetup* physicsSetup = new ImportObjDemo(app);
+	return new BasicDemo(app, physicsSetup);
+}
+static BulletDemoInterface* MyImportSTLCreateFunc(SimpleOpenGL3App* app)
+{
+    CommonPhysicsSetup* physicsSetup = new ImportSTLDemo(app);
+	return new BasicDemo(app, physicsSetup);
+}
+
 
 struct BulletDemoEntry
 {
@@ -42,7 +72,13 @@ static BulletDemoEntry allDemos[]=
 	{1,"BasicDemo",BasicDemo::MyCreateFunc},
 	{ 1, "CcdDemo", MyCcdPhysicsDemoCreateFunc },
 	{ 1, "Kinematic", MyKinematicObjectCreateFunc },
-
+	{ 1, "Constraints", MyConstraintCreateFunc },
+	{0,"File Formats", 0},
+//@todo(erwincoumans)	{ 1, "bullet", MyImportSTLCreateFunc},
+	{ 1, "Wavefront Obj", MyImportObjCreateFunc},
+    { 1, "URDF", MyImportUrdfCreateFunc },
+	{ 1, "STL", MyImportSTLCreateFunc},
+    
 /*	{1,"ChainDemo",ChainDemo::MyCreateFunc},
 //	{0, "Stress tests", 0 },
 

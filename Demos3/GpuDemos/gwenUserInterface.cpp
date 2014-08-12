@@ -31,7 +31,19 @@ GwenUserInterface::~GwenUserInterface()
 	delete coreRend;
 
 }
-		
+
+class MyMenuItems :  public Gwen::Controls::Base
+{
+public:
+
+	MyMenuItems() :Gwen::Controls::Base(0)
+	{
+	}
+	void myQuitApp( Gwen::Controls::Base* pControl )
+	{
+		exit(0);
+	}
+};
 
 struct MyTestMenuBar : public Gwen::Controls::MenuStrip
 {
@@ -43,8 +55,10 @@ struct MyTestMenuBar : public Gwen::Controls::MenuStrip
 	{
 //		Gwen::Controls::MenuStrip* menu = new Gwen::Controls::MenuStrip( pParent );
 		{
+MyMenuItems* menuItems = new MyMenuItems;
+
 			Gwen::Controls::MenuItem* pRoot = AddItem( L"File" );
-		
+			pRoot->GetMenu()->AddItem(L"Quit",menuItems,(Gwen::Event::Handler::Function)&MyMenuItems::myQuitApp);
 			pRoot = AddItem( L"View" );
 //			Gwen::Event::Handler* handler =	GWEN_MCALL(&MyTestMenuBar::MenuItemSelect );
 			pRoot->GetMenu()->AddItem( L"Profiler");//,,m_profileWindow,(Gwen::Event::Handler::Function)&MyProfileWindow::MenuItemSelect);
@@ -175,7 +189,7 @@ void	GwenUserInterface::init(int width, int height,struct sth_stash* stash,float
 	tab->Dock( Gwen::Pos::Fill );
 	//tab->SetMargin( Gwen::Margin( 2, 2, 2, 2 ) );
 
-	Gwen::UnicodeString str1(L"Main");
+	Gwen::UnicodeString str1(L"Params");
 	m_data->m_demoPage = tab->AddPage(str1);
 
 	
@@ -318,7 +332,7 @@ void	GwenUserInterface::draw(int width, int height)
 	{
 		m_data->pCanvas->SetSize(width,height);
 		m_data->m_primRenderer->setScreenSize(width,height);
-		m_data->pRenderer->resize(width,height);
+		m_data->pRenderer->Resize(width,height);
 		m_data->pCanvas->RenderCanvas();
 		//restoreOpenGLState();
 	}

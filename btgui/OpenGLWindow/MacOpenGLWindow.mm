@@ -339,8 +339,10 @@ void MacOpenGLWindow::createWindow(const b3gWindowConstructionInfo& ci)
 
    // https://developer.apple.com/library/mac/#documentation/GraphicsAnimation/Conceptual/HighResolutionOSX/CapturingScreenContents/CapturingScreenContents.html#//apple_ref/doc/uid/TP40012302-CH10-SW1
     //support HighResolutionOSX for Retina Macbook
-    [m_internalData->m_myview  setWantsBestResolutionOpenGLSurface:YES];
-
+    if (ci.m_openglVersion>=3)
+    {
+        [m_internalData->m_myview  setWantsBestResolutionOpenGLSurface:YES];
+    }
     NSSize sz;
     sz.width = 1;
     sz.height = 1;
@@ -354,29 +356,18 @@ void MacOpenGLWindow::createWindow(const b3gWindowConstructionInfo& ci)
  
     [m_internalData->m_window setContentView: m_internalData->m_myview];
 
-    GLuint n = 1;
-    GLuint               vbo[3]={-1,-1,-1};
-    
-	glGenBuffers(n, vbo);
-    checkError("glGenBuffers");
-
+  
     
 	[m_internalData->m_window setDelegate:(id) m_internalData->m_myview];
-	glGenBuffers(n, vbo);
-    checkError("glGenBuffers");
-
+	
     [m_internalData->m_window makeKeyAndOrderFront: nil];
     
     [m_internalData->m_myview MakeCurrent];
     m_internalData->m_width = m_internalData->m_myview.GetWindowWidth;
     m_internalData->m_height = m_internalData->m_myview.GetWindowHeight;
     
-    glGenBuffers(n, vbo);
-    checkError("glGenBuffers");
     
     [NSApp activateIgnoringOtherApps:YES];
-    glGenBuffers(n, vbo);
-    checkError("glGenBuffers");
     
    
 //[m_internalData->m_window setLevel:NSMainMenuWindowLevel];
@@ -682,7 +673,7 @@ int getAsciiCodeFromVirtualKeycode(int virtualKeyCode)
 		case kVK_ANSI_KeypadPlus      : {keycode = '+'; break;}
 		case kVK_ANSI_KeypadClear    : {keycode = '?'; break;}
 		case kVK_ANSI_KeypadDivide   : {keycode = '/'; break;}
-		case kVK_ANSI_KeypadEnter   : {keycode = 13; break;}
+		case kVK_ANSI_KeypadEnter   : {keycode = B3G_RETURN; break;}
 		case kVK_ANSI_KeypadMinus   : {keycode = '-'; break;}
 		case kVK_ANSI_KeypadEquals  : {keycode = '='; break;}
 		case kVK_ANSI_Keypad0   : {keycode = '0'; break;}
@@ -695,7 +686,11 @@ int getAsciiCodeFromVirtualKeycode(int virtualKeyCode)
 		case kVK_ANSI_Keypad7   : {keycode = '7'; break;}
 		case kVK_ANSI_Keypad8   : {keycode = '8'; break;}
 		case kVK_ANSI_Keypad9   : {keycode = '9'; break;}
-			
+        case kVK_Return:
+        {
+            keycode = B3G_RETURN; break;
+        }
+            
 		default:
 		{
 			
@@ -947,7 +942,7 @@ void MacOpenGLWindow::startRendering()
     assert(err==GL_NO_ERROR);
     
     
-    glClearColor(1,1,1,1);
+   // glClearColor(1,1,1,1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);     //clear buffers
 
     err = glGetError();

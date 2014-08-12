@@ -2,6 +2,7 @@
 #include "btBulletDynamicsCommon.h"
 #include "OpenGLWindow/SimpleOpenGL3App.h"
 #include "BulletCollision/CollisionShapes/btShapeHull.h"//to create a tesselation of a generic btConvexShape
+#include "MyDebugDrawer.h"
 struct GraphicsVertex
 {
 	float pos[4];
@@ -13,9 +14,10 @@ struct GraphicsVertex
 struct MyGraphicsPhysicsBridge : public GraphicsPhysicsBridge
 {
 	SimpleOpenGL3App* m_glApp;
+	MyDebugDrawer* m_debugDraw;
 
 	MyGraphicsPhysicsBridge(SimpleOpenGL3App* glApp)
-		:m_glApp(glApp)
+		:m_glApp(glApp), m_debugDraw(0)
 	{
 	}
 	virtual void createRigidBodyGraphicsObject(btRigidBody* body, const btVector3& color)
@@ -41,7 +43,11 @@ struct MyGraphicsPhysicsBridge : public GraphicsPhysicsBridge
 			box->setUserIndex(cubeShapeId);
 			break;
 		}
-		
+		case TRIANGLE_MESH_SHAPE_PROXYTYPE:
+		{
+			
+			break;
+		}
 		default:
 		{
 			if (collisionShape->isConvex())
@@ -50,18 +56,18 @@ struct MyGraphicsPhysicsBridge : public GraphicsPhysicsBridge
 				{
 					btShapeHull* hull = new btShapeHull(convex);
 					hull->buildHull(0.0);
-		
+
 					{
-						int strideInBytes = 9*sizeof(float);
-						int numVertices = hull->numVertices();
-						int numIndices =hull->numIndices();
-			
+						//int strideInBytes = 9*sizeof(float);
+						//int numVertices = hull->numVertices();
+						//int numIndices =hull->numIndices();
+
 						btAlignedObjectArray<GraphicsVertex> gvertices;
 						btAlignedObjectArray<int> indices;
 
 						for (int t=0;t<hull->numTriangles();t++)
 						{
-							
+
 							btVector3 triNormal;
 
 							int index0 = hull->getIndexPointer()[t*3+0];
@@ -82,20 +88,20 @@ struct MyGraphicsPhysicsBridge : public GraphicsPhysicsBridge
 								vtx.pos[1] = pos.y();
 								vtx.pos[2] = pos.z();
 								vtx.pos[3] = 0.f;
-								
+
 								vtx.normal[0] =triNormal.x();
 								vtx.normal[1] =triNormal.y();
 								vtx.normal[2] =triNormal.z();
-								vtx.normal[3] =0;
+
 								vtx.texcoord[0] = 0.5f;
 								vtx.texcoord[1] = 0.5f;
-								
+
 								indices.push_back(gvertices.size());
 								gvertices.push_back(vtx);
 							}
 						}
-			
-			
+
+
 						int shapeId = m_glApp->m_instancingRenderer->registerShape(&gvertices[0].pos[0],gvertices.size(),&indices[0],indices.size());
 						convex->setUserIndex(shapeId);
 					}
@@ -123,15 +129,40 @@ struct MyGraphicsPhysicsBridge : public GraphicsPhysicsBridge
 		}
 		m_glApp->m_instancingRenderer->writeTransforms();
 	}
+
+	virtual void createPhysicsDebugDrawer(btDiscreteDynamicsWorld* rbWorld)
+	{
+	    btAssert(rbWorld);
+        m_debugDraw = new MyDebugDrawer(m_glApp);
+        rbWorld->setDebugDrawer(m_debugDraw );
+
+
+        m_debugDraw->setDebugMode(
+            btIDebugDraw::DBG_DrawWireframe
+            +btIDebugDraw::DBG_DrawAabb
+            //btIDebugDraw::DBG_DrawContactPoints
+            );
+
+	}
+
+	virtual CommonParameterInterface* getParameterInterface()
+	{
+		return m_glApp->m_parameterInterface;
+	}
+	
+	virtual void setUpAxis(int axis)
+	{
+		m_glApp->setUpAxis(axis);
+	}
 };
 
 Bullet2RigidBodyDemo::Bullet2RigidBodyDemo(SimpleOpenGL3App* app, CommonPhysicsSetup* physicsSetup)
-	:m_glApp(app),
-	m_physicsSetup(physicsSetup),
+	:	m_physicsSetup(physicsSetup),
 	m_controlPressed(false),
-	m_altPressed(false)
+	m_altPressed(false),
+	m_glApp(app)
 {
-	
+
 }
 void Bullet2RigidBodyDemo::initPhysics()
 {
@@ -143,7 +174,7 @@ void Bullet2RigidBodyDemo::initPhysics()
 
 void Bullet2RigidBodyDemo::exitPhysics()
 {
-	
+
 	m_physicsSetup->exitPhysics();
 
 }
@@ -164,6 +195,12 @@ void Bullet2RigidBodyDemo::renderScene()
 	m_glApp->m_instancingRenderer->renderScene();
 
 }
+
+void	Bullet2RigidBodyDemo::physicsDebugDraw()
+{
+    m_physicsSetup->debugDraw();
+}
+
 Bullet2RigidBodyDemo::~Bullet2RigidBodyDemo()
 {
 }
@@ -193,8 +230,10 @@ btVector3	Bullet2RigidBodyDemo::getRayTo(int x,int y)
 	rayForward*= farPlane;
 
 	btVector3 rightOffset;
-	btVector3 m_cameraUp=btVector3(0,1,0);
-	btVector3 vertical = m_cameraUp;
+	btVector3 cameraUp=btVector3(0,0,0);
+	cameraUp[m_glApp->getUpAxis()]=1;
+	
+	btVector3 vertical = cameraUp;
 
 	btVector3 hor;
 	hor = rayForward.cross(vertical);
@@ -213,7 +252,7 @@ btVector3	Bullet2RigidBodyDemo::getRayTo(int x,int y)
 	float height = m_glApp->m_instancingRenderer->getScreenHeight();
 
 	aspect =  width / height;
-	
+
 	hor*=aspect;
 
 
@@ -228,16 +267,17 @@ btVector3	Bullet2RigidBodyDemo::getRayTo(int x,int y)
 	return rayTo;
 }
 
-	
+
 bool	Bullet2RigidBodyDemo::mouseMoveCallback(float x,float y)
 {
 	btVector3 rayTo = getRayTo(x, y);
 	btVector3 rayFrom;
 	m_glApp->m_instancingRenderer->getCameraPosition(rayFrom);
 	m_physicsSetup->movePickedBody(rayFrom,rayTo);
-		
+
 	return false;
 }
+
 bool	Bullet2RigidBodyDemo::mouseButtonCallback(int button, int state, float x, float y)
 {
 
@@ -250,10 +290,10 @@ bool	Bullet2RigidBodyDemo::mouseButtonCallback(int button, int state, float x, f
 
 			btVector3 rayFrom = camPos;
 			btVector3 rayTo = getRayTo(x,y);
+			
+			m_physicsSetup->pickBody(rayFrom, rayTo);
 
-			bool hasPicked = m_physicsSetup->pickBody(rayFrom, rayTo);
 
-				
 		}
 	} else
 	{
