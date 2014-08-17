@@ -30,7 +30,7 @@ int sFrameNumber = 0;
 bool firstRun=true;
 btScalar startAngle(0.3);
 btScalar ccdMotionThreshHold(0.001);
-btScalar margin(0.01);
+btScalar margin(0.001);
 btScalar floorHE(0.1);
 btScalar defaultTimeStep(1./60);
 btScalar timeStep(defaultTimeStep);
@@ -41,7 +41,8 @@ const char *modes[]=
 "two objects and springConstraints",
 "two objects and constraints with limits"};
 btScalar btZero(0);
-btScalar l=0.055;
+btScalar l(0.055);
+btScalar w(0.01);
 btDynamicsWorld* dw;
 
 void addSpringConstraints(btAlignedObjectArray<btRigidBody*> ha,
@@ -158,9 +159,9 @@ void	CharpyDemo::initPhysics()
 
 
 	// support anvils leaving 40 mm open space between them
-	{
+	{ // lower part
 		btCollisionShape* shape = 
-			new btBoxShape(btVector3(0.05,0.1,0.02));
+			new btBoxShape(btVector3(0.05+w,0.1,0.02));
 		m_collisionShapes.push_back(shape);
 		// symmetrically around z=0 and x=0
 		// top at y=0.2
@@ -173,9 +174,9 @@ void	CharpyDemo::initPhysics()
 			localCreateRigidBody(0.f,tr,shape);
 		}
 	}
-	{
+	{ // back support
 		btCollisionShape* shape = 
-			new btBoxShape(btVector3(0.025,0.02,0.02));
+			new btBoxShape(btVector3(0.025+w/2,0.02+w,0.02));
 		m_collisionShapes.push_back(shape);
 		// symmetrically around z=0
 		// bottom at y=0.2
@@ -184,8 +185,8 @@ void	CharpyDemo::initPhysics()
 		{	
 			btTransform tr;
 			tr.setIdentity();
-			btVector3 pos(btScalar(-0.025),
-				btScalar(0.22),
+			btVector3 pos(btScalar(-0.025-w/2),
+				btScalar(0.22+w),
 				btScalar((i==0?-1:1)*0.04));
 			tr.setOrigin(pos);
 			localCreateRigidBody(0.f,tr,shape);
@@ -201,11 +202,11 @@ void	CharpyDemo::initPhysics()
 		if(mode==0){
 			halfLength=l/2;
 		}
-		btScalar sMass(0.01f*0.01f*halfLength*2.0f*7800.0f);
+		btScalar sMass(w*w*halfLength*2.0f*7800.0f);
 		btAlignedObjectArray<btRigidBody*> ha;
 		btAlignedObjectArray<btTransform> ta;
 		btCollisionShape* shape = 
-			new btBoxShape(btVector3(0.005,0.005,halfLength));
+			new btBoxShape(btVector3(w/2,w/2,halfLength));
 		m_collisionShapes.push_back(shape);
 		btVector3 localInertia(0,0,0);
 		shape->calculateLocalInertia(sMass,localInertia);
@@ -214,7 +215,7 @@ void	CharpyDemo::initPhysics()
 		{	
 			btTransform tr;
 			tr.setIdentity();
-			btVector3 pos(0.005,0.205,
+			btVector3 pos(w/2,0.2+w/2,
 				(mode>0?(i==0?-1:1)*halfLength:0));
 			tr.setOrigin(pos);
 			btDefaultMotionState* myMotionState 
@@ -366,7 +367,15 @@ void CharpyDemo::showMessage()
 			margin);
 		GLDebugDrawString(xStart,yStart,buf);
 		yStart+=20;
-		sprintf(buf,"j/J to change floor half extents, now=%1.8f m",
+		sprintf(buf,"k/K to change specimen width, now=%1.6f m",
+			w);
+		GLDebugDrawString(xStart,yStart,buf);
+		yStart+=20;
+		sprintf(buf,"v/V to change specimen length, now=%1.6f m",
+			l);
+		GLDebugDrawString(xStart,yStart,buf);
+		yStart+=20;
+		sprintf(buf,"j/J to change floor half extents, now=%1.6f m",
 			floorHE);
 		GLDebugDrawString(xStart,yStart,buf);
 		yStart+=20;
@@ -409,7 +418,7 @@ void resetCollisionMargin()
 }
 
 
-/** k anf v are free */
+/**  no free keys */
 void CharpyDemo::keyboardUpCallback(unsigned char key, int x, int y)
 {
 	switch (key)
@@ -444,6 +453,22 @@ void CharpyDemo::keyboardUpCallback(unsigned char key, int x, int y)
 			break;
 	case 'J':
 			floorHE/=0.8;
+			clientResetScene();
+			break;
+	case 'k':
+			w*=0.8;
+			clientResetScene();
+			break;
+	case 'K':
+			w/=0.8;
+			clientResetScene();
+			break;
+	case 'v':
+			l*=0.8;
+			clientResetScene();
+			break;
+	case 'V':
+			l/=0.8;
 			clientResetScene();
 			break;
 	case ':':
