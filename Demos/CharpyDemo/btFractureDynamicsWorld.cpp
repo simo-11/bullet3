@@ -198,15 +198,6 @@ void	btFractureDynamicsWorld::breakDisconnectedParts( btFractureBody* fracObj)
 
 #include <stdio.h>
 
-float getBodySpeed2(const btCollisionObject* o){
-	return o->getInterpolationLinearVelocity().length2();
-}
-
-float getManifoldSpeed2(btPersistentManifold* manifold){
-	float s0=getBodySpeed2(manifold->getBody0());
-	float s1=getBodySpeed2(manifold->getBody0());
-	return s0>s1?s0:s1;
-}
 
 void btFractureDynamicsWorld::fractureCallback( )
 {
@@ -232,17 +223,6 @@ void btFractureDynamicsWorld::fractureCallback( )
 
 		
 
-		static float maxImpact = 0;
-		static float maxSpeed2 = 0;
-		if (totalImpact>maxImpact){
-			maxImpact = totalImpact;
-			printf("maxImpact=%f\n",maxImpact);
-		}
-		float maxManifoldSpeed2=getManifoldSpeed2(manifold);
-		if (maxManifoldSpeed2>maxSpeed2){
-			maxSpeed2 = maxManifoldSpeed2;
-			printf("maxSpeed=%f\n",sqrtf(maxSpeed2));
-		}
 		//some threshold otherwise resting contact would break objects after a while
 		if (totalImpact < 40.f)
 			continue;

@@ -45,6 +45,17 @@ btScalar l(0.055);
 btScalar w(0.01);
 btDynamicsWorld* dw;
 
+btScalar getBodySpeed2(const btCollisionObject* o){
+	return o->getInterpolationLinearVelocity().length2();
+}
+
+btScalar getManifoldSpeed2(btPersistentManifold* manifold){
+	btScalar s0=getBodySpeed2(manifold->getBody0());
+	btScalar s1=getBodySpeed2(manifold->getBody0());
+	return s0>s1?s0:s1;
+}
+
+
 void addSpringConstraints(btAlignedObjectArray<btRigidBody*> ha,
 		btAlignedObjectArray<btTransform> ta){
 	btGeneric6DofSpringConstraint *sc=
@@ -98,7 +109,7 @@ http://www.bulletphysics.org/mediawiki-1.5.8/index.php?title=Anti_tunneling_by_M
 */
 void resetCcdMotionThreshHold()
 {
-	btScalar radius(ccdMotionThreshHold/5.);
+	btScalar radius(ccdMotionThreshHold/5.f);
 	for (int i=dw->getNumCollisionObjects()-1; i>=0 ;i--)
 	{
 		btCollisionObject* obj = dw->getCollisionObjectArray()[i];
@@ -144,8 +155,9 @@ void	CharpyDemo::initPhysics()
 		new btFractureDynamicsWorld(m_dispatcher,m_broadphase,m_solver,m_collisionConfiguration);
 	m_dynamicsWorld = fractureWorld;
 	dw=m_dynamicsWorld;
-	//m_splitImpulse removes the penetration resolution from the applied impulse, otherwise objects might fracture due to deep penetrations.
-	m_dynamicsWorld->getSolverInfo().m_splitImpulse = true;
+	// m_splitImpulse removes the penetration resolution from 
+	// the applied impulse, otherwise objects might fracture due to deep penetrations.
+	// m_dynamicsWorld->getSolverInfo().m_splitImpulse = true;
 
 	// floor
 	{
@@ -161,7 +173,7 @@ void	CharpyDemo::initPhysics()
 	// support anvils leaving 40 mm open space between them
 	{ // lower part
 		btCollisionShape* shape = 
-			new btBoxShape(btVector3(0.05+w,0.1,0.02));
+			new btBoxShape(btVector3(0.05f+w,0.1f,0.02f));
 		m_collisionShapes.push_back(shape);
 		// symmetrically around z=0 and x=0
 		// top at y=0.2
@@ -313,6 +325,45 @@ void	CharpyDemo::clientResetScene()
 	initPhysics();
 }
 
+btScalar minDistanceForCollision(0);
+btScalar minCollisionDistance(0);
+btScalar maxImpact(0);
+btScalar maxSpeed2(0);
+
+void checkCollisions(){
+	int numManifolds = dw->getDispatcher()->getNumManifolds();
+	for (int i=0;i<numManifolds;i++)
+	{
+		btPersistentManifold* contactManifold =  dw->getDispatcher()->getManifoldByIndexInternal(i);
+		const btCollisionObject* obA = contactManifold->getBody0();
+		const btCollisionObject* obB = contactManifold->getBody1();
+
+		int numContacts = contactManifold->getNumContacts();
+		btScalar totalImpact(0);
+		for (int j=0;j<numContacts;j++)
+		{
+			btManifoldPoint& pt = contactManifold->getContactPoint(j);
+			totalImpact += pt.m_appliedImpulse;
+			btScalar distance(pt.getDistance());
+			if(distance<minCollisionDistance){
+				minCollisionDistance=distance;
+			}
+			if (pt.getDistance()<minDistanceForCollision)
+			{
+				const btVector3& ptA = pt.getPositionWorldOnA();
+				const btVector3& ptB = pt.getPositionWorldOnB();
+				const btVector3& normalOnB = pt.m_normalWorldOnB;
+			}
+		}
+		if (totalImpact>maxImpact){
+			maxImpact = totalImpact;
+		}
+		float maxManifoldSpeed2=getManifoldSpeed2(contactManifold);
+		if (maxManifoldSpeed2>maxSpeed2){
+			maxSpeed2 = maxManifoldSpeed2;
+		}
+	}
+}
 
 void CharpyDemo::clientMoveAndDisplay()
 {
@@ -326,6 +377,7 @@ void CharpyDemo::clientMoveAndDisplay()
 			simulationTimeStep=btScalar(ms/1e6);
 		}
 		m_dynamicsWorld->stepSimulation(simulationTimeStep);
+		checkCollisions();
 		//optional but useful: debug drawing
 		m_dynamicsWorld->debugDrawWorld();
 	}
@@ -380,6 +432,9 @@ void CharpyDemo::showMessage()
 		GLDebugDrawString(xStart,yStart,buf);
 		yStart+=20;
 		sprintf(buf,"mode=%d: %s",mode,modes[mode]);
+		GLDebugDrawString(xStart,yStart,buf);
+		yStart+=20;
+		sprintf(buf,"minCollisionDistance: %1.6f",minCollisionDistance);
 		GLDebugDrawString(xStart,yStart,buf);
 		resetPerspectiveProjection();
 		glEnable(GL_LIGHTING);
@@ -501,6 +556,12 @@ void	CharpyDemo::shootBox(const btVector3& destination)
 
 void	CharpyDemo::exitPhysics()
 {
+	printf("maxCollision was %f m\n",(float)(-1.*minCollisionDistance));
+	printf("maxImpact was %f J\n",maxImpact);
+	printf("maxSpeed was %f m/s\n",sqrtf(maxSpeed2));
+	maxSpeed2=btScalar(0);
+	maxImpact=btScalar(0);
+	minCollisionDistance=btScalar(0.f);
 	int i;
 
 	//cleanup in the reverse order of creation/initialization
