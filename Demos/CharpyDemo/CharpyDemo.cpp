@@ -372,11 +372,12 @@ void CharpyDemo::clientMoveAndDisplay()
 	if (m_dynamicsWorld)	{
 		if(timeStep!=defaultTimeStep){
 			simulationTimeStep=timeStep;
-		}else{
+			m_dynamicsWorld->stepSimulation(simulationTimeStep, 30, simulationTimeStep);
+		} else{
 			float ms = getDeltaTimeMicroseconds();
 			simulationTimeStep=btScalar(ms/1e6);
+			m_dynamicsWorld->stepSimulation(simulationTimeStep, 10);
 		}
-		m_dynamicsWorld->stepSimulation(simulationTimeStep);
 		checkCollisions();
 		//optional but useful: debug drawing
 		m_dynamicsWorld->debugDrawWorld();
