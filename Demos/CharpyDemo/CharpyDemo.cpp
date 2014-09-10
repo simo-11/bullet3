@@ -29,6 +29,7 @@ It also helps myself as this work has had many long pauses
 int sFrameNumber = 0;
 bool firstRun=true;
 btScalar startAngle(0.3);
+btScalar displayWait(1.0);
 btScalar ccdMotionThreshHold(0.001);
 btScalar margin(0.001);
 btScalar floorHE(0.1);
@@ -386,6 +387,8 @@ void CharpyDemo::clientMoveAndDisplay()
 	showMessage();
 	glFlush();
 	swapBuffers();
+	DWORD sleepTimeMs = (DWORD)displayWait;
+	Sleep(sleepTimeMs);
 }
 
 void CharpyDemo::showMessage()
@@ -404,7 +407,10 @@ void CharpyDemo::showMessage()
 		btFractureDynamicsWorld* world = (btFractureDynamicsWorld*)m_dynamicsWorld;
 		yStart+=20;
 		GLDebugDrawString(xStart,yStart,"space to restart");
-		yStart+=20;
+		yStart += 20;
+		sprintf(buf, "{/} to change displayWait, now=%1f ms", displayWait);
+		GLDebugDrawString(xStart, yStart, buf);
+		yStart += 20;
 		sprintf(buf,"+/- to change start angle, now=%1.1f",startAngle);
 		GLDebugDrawString(xStart,yStart,buf);
 		yStart+=20;
@@ -479,6 +485,12 @@ void CharpyDemo::keyboardUpCallback(unsigned char key, int x, int y)
 {
 	switch (key)
 	{
+	case '{':
+		displayWait*=0.8;
+		break;
+	case '}':
+		displayWait/= 0.8;
+		break;
 	case '+':
 			startAngle+=0.1;
 			clientResetScene();
