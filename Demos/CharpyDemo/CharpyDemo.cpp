@@ -29,7 +29,7 @@ It also helps myself as this work has had many long pauses
 int sFrameNumber = 0;
 bool firstRun=true;
 btScalar startAngle(0.3);
-btScalar displayWait(1.0);
+long displayWait=10;
 btScalar ccdMotionThreshHold(0.001);
 btScalar margin(0.001);
 btScalar floorHE(0.1);
@@ -387,8 +387,7 @@ void CharpyDemo::clientMoveAndDisplay()
 	showMessage();
 	glFlush();
 	swapBuffers();
-	DWORD sleepTimeMs = (DWORD)displayWait;
-	Sleep(sleepTimeMs);
+	Sleep(displayWait);
 }
 
 void CharpyDemo::showMessage()
@@ -408,14 +407,14 @@ void CharpyDemo::showMessage()
 		yStart+=20;
 		GLDebugDrawString(xStart,yStart,"space to restart");
 		yStart += 20;
-		sprintf(buf, "{/} to change displayWait, now=%1f ms", displayWait);
+		sprintf(buf, "{/} to change displayWait, now=%3ld ms", displayWait);
 		GLDebugDrawString(xStart, yStart, buf);
 		yStart += 20;
 		sprintf(buf,"+/- to change start angle, now=%1.1f",startAngle);
 		GLDebugDrawString(xStart,yStart,buf);
 		yStart+=20;
-		sprintf(buf,"./:/, to change timeStep, now=%2.4f ms",
-			simulationTimeStep*1000);
+		sprintf(buf,"./:/, to change timeStep, now=%2.4f/%2.4f ms",
+			timeStep*1000,simulationTimeStep*1000);
 		GLDebugDrawString(xStart,yStart,buf);
 		yStart+=20;
 		sprintf(buf,"</> to change ccdMotionThreshHold, now=%1.8f m",
@@ -464,6 +463,7 @@ void CharpyDemo::displayCallback(void) {
 
 	glFlush();
 	swapBuffers();
+	Sleep(100); // save energy
 }
 
 
@@ -486,10 +486,18 @@ void CharpyDemo::keyboardUpCallback(unsigned char key, int x, int y)
 	switch (key)
 	{
 	case '{':
-		displayWait*=0.8;
+		if (displayWait < 10 && displayWait>0){
+			displayWait--;
+		}else{
+			displayWait /= 1.2;
+		}
 		break;
 	case '}':
-		displayWait/= 0.8;
+		if (displayWait < 10){
+			displayWait++;
+		}else{
+			displayWait *= 1.2;
+		}
 		break;
 	case '+':
 			startAngle+=0.1;
@@ -540,10 +548,10 @@ void CharpyDemo::keyboardUpCallback(unsigned char key, int x, int y)
 			clientResetScene();
 			break;
 	case ':':
-			timeStep=btScalar(simulationTimeStep/0.8);
+			timeStep=btScalar(timeStep/0.8);
 			break;
 	case '.':
-			timeStep=btScalar(simulationTimeStep*0.8);
+			timeStep=btScalar(timeStep*0.8);
 			break;
 	case ',':
 			timeStep=defaultTimeStep;
