@@ -44,6 +44,8 @@ const char *modes[]=
 btScalar btZero(0);
 btScalar l(0.055);
 btScalar w(0.01);
+float energy;
+float maxEnergy;
 btDynamicsWorld* dw;
 
 btScalar getBodySpeed2(const btCollisionObject* o){
@@ -136,6 +138,7 @@ void	CharpyDemo::initPhysics()
 		m_frustumZFar=btScalar(10);
 		firstRun=false;
 	}
+	maxEnergy = 0;
 	printf("startAngle=%f timeStep=%f\n",startAngle,timeStep);
 	///collision configuration contains default setup for memory, collision setup
 	m_collisionConfiguration = new btDefaultCollisionConfiguration();
@@ -189,7 +192,7 @@ void	CharpyDemo::initPhysics()
 	}
 	{ // back support
 		btCollisionShape* shape = 
-			new btBoxShape(btVector3(0.025+w/2,0.02+w,0.02));
+			new btBoxShape(btVector3(0.025+w/2,0.02+w,0.02f));
 		m_collisionShapes.push_back(shape);
 		// symmetrically around z=0
 		// bottom at y=0.2
@@ -229,7 +232,7 @@ void	CharpyDemo::initPhysics()
 			btTransform tr;
 			tr.setIdentity();
 			btVector3 pos(w/2,0.2+w/2,
-				(mode>0?(i==0?-1:1)*halfLength:0));
+				(mode>0?(i==0?-1:1)*halfLength:0.f));
 			tr.setOrigin(pos);
 			btDefaultMotionState* myMotionState 
 				= new btDefaultMotionState(tr);
@@ -366,6 +369,46 @@ void checkCollisions(){
 	}
 }
 
+float getRotationEnergy(btScalar invInertia, btScalar angularVelocity){
+	if (invInertia == 0){
+		return 0.f;
+	}
+	float inertia = 1.f / invInertia;
+	return 0.5*inertia*angularVelocity*angularVelocity;
+}
+void updateEnergy(){
+	energy = 0;
+	btVector3 gravity = dw->getGravity();
+	const btCollisionObjectArray objects = dw->getCollisionObjectArray();
+	for (int i = 0; i<objects.capacity(); i++)
+	{
+		const btCollisionObject* o = objects[i];
+		const btRigidBody* ro = btRigidBody::upcast(o);
+		btScalar iM = ro->getInvMass();
+		if (iM == 0){
+			continue;
+		}
+		btVector3 v = ro->getLinearVelocity();
+		btScalar m = 1/iM;
+		float linearEnergy = 0.5*m*v.length2();
+		btVector3 com = ro->getCenterOfMassPosition();
+		float gravitationalEnergy = -m*gravity.dot(com);
+		const btVector3 rv = ro->getAngularVelocity();
+		const btVector3 iI = ro->getInvInertiaDiagLocal();
+		float inertiaEnergy = 0;
+		inertiaEnergy += getRotationEnergy(iI.getX(), rv.getX());
+		inertiaEnergy += getRotationEnergy(iI.getY(), rv.getY());
+		inertiaEnergy += getRotationEnergy(iI.getZ(), rv.getZ());
+		energy += linearEnergy;
+		energy += inertiaEnergy;
+		energy += gravitationalEnergy;
+	}
+	if (energy > maxEnergy){
+		maxEnergy = energy;
+	}
+}
+
+
 void CharpyDemo::clientMoveAndDisplay()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
@@ -380,6 +423,7 @@ void CharpyDemo::clientMoveAndDisplay()
 			m_dynamicsWorld->stepSimulation(simulationTimeStep, 10);
 		}
 		checkCollisions();
+		updateEnergy();
 		//optional but useful: debug drawing
 		m_dynamicsWorld->debugDrawWorld();
 	}
@@ -404,7 +448,10 @@ void CharpyDemo::showMessage()
 		int yStart = 20;
 
 		btFractureDynamicsWorld* world = (btFractureDynamicsWorld*)m_dynamicsWorld;
-		yStart+=20;
+		sprintf(buf, "energy:max/current/loss %3.0f/%3.0f/%3.0f J", 
+			maxEnergy,energy,maxEnergy-energy);
+		GLDebugDrawString(xStart, yStart, buf);
+		yStart += 20;
 		GLDebugDrawString(xStart,yStart,"space to restart");
 		yStart += 20;
 		sprintf(buf, "{/} to change displayWait, now=%3ld ms", displayWait);
@@ -413,16 +460,8 @@ void CharpyDemo::showMessage()
 		sprintf(buf,"+/- to change start angle, now=%1.1f",startAngle);
 		GLDebugDrawString(xStart,yStart,buf);
 		yStart+=20;
-		sprintf(buf,"./:/, to change timeStep, now=%2.4f/%2.4f ms",
+		sprintf(buf,"./:/, to change timeStep, now=%2.2f/%2.2f ms",
 			timeStep*1000,simulationTimeStep*1000);
-		GLDebugDrawString(xStart,yStart,buf);
-		yStart+=20;
-		sprintf(buf,"</> to change ccdMotionThreshHold, now=%1.8f m",
-			ccdMotionThreshHold);
-		GLDebugDrawString(xStart,yStart,buf);
-		yStart+=20;
-		sprintf(buf,"e/E to change margin, now=%1.8f m",
-			margin);
 		GLDebugDrawString(xStart,yStart,buf);
 		yStart+=20;
 		sprintf(buf,"k/K to change specimen width, now=%1.6f m",
@@ -433,15 +472,25 @@ void CharpyDemo::showMessage()
 			l);
 		GLDebugDrawString(xStart,yStart,buf);
 		yStart+=20;
-		sprintf(buf,"j/J to change floor half extents, now=%1.6f m",
-			floorHE);
-		GLDebugDrawString(xStart,yStart,buf);
-		yStart+=20;
 		sprintf(buf,"mode=%d: %s",mode,modes[mode]);
 		GLDebugDrawString(xStart,yStart,buf);
-		yStart+=20;
-		sprintf(buf,"minCollisionDistance: %1.6f",minCollisionDistance);
-		GLDebugDrawString(xStart,yStart,buf);
+		yStart += 20;
+		sprintf(buf, "minCollisionDistance: %1.6f", minCollisionDistance);
+		GLDebugDrawString(xStart, yStart, buf);
+		if (false){ // these do not seem interesting
+			yStart += 20;
+			sprintf(buf, "</> to change ccdMotionThreshHold, now=%1.8f m",
+				ccdMotionThreshHold);
+			GLDebugDrawString(xStart, yStart, buf);
+			yStart += 20;
+			sprintf(buf, "e/E to change margin, now=%1.8f m",
+				margin);
+			GLDebugDrawString(xStart, yStart, buf);
+			yStart += 20;
+			sprintf(buf, "j/J to change floor half extents, now=%1.6f m",
+				floorHE);
+			GLDebugDrawString(xStart, yStart, buf);
+		}
 		resetPerspectiveProjection();
 		glEnable(GL_LIGHTING);
 	}
@@ -489,7 +538,7 @@ void CharpyDemo::keyboardUpCallback(unsigned char key, int x, int y)
 		if (displayWait < 10 && displayWait>0){
 			displayWait--;
 		}else{
-			displayWait /= 1.2;
+			displayWait =(long)(displayWait/1.2);
 		}
 		break;
 	case '}':
