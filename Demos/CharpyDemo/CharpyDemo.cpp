@@ -521,7 +521,7 @@ void resetCollisionMargin()
 
 
 /**  no free keys */
-void CharpyDemo::keyboardUpCallback(unsigned char key, int x, int y)
+void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
 {
 	switch (key)
 	{
@@ -605,7 +605,7 @@ void CharpyDemo::keyboardUpCallback(unsigned char key, int x, int y)
 			break;
 		}
 	default:
-		PlatformDemoApplication::keyboardUpCallback(key,x,y);
+		PlatformDemoApplication::keyboardCallback(key,x,y);
 		break;
 	}
 }
