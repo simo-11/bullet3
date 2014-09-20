@@ -17,7 +17,7 @@ It also helps myself as this work has had many long pauses
 #include "GLDebugFont.h"
 ///btBulletDynamicsCommon.h is the main Bullet include file, contains most common include files.
 #include "btBulletDynamicsCommon.h"
-
+#include "BulletDynamics/ConstraintSolver/btGeneric6DofSpring2Constraint.h"
 
 #include <stdio.h> //printf debugging
 
@@ -40,11 +40,17 @@ int mode=0;
 const char *modes[]=
 {"single object",
 "two objects and springConstraints",
-"two objects and constraints with limits"};
+"two objects and constraints with zero limits",
+"two objects and spring2Constraints",
+};
 btScalar btZero(0);
+btScalar btOne(1);
 btScalar l(0.055);
 btScalar w(0.01);
-float energy=0;
+btScalar E(200E9);
+btScalar fu(400e6);
+btScalar damping(1);
+float energy = 0;
 float maxEnergy;
 btDynamicsWorld* dw;
 
@@ -64,10 +70,8 @@ void addSpringConstraints(btAlignedObjectArray<btRigidBody*> ha,
 	btGeneric6DofSpringConstraint *sc=
 				new btGeneric6DofSpringConstraint(*ha[0],*ha[1], 
 	ta[0], ta[1],true);
-	btScalar E(200e9);
-	btScalar fu(400e6);
-	btScalar b(0.01);
-	btScalar h(0.008);
+	btScalar b(w);
+	btScalar h(w-0.002); // notch is 2 mm
 	btScalar I1(b*h*h*h/12);
 	btScalar I2(h*b*b*b/12);
 	btScalar k0(E*b*h/l/2);
@@ -85,15 +89,44 @@ void addSpringConstraints(btAlignedObjectArray<btRigidBody*> ha,
 	for (int i=0;i<6;i++)
 	{	
 		sc->enableSpring(i,true);
-		if(mode==2){
-			sc->setLimit(i,0,0); // make fixed
-		}
 	}
 	for (int i=0;i<6;i++)
 	{	
-		sc->setDamping(i,btZero);
+		sc->setDamping(i,damping); 
 	}
 	sc->setEquilibriumPoint();	
+}
+
+void addSpring2Constraints(btAlignedObjectArray<btRigidBody*> ha,
+	btAlignedObjectArray<btTransform> ta){
+	btGeneric6DofSpring2Constraint *sc =
+		new btGeneric6DofSpring2Constraint(*ha[0], *ha[1],
+		ta[0], ta[1]);
+	btScalar b(w);
+	btScalar h(w - 0.002); // notch is 2 mm
+	btScalar I1(b*h*h*h / 12);
+	btScalar I2(h*b*b*b / 12);
+	btScalar k0(E*b*h / l / 2);
+	btScalar k1(48 * E*I1 / l / l / l);
+	btScalar k2(48 * E*I1 / l / l / l);
+	btScalar w1(fu*b*h*h / 4);
+	btScalar w2(fu*b*b*h / 4);
+	sc->setStiffness(0, k0);
+	sc->setStiffness(1, k1);
+	sc->setStiffness(2, k2);
+	sc->setStiffness(3, w1); // not very exact
+	sc->setStiffness(4, w2);
+	sc->setStiffness(5, w1);
+	dw->addConstraint(sc, true);
+	for (int i = 0; i<6; i++)
+	{
+		sc->enableSpring(i, true);
+	}
+	for (int i = 0; i<6; i++)
+	{
+		sc->setDamping(i, damping);
+	}
+	sc->setEquilibriumPoint();
 }
 
 void addFixedConstraints(btAlignedObjectArray<btRigidBody*> ha,
@@ -129,7 +162,8 @@ float getRotationEnergy(btScalar invInertia, btScalar angularVelocity){
 		return 0.f;
 	}
 	float inertia = 1.f / invInertia;
-	return 0.5*inertia*angularVelocity*angularVelocity;
+	float e=0.5*inertia*angularVelocity*angularVelocity;
+	return e;
 }
 
 void updateEnergy(){
@@ -295,6 +329,9 @@ void	CharpyDemo::initPhysics()
 		case 2:
 			addFixedConstraints(ha,ta);
 			break;
+		case 3:
+			addSpring2Constraints(ha, ta);
+			break;
 		}
 	}
 	// hammer with arm and hinge
@@ -452,7 +489,7 @@ void CharpyDemo::showMessage()
 		xStart = m_glutScreenWidth - lineWidth;
 		yStart = 20;
 
-		sprintf(buf, "energy:max/current/loss %3.0f/%3.0f/%3.0f J", 
+		sprintf(buf, "energy:max/current/loss %8.2g/%8.2g/%8.2g J", 
 			maxEnergy,energy,maxEnergy-energy);
 		infoMsg(buf);
 		sprintf(buf, "minCollisionDistance: simulation/step %1.3f/%1.3f",
@@ -462,7 +499,9 @@ void CharpyDemo::showMessage()
 		infoMsg(buf);
 		sprintf(buf,"+/- to change start angle, now=%1.1f",startAngle);
 		infoMsg(buf);
-		sprintf(buf,"./:/, to change timeStep, now=%2.2f/%2.2f ms",
+		sprintf(buf, "(/) to change damping, now=%1.1f", damping);
+		infoMsg(buf);
+		sprintf(buf, "./:/, to change timeStep, now=%2.2f/%2.2f ms",
 			timeStep*1000,simulationTimeStep*1000);
 		infoMsg(buf);
 		sprintf(buf,"k/K to change specimen width, now=%1.6f m",w);
@@ -547,6 +586,18 @@ void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
 			startAngle-=0.1;
 			clientResetScene();
 			break;
+	case '(':
+			if (damping>0.1){
+				damping -= 0.1;
+				clientResetScene();
+			}
+			break;
+	case ')':
+			if (damping < 1){
+				damping += 0.1;
+				clientResetScene();
+			}
+			break;
 	case '<':
 			ccdMotionThreshHold*=0.8;
 			resetCcdMotionThreshHold();
@@ -599,7 +650,8 @@ void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
 	case '0':
 	case '1':
 	case '2':
-		{
+	case '3':
+	{
 			mode=key-'0';
 			clientResetScene();
 			break;

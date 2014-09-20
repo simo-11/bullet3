@@ -1,8 +1,8 @@
 /*
 Simo Nikula 2014 based on bullet3 App_FractureDemo
 */
-#ifndef FRACTURE_DEMO_H
-#define FRACTURE_DEMO_H
+#ifndef CHARPY_DEMO_H
+#define CHARPY_DEMO_H
 
 #ifdef _WINDOWS
 #include "Win32DemoApplication.h"
@@ -72,5 +72,5 @@ class CharpyDemo : public PlatformDemoApplication
 	
 };
 
-#endif //FRACTURE_DEMO_H
+#endif //CHARPY_DEMO_H
 
