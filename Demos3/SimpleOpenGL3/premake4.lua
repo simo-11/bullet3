@@ -4,7 +4,6 @@
 		language "C++"
 				
 		kind "ConsoleApp"
-		targetdir "../../bin"
 
   	includedirs {
                 ".",
@@ -12,19 +11,14 @@
                 "../../btgui"
                 }
 
-		initOpenGL()
-		initGlew()
 			
-		links{"gwen", "OpenGL_Window","OpenGL_TrueTypeFont"}
-		
+		links{ "OpenGL_Window","Bullet3Common"}
+		initOpenGL()	
+		initGlew()
+	
 		files {
-		"**.cpp",
-		"**.h",
-		"../../src/Bullet3Common/**.cpp",
- 		"../../src/Bullet3Common/**.h",
-		"../../btgui/Timing/b3Clock.cpp",
-		"../../btgui/Timing/b3Clock.h"
-
+		"*.cpp",
+		"*.h",
 		}
 		
 if os.is("Linux") then initX11() end

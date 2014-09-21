@@ -25,7 +25,7 @@
 	
 	
 	files {
-		"../FontFiles/OpenSans.cpp",
+		"../OpenGLWindow/OpenSans.cpp",
 		"../OpenGLWindow/TwFonts.cpp",
 		"../OpenGLWindow/TwFonts.h",
 		"../OpenGLWindow/LoadShader.cpp",
@@ -33,12 +33,12 @@
 		"../OpenGLWindow/GLPrimitiveRenderer.cpp",
 		"../OpenGLWindow/GLPrimitiveRenderer.h",				
 		"../OpenGLWindow/GwenOpenGL3CoreRenderer.h",
-		"../OpenGLTrueTypeFont/fontstash.cpp",
-		"../OpenGLTrueTypeFont/fontstash.h",
-		"../OpenGLTrueTypeFont/opengl_fontstashcallbacks.cpp",
- 		"../OpenGLTrueTypeFont/opengl_fontstashcallbacks.h",
-		"../../btgui/Timing/b3Clock.cpp",
-		"../../btgui/Timing/b3Clock.h",
+		"../OpenGLWindow/fontstash.cpp",
+		"../OpenGLWindow/fontstash.h",
+		"../OpenGLWindow/opengl_fontstashcallbacks.cpp",
+ 		"../OpenGLWindow/opengl_fontstashcallbacks.h",
+		"../Bullet3AppSupport/b3Clock.cpp",
+		"../Bullet3AppSupport/b3Clock.h",
 		"**.cpp",
 		"**.h",
 	}

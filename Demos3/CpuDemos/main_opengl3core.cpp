@@ -22,11 +22,11 @@
 
 #include <assert.h>
 #include <string.h>
-#include "OpenGLTrueTypeFont/fontstash.h"
-#include "OpenGLTrueTypeFont/opengl_fontstashcallbacks.h"
+#include "OpenGLWindow/fontstash.h"
+#include "OpenGLWindow/opengl_fontstashcallbacks.h"
 #include "gwenUserInterface.h"
 
-#include "../btgui/Timing/b3Quickprof.h"
+#include "../btgui/Bullet3AppSupport/b3Quickprof.h"
 #include "../btgui/OpenGLWindow/GLRenderToTexture.h"
 
 bool exportFrame=false;
@@ -459,7 +459,7 @@ void myprintf(const char* msg)
 
 
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "OpenGLTrueTypeFont/stb_image_write.h"
+#include "OpenGLWindow/stb_image_write.h"
 void writeTextureToPng(int textureWidth, int textureHeight, const char* fileName)
 {
 	int numComponents = 4;

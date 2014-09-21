@@ -1,16 +1,16 @@
 
-#include "../../btgui/OpenGLWindow/SimpleOpenGL3App.h"
+#include "OpenGLWindow/SimpleOpenGL3App.h"
 #include "Bullet3Common/b3Vector3.h"
 #include "assert.h"
 #include <stdio.h>
-#include "../GpuDemos/gwenInternalData.h"
-#include "../GpuDemos/gwenUserInterface.h"
+#include "Bullet3AppSupport/gwenInternalData.h"
+#include "Bullet3AppSupport/gwenUserInterface.h"
 #include "BulletDemoEntries.h"
-#include "../../btgui/Timing/b3Clock.h"
-#include "GwenParameterInterface.h"
-#include "GwenProfileWindow.h"
-#include "GwenTextureWindow.h"
-#include "GraphingTexture.h"
+#include "Bullet3AppSupport/b3Clock.h"
+#include "Bullet3AppSupport/GwenParameterInterface.h"
+#include "Bullet3AppSupport/GwenProfileWindow.h"
+#include "Bullet3AppSupport/GwenTextureWindow.h"
+#include "Bullet3AppSupport/GraphingTexture.h"
 
 
 #define DEMO_SELECTION_COMBOBOX 13
@@ -181,6 +181,32 @@ static void MyMouseButtonCallback(int button, int state, float x, float y)
 
 #include <string.h>
 
+void openURDFDemo(const char* filename)
+{
+   
+    if (sCurrentDemo)
+    {
+        sCurrentDemo->exitPhysics();
+        app->m_instancingRenderer->removeAllInstances();
+        delete sCurrentDemo;
+        sCurrentDemo=0;
+    }
+    
+    app->m_parameterInterface->removeAllParameters();
+   
+    ImportUrdfDemo* physicsSetup = new ImportUrdfDemo();
+    physicsSetup->setFileName(filename);
+    
+    sCurrentDemo = new BasicDemo(app, physicsSetup);
+    
+    if (sCurrentDemo)
+    {
+        sCurrentDemo->initPhysics();
+    }
+
+    
+}
+
 void selectDemo(int demoIndex)
 {
 	sCurrentDemoIndex = demoIndex;
@@ -329,6 +355,18 @@ struct GL3TexLoader : public MyTextureLoader
 	}
 };
 
+void fileOpenCallback()
+{
+
+ char filename[1024];
+ int len = app->m_window->fileOpenDialog(filename,1024);
+ if (len)
+ {
+     //todo(erwincoumans) check if it is actually URDF
+     //printf("file open:%s\n", filename);
+     openURDFDemo(filename);
+ }
+}
 
 extern float shadowMapWorldSize;
 int main(int argc, char* argv[])
@@ -476,7 +514,8 @@ int main(int argc, char* argv[])
 	*/
 	unsigned long int	prevTimeInMicroseconds = clock.getTimeMicroseconds();
 
-
+    gui->registerFileOpenCallback(fileOpenCallback);
+    
 	do
 	{
 

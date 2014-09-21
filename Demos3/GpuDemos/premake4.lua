@@ -24,6 +24,7 @@ function createProject(vendor)
 		}
 		
 		links {
+			"Bullet3AppSupport",
 			"gwen",
 			"Bullet2FileLoader",
 			 "Bullet3OpenCL_" .. vendor,
@@ -52,17 +53,13 @@ function createProject(vendor)
 			"../../btgui/OpenGLWindow/TwFonts.h",
 			"../../btgui/OpenGLWindow/GLRenderToTexture.cpp",
 			"../../btgui/OpenGLWindow/GLRenderToTexture.h",
-			"../../btgui/OpenGLTrueTypeFont/fontstash.cpp",
-			"../../btgui/OpenGLTrueTypeFont/fontstash.h",
-			"../../btgui/OpenGLTrueTypeFont/opengl_fontstashcallbacks.cpp",
-			"../../btgui/OpenGLTrueTypeFont/opengl_fontstashcallbacks.h",
-			"../../btgui/FontFiles/OpenSans.cpp",
+			"../../btgui/OpenGLWindow/fontstash.cpp",
+			"../../btgui/OpenGLWindow/fontstash.h",
+			"../../btgui/OpenGLWindow/opengl_fontstashcallbacks.cpp",
+			"../../btgui/OpenGLWindow/opengl_fontstashcallbacks.h",
+			"../../btgui/OpenGLWindow/OpenSans.cpp",
 			"../../btgui/stb_image/stb_image.cpp",
 			"../../btgui/stb_image/stb_image.h",
-			"../../btgui/Timing/b3Quickprof.cpp",
-			"../../btgui/Timing/b3Quickprof.h",
-			"../../btgui/Timing/b3Clock.cpp",
-			"../../btgui/Timing/b3Clock.h",
 		}
 
 	if _OPTIONS["midi"] then

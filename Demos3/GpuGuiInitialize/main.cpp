@@ -14,11 +14,11 @@
 //#include "b3GpuDynamicsWorld.h"
 #include <assert.h>
 #include <string.h>
-#include "OpenGLTrueTypeFont/fontstash.h"
-#include "OpenGLTrueTypeFont/opengl_fontstashcallbacks.h"
+#include "OpenGLWindow/fontstash.h"
+#include "OpenGLWindow/opengl_fontstashcallbacks.h"
 
 #include "OpenGLWindow/GwenOpenGL3CoreRenderer.h"
-#include "../btgui/Timing/b3Quickprof.h"
+#include "../btgui/Bullet3AppSupport/b3Quickprof.h"
 
 #include "Gwen/Gwen.h"
 #include "Gwen/Controls/Button.h"

@@ -35,15 +35,15 @@
 		"../../btgui/OpenGLWindow/GLRenderToTexture.h",
 		"../../btgui/OpenGLWindow/TwFonts.cpp",
 		"../../btgui/OpenGLWindow/TwFonts.h",
-		"../../btgui/FontFiles/OpenSans.cpp",
-		"../../btgui/OpenGLTrueTypeFont/fontstash.cpp",
-		"../../btgui/OpenGLTrueTypeFont/fontstash.h",
-		"../../btgui/OpenGLTrueTypeFont/opengl_fontstashcallbacks.cpp",
- 		"../../btgui/OpenGLTrueTypeFont/opengl_fontstashcallbacks.h",
+		"../../btgui/OpenGLWindow/OpenSans.cpp",
+		"../../btgui/OpenGLWindow/fontstash.cpp",
+		"../../btgui/OpenGLWindow/fontstash.h",
+		"../../btgui/OpenGLWindow/opengl_fontstashcallbacks.cpp",
+ 		"../../btgui/OpenGLWindow/opengl_fontstashcallbacks.h",
  		"../../src/Bullet3Common/**.cpp",
  		"../../src/Bullet3Common/**.h",
-		"../../btgui/Timing/b3Clock.cpp",
-		"../../btgui/Timing/b3Clock.h"
+		"../../btgui/Bullet3AppSupport/b3Clock.cpp",
+		"../../btgui/Bullet3AppSupport/b3Clock.h"
 
 		}
 

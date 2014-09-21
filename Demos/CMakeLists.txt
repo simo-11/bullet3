@@ -24,18 +24,12 @@ IF (USE_GLUT)
 			SET(SharedDemoSubdirs			OpenGL		)
 		ENDIF(BUILD_CPU_DEMOS)
 		
-		IF(BUILD_MULTITHREADING)
-			SUBDIRS(	MultiThreadedDemo			OpenCLClothDemo			)
-		ENDIF(BUILD_MULTITHREADING)
 
 		SUBDIRS( 		
 			${SharedDemoSubdirs}
 			Benchmarks
 		)
 		
-		IF(BUILD_MULTITHREADING)
-			SUBDIRS(	ThreadingDemo		VectorAdd_OpenCL )
-		ENDIF()
 
 	ENDIF(GLUT_FOUND)
 ELSE (USE_GLUT)
@@ -58,7 +52,6 @@ ELSE (USE_GLUT)
 		GenericJointDemo 
 		SerializeDemo 
 		SoftDemo
-		VectorAdd_OpenCL
 		VoronoiFractureDemo
 	)
 	ENDIF(WIN32)
