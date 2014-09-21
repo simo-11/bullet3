@@ -1,5 +1,5 @@
 /*
-Simo Nikula 2014 based on bullet3 App_FractureDemo
+Simo Nikula 2014 based on bullet3 Demos
 Lots of details are described so that newcomers 
 missing graphics 
 or structural analysis background should be able to follow.
@@ -8,10 +8,10 @@ It also helps myself as this work has had many long pauses
 */
 
 
-///CharpyDemo shows how to break objects.
-///It assumes a btCompoundShaps (where the childshapes are the pre-fractured pieces)
-///The btFractureBody is a class derived from btRigidBody, dealing with the collision impacts.
-
+/**
+CharpyDemo shows how to handle Charpy test.
+target is to break objects using plasticity.
+*/
 #include "CharpyDemo.h"
 #include "GlutStuff.h"
 #include "GLDebugFont.h"
@@ -20,11 +20,6 @@ It also helps myself as this work has had many long pauses
 #include "BulletDynamics/ConstraintSolver/btGeneric6DofSpring2Constraint.h"
 
 #include <stdio.h> //printf debugging
-
-
-
-#include "btFractureBody.h"
-#include "btFractureDynamicsWorld.h"
 
 int sFrameNumber = 0;
 bool firstRun=true;
@@ -49,7 +44,7 @@ btScalar l(0.055);
 btScalar w(0.01);
 btScalar E(200E9);
 btScalar fu(400e6);
-btScalar damping(1);
+btScalar damping(0.2);
 float energy = 0;
 float maxEnergy;
 btDynamicsWorld* dw;
@@ -228,9 +223,9 @@ void	CharpyDemo::initPhysics()
 
 	//m_dynamicsWorld = new btDiscreteDynamicsWorld(m_dispatcher,m_broadphase,m_solver,m_collisionConfiguration);
 
-	btFractureDynamicsWorld* fractureWorld = 
-		new btFractureDynamicsWorld(m_dispatcher,m_broadphase,m_solver,m_collisionConfiguration);
-	m_dynamicsWorld = fractureWorld;
+	btDiscreteDynamicsWorld* btWorld =
+		new btDiscreteDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collisionConfiguration);
+	m_dynamicsWorld = btWorld;
 	dw=m_dynamicsWorld;
 	// m_splitImpulse removes the penetration resolution from 
 	// the applied impulse, otherwise objects might fracture due to deep penetrations.
@@ -311,8 +306,8 @@ void	CharpyDemo::initPhysics()
 				= new btDefaultMotionState(tr);
 			btRigidBody::btRigidBodyConstructionInfo 
 				rbInfo(sMass,myMotionState,shape,localInertia);
-			btFractureBody* body = 
-				new btFractureBody(rbInfo, m_dynamicsWorld);
+			btRigidBody* body =
+				new btRigidBody(rbInfo);
 			m_dynamicsWorld->addRigidBody(body);
 			ha.push_back(body);
 			btTransform ctr;
@@ -396,7 +391,7 @@ void	CharpyDemo::initPhysics()
 	}
 	resetCcdMotionThreshHold();
 	updateEnergy();
-	fractureWorld->stepSimulation(timeStep,0);
+	btWorld->stepSimulation(timeStep,0);
 }
 
 
@@ -489,7 +484,7 @@ void CharpyDemo::showMessage()
 		xStart = m_glutScreenWidth - lineWidth;
 		yStart = 20;
 
-		sprintf(buf, "energy:max/current/loss %8.2g/%8.2g/%8.2g J", 
+		sprintf(buf, "energy:max/current/loss %9.2g/%9.2g/%9.2g J", 
 			maxEnergy,energy,maxEnergy-energy);
 		infoMsg(buf);
 		sprintf(buf, "minCollisionDistance: simulation/step %1.3f/%1.3f",
@@ -499,10 +494,12 @@ void CharpyDemo::showMessage()
 		infoMsg(buf);
 		sprintf(buf,"+/- to change start angle, now=%1.1f",startAngle);
 		infoMsg(buf);
-		sprintf(buf, "(/) to change damping, now=%1.1f", damping);
-		infoMsg(buf);
+		if (mode == 1 || mode == 3){
+			sprintf(buf, "(/) to change damping, now=%1.1f", damping);
+			infoMsg(buf);
+		}
 		sprintf(buf, "./:/, to change timeStep, now=%2.2f/%2.2f ms",
-			timeStep*1000,simulationTimeStep*1000);
+		timeStep*1000,simulationTimeStep*1000);
 		infoMsg(buf);
 		sprintf(buf,"k/K to change specimen width, now=%1.6f m",w);
 		infoMsg(buf);
@@ -587,7 +584,7 @@ void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
 			clientResetScene();
 			break;
 	case '(':
-			if (damping>0.1){
+			if (damping>0.){
 				damping -= 0.1;
 				clientResetScene();
 			}

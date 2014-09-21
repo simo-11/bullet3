@@ -1,5 +1,5 @@
 /*
-Simo Nikula 2014 based on bullet3 App_FractureDemo
+Simo Nikula 2014 based on bullet3 demos
 */
 
 #include "CharpyDemo.h"

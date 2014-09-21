@@ -29,10 +29,6 @@ ADD_EXECUTABLE(AppCharpyDemo
 		main.cpp
 		CharpyDemo.cpp 
 		CharpyDemo.h
-		btFractureBody.h
-		btFractureBody.cpp
-		btFractureDynamicsWorld.cpp
-		btFractureDynamicsWorld.h
 		${BULLET_PHYSICS_SOURCE_DIR}/build3/bullet.rc
 	)
 ELSE()
@@ -40,10 +36,6 @@ ELSE()
 		main.cpp
 		CharpyDemo.cpp 
 		CharpyDemo.h
-		btFractureBody.h
-		btFractureBody.cpp
-		btFractureDynamicsWorld.cpp
-		btFractureDynamicsWorld.h
 	)
 ENDIF()
 
@@ -65,10 +57,6 @@ ELSE (USE_GLUT)
 		Win32CharpyDemo.cpp
 		CharpyDemo.cpp 
 		CharpyDemo.h
-		btFractureBody.h
-		btFractureBody.cpp
-		btFractureDynamicsWorld.cpp
-		btFractureDynamicsWorld.h
 		${BULLET_PHYSICS_SOURCE_DIR}/build3/bullet.rc
 	)
 	
