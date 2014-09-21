@@ -31,9 +31,12 @@ btScalar floorHE(0.1);
 btScalar defaultTimeStep(1./60);
 btScalar timeStep(defaultTimeStep);
 btScalar simulationTimeStep(timeStep);
-int mode=0;
+btScalar currentTime;
+int mode=2;
 const char *modes[]=
-{"single object",
+{
+"None",
+"single object",
 "two objects and springConstraints",
 "two objects and constraints with zero limits",
 "two objects and spring2Constraints",
@@ -206,6 +209,7 @@ void	CharpyDemo::initPhysics()
 		m_frustumZFar=btScalar(10);
 		firstRun=false;
 	}
+	energy = 0;
 	maxEnergy = energy;
 	printf("startAngle=%f timeStep=%f\n",startAngle,timeStep);
 	///collision configuration contains default setup for memory, collision setup
@@ -283,7 +287,7 @@ void	CharpyDemo::initPhysics()
 	// backside at x=0
 	{
 		btScalar halfLength=l/4;
-		if(mode==0){
+		if(mode==1){
 			halfLength=l/2;
 		}
 		btScalar sMass(w*w*halfLength*2.0f*7800.0f);
@@ -294,13 +298,13 @@ void	CharpyDemo::initPhysics()
 		m_collisionShapes.push_back(shape);
 		btVector3 localInertia(0,0,0);
 		shape->calculateLocalInertia(sMass,localInertia);
-		// Only one object in mode 0
-		for (int i=0;(mode>0?i<2:i<1);i++)
+		// Only one object in mode 1
+		for (int i=0;(mode>1?i<2:i<1);i++)
 		{	
 			btTransform tr;
 			tr.setIdentity();
 			btVector3 pos(w/2,0.2+w/2,
-				(mode>0?(i==0?-1:1)*halfLength:0.f));
+				(mode>1?(i==0?-1:1)*halfLength:0.f));
 			tr.setOrigin(pos);
 			btDefaultMotionState* myMotionState 
 				= new btDefaultMotionState(tr);
@@ -313,18 +317,18 @@ void	CharpyDemo::initPhysics()
 			btTransform ctr;
 			ctr.setIdentity();
 			btVector3 cpos(0,0,
-				(mode>0?(i==0?1:-1)*halfLength:0));
+				(mode>1?(i==0?1:-1)*halfLength:0));
 			ctr.setOrigin(cpos);
 			ta.push_back(ctr);
 		}
 		switch(mode) {
-		case 1:
+		case 2:
 			addSpringConstraints(ha,ta);
 			break;
-		case 2:
+		case 3:
 			addFixedConstraints(ha,ta);
 			break;
-		case 3:
+		case 4:
 			addSpring2Constraints(ha, ta);
 			break;
 		}
@@ -392,6 +396,7 @@ void	CharpyDemo::initPhysics()
 	resetCcdMotionThreshHold();
 	updateEnergy();
 	btWorld->stepSimulation(timeStep,0);
+	currentTime=timeStep;
 }
 
 
@@ -458,6 +463,7 @@ void CharpyDemo::clientMoveAndDisplay()
 		//optional but useful: debug drawing
 		m_dynamicsWorld->debugDrawWorld();
 	}
+	currentTime += simulationTimeStep;
 	renderme(); 
 	showMessage();
 	glFlush();
@@ -480,11 +486,11 @@ void CharpyDemo::showMessage()
 		glDisable(GL_LIGHTING);
 		glColor3f(0, 0, 0);
 		char buf[100];
-		int lineWidth = 580;
+		int lineWidth = 620;
 		xStart = m_glutScreenWidth - lineWidth;
 		yStart = 20;
 
-		sprintf(buf, "energy:max/current/loss %9.2g/%9.2g/%9.2g J", 
+		sprintf(buf, "energy:max/current/loss %9.3g/%9.3g/%9.3g J", 
 			maxEnergy,energy,maxEnergy-energy);
 		infoMsg(buf);
 		sprintf(buf, "minCollisionDistance: simulation/step %1.3f/%1.3f",
@@ -494,7 +500,7 @@ void CharpyDemo::showMessage()
 		infoMsg(buf);
 		sprintf(buf,"+/- to change start angle, now=%1.1f",startAngle);
 		infoMsg(buf);
-		if (mode == 1 || mode == 3){
+		if (mode == 2 || mode == 4){
 			sprintf(buf, "(/) to change damping, now=%1.1f", damping);
 			infoMsg(buf);
 		}
@@ -505,7 +511,7 @@ void CharpyDemo::showMessage()
 		infoMsg(buf);
 		sprintf(buf,"v/V to change specimen length, now=%1.6f m",l);
 		infoMsg(buf);
-		sprintf(buf,"mode=%d: %s",mode,modes[mode]);
+		sprintf(buf,"mode(F1-F4)=%d: %s",mode,modes[mode]);
 		infoMsg(buf);
 		if (false){ // these do not currently seem interesting
 			sprintf(buf, "</> to change ccdMotionThreshHold, now=%1.8f m",
@@ -517,7 +523,8 @@ void CharpyDemo::showMessage()
 				floorHE);
 			infoMsg(buf);
 		}
-		infoMsg("space to restart");
+		sprintf(buf, "space to restart, currentTime=%3.4f s", currentTime);
+		infoMsg(buf);
 		resetPerspectiveProjection();
 		glEnable(GL_LIGHTING);
 	}
@@ -555,6 +562,26 @@ void resetCollisionMargin()
 	}
 }
 
+void CharpyDemo::specialKeyboard(int key, int x, int y){
+	switch (key){
+	case GLUT_KEY_F1:
+		mode = 1;
+		clientResetScene();
+		break;
+	case GLUT_KEY_F2:
+		mode = 2;
+		clientResetScene();
+		break;
+	case GLUT_KEY_F3:
+		mode = 3;
+		clientResetScene();
+		break;
+	case GLUT_KEY_F4:
+		mode = 4;
+		clientResetScene();
+		break;
+	}
+}
 
 /**  no free keys */
 void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
@@ -644,15 +671,6 @@ void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
 	case ',':
 			timeStep=defaultTimeStep;
 			break;
-	case '0':
-	case '1':
-	case '2':
-	case '3':
-	{
-			mode=key-'0';
-			clientResetScene();
-			break;
-		}
 	default:
 		PlatformDemoApplication::keyboardCallback(key,x,y);
 		break;

@@ -57,6 +57,7 @@ class CharpyDemo : public PlatformDemoApplication
 	virtual void displayCallback();
 		
 	virtual void keyboardCallback(unsigned char key, int x, int y);
+	virtual void specialKeyboard(int key, int x, int y);
 
 	virtual void clientResetScene();
 
