@@ -580,6 +580,9 @@ void CharpyDemo::specialKeyboard(int key, int x, int y){
 		mode = 4;
 		clientResetScene();
 		break;
+	default:
+		PlatformDemoApplication::specialKeyboard(key, x, y);
+		break;
 	}
 }
 
