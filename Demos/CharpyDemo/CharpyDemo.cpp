@@ -674,6 +674,10 @@ void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
 	case ',':
 			timeStep=defaultTimeStep;
 			break;
+	case 'i':
+		getDeltaTimeMicroseconds(); // get net time
+		PlatformDemoApplication::keyboardCallback(key, x, y);
+		break;
 	default:
 		PlatformDemoApplication::keyboardCallback(key,x,y);
 		break;
