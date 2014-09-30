@@ -231,9 +231,11 @@ void	CharpyDemo::initPhysics()
 		new btDiscreteDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collisionConfiguration);
 	m_dynamicsWorld = btWorld;
 	dw=m_dynamicsWorld;
-	// m_splitImpulse removes the penetration resolution from 
-	// the applied impulse, otherwise objects might fracture due to deep penetrations.
-	// m_dynamicsWorld->getSolverInfo().m_splitImpulse = true;
+	// dw->getSolverInfo().m_erp2 = 0.95; // default is 0.8
+	// dw->getSolverInfo().m_erp = 0.6; // default is 0.2
+	// dw->getSolverInfo().m_splitImpulse = true; // default is true
+	// dw->getSolverInfo().m_splitImpulsePenetrationThreshold = -0.002; // default is -0.04
+	// Tuning did not help
 
 	// floor
 	{
