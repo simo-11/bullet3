@@ -250,7 +250,7 @@ void	CharpyDemo::initPhysics()
 
 	// support anvils leaving 40 mm open space between them
 	{ // lower part
-		btCollisionShape* shape = 
+		btBoxShape* shape = 
 			new btBoxShape(btVector3(0.05f+w,0.1f,0.02f));
 		m_collisionShapes.push_back(shape);
 		// symmetrically around z=0 and x=0
@@ -265,7 +265,7 @@ void	CharpyDemo::initPhysics()
 		}
 	}
 	{ // back support
-		btCollisionShape* shape = 
+		btBoxShape* shape = 
 			new btBoxShape(btVector3(0.025+w/2,0.02+w,0.02f));
 		m_collisionShapes.push_back(shape);
 		// symmetrically around z=0
@@ -295,7 +295,7 @@ void	CharpyDemo::initPhysics()
 		btScalar sMass(w*w*halfLength*2.0f*7800.0f);
 		btAlignedObjectArray<btRigidBody*> ha;
 		btAlignedObjectArray<btTransform> ta;
-		btCollisionShape* shape = 
+		btBoxShape* shape = 
 			new btBoxShape(btVector3(w/2,w/2,halfLength));
 		m_collisionShapes.push_back(shape);
 		btVector3 localInertia(0,0,0);
