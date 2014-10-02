@@ -31,6 +31,7 @@ btScalar floorHE(0.1);
 btScalar defaultTimeStep(1./60);
 btScalar timeStep(defaultTimeStep);
 btScalar simulationTimeStep(timeStep);
+bool variableTimeStep = false;
 btScalar currentTime;
 int mode=2;
 const char *modes[]=
@@ -414,6 +415,7 @@ btScalar maxImpact(0);
 btScalar maxSpeed2(0);
 
 void checkCollisions(){
+	btScalar maxCurrentSpeed2 = btScalar(0);
 	minCurrentCollisionDistance = btScalar(0);
 	int numManifolds = dw->getDispatcher()->getNumManifolds();
 	for (int i=0;i<numManifolds;i++)
@@ -442,6 +444,28 @@ void checkCollisions(){
 		float maxManifoldSpeed2=getManifoldSpeed2(contactManifold);
 		if (maxManifoldSpeed2>maxSpeed2){
 			maxSpeed2 = maxManifoldSpeed2;
+		}
+		if (variableTimeStep){
+			if (maxManifoldSpeed2 > maxCurrentSpeed2){
+				maxCurrentSpeed2 = maxManifoldSpeed2;
+			}
+		}
+	}
+	if (variableTimeStep){
+		/**
+		* tune timeStep so that it 1/10 of specimen width
+		is done in one step
+		*/
+		if (maxCurrentSpeed2>0){
+			btScalar speed = btSqrt(maxCurrentSpeed2);
+			timeStep = w / 10 / speed;
+		}else{
+			/**
+			* no manifolds -> increase timeStep
+			*/
+			if (timeStep < defaultTimeStep/1.2){
+				timeStep *= 1.2;
+			}
 		}
 	}
 }
@@ -506,14 +530,14 @@ void CharpyDemo::showMessage()
 			sprintf(buf, "(/) to change damping, now=%1.1f", damping);
 			infoMsg(buf);
 		}
-		sprintf(buf, "./:/, to change timeStep, now=%2.2f/%2.2f ms",
-		timeStep*1000,simulationTimeStep*1000);
+		sprintf(buf, "./:/,/; to change timeStep, now=%2.2f/%2.2f ms, auto(;)=%s",
+		timeStep*1000,simulationTimeStep*1000,(variableTimeStep?"on":"off"));
 		infoMsg(buf);
 		sprintf(buf,"k/K to change specimen width, now=%1.6f m",w);
 		infoMsg(buf);
 		sprintf(buf,"v/V to change specimen length, now=%1.6f m",l);
 		infoMsg(buf);
-		sprintf(buf,"mode(F1-F4)=%d: %s",mode,modes[mode]);
+		sprintf(buf,"mode(F1-F4)=F%d: %s",mode,modes[mode]);
 		infoMsg(buf);
 		if (false){ // these do not currently seem interesting
 			sprintf(buf, "</> to change ccdMotionThreshHold, now=%1.8f m",
@@ -675,6 +699,9 @@ void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
 			break;
 	case ',':
 			timeStep=defaultTimeStep;
+			break;
+	case ';':
+			variableTimeStep = !variableTimeStep;
 			break;
 	case 'i':
 		getDeltaTimeMicroseconds(); // get net time
