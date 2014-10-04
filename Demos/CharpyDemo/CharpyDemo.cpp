@@ -14,6 +14,7 @@ target is to break objects using plasticity.
 */
 #include "CharpyDemo.h"
 #include "GlutStuff.h"
+#include "GLDebugDrawer.h"
 #include "GLDebugFont.h"
 ///btBulletDynamicsCommon.h is the main Bullet include file, contains most common include files.
 #include "btBulletDynamicsCommon.h"
@@ -21,6 +22,7 @@ target is to break objects using plasticity.
 
 #include <stdio.h> //printf debugging
 
+GLDebugDrawer	gDebugDrawer;
 int sFrameNumber = 0;
 bool firstRun=true;
 btScalar startAngle(0.3);
@@ -206,6 +208,7 @@ void	CharpyDemo::initPhysics()
 		// we look at quite small object
 		setCameraDistance(btScalar(0.5));
 		m_cameraPosition.setX(btScalar(0.3));
+		m_cameraUp.setValue(0.01,1.,0.01); // avoid btAssert issues when looking from up
 		m_frustumZNear=btScalar(0.01);
 		m_frustumZFar=btScalar(10);
 		firstRun=false;
@@ -400,6 +403,7 @@ void	CharpyDemo::initPhysics()
 	updateEnergy();
 	btWorld->stepSimulation(timeStep,0);
 	currentTime=timeStep;
+	dw->setDebugDrawer(&gDebugDrawer);
 }
 
 
@@ -486,7 +490,6 @@ void CharpyDemo::clientMoveAndDisplay()
 		}
 		checkCollisions();
 		updateEnergy();
-		//optional but useful: debug drawing
 		m_dynamicsWorld->debugDrawWorld();
 	}
 	currentTime += simulationTimeStep;
@@ -559,17 +562,11 @@ void CharpyDemo::showMessage()
 
 
 void CharpyDemo::displayCallback(void) {
-
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
-
 	renderme();
-
 	showMessage();
-
-	//optional but useful: debug drawing to detect problems
 	if (m_dynamicsWorld)
 		m_dynamicsWorld->debugDrawWorld();
-
 	glFlush();
 	swapBuffers();
 	Sleep(100); // save energy
