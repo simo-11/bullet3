@@ -36,13 +36,20 @@ btScalar simulationTimeStep(timeStep);
 bool variableTimeStep = false;
 btScalar currentTime;
 int mode=2;
-const char *modes[]=
+int viewMode = 1;
+const char *modes[] =
 {
 "None",
 "single object",
 "two objects and springConstraints",
 "two objects and constraints with zero limits",
 "two objects and spring2Constraints",
+};
+const char *viewModes[] =
+{
+	"None",
+	"Lookat [0,0,0]",
+	"Look from hammer to specimen",
 };
 btScalar btZero(0);
 btScalar btOne(1);
@@ -54,6 +61,7 @@ btScalar damping(0.2);
 float energy = 0;
 float maxEnergy;
 btDynamicsWorld* dw;
+btVector3 y_up(0.01, 1., 0.01);
 
 btScalar getBodySpeed2(const btCollisionObject* o){
 	return o->getInterpolationLinearVelocity().length2();
@@ -205,12 +213,7 @@ void	CharpyDemo::initPhysics()
 		setTexturing(true);
 		setShadows(true);
 		setDebugMode(btIDebugDraw::DBG_DrawText|btIDebugDraw::DBG_NoHelpText);
-		// we look at quite small object
-		setCameraDistance(btScalar(0.5));
-		m_cameraPosition.setX(btScalar(0.3));
-		m_cameraUp.setValue(0.01,1.,0.01); // avoid btAssert issues when looking from up
-		m_frustumZNear=btScalar(0.01);
-		m_frustumZFar=btScalar(10);
+		setViewMode(1);
 		firstRun=false;
 	}
 	energy = 0;
@@ -542,6 +545,8 @@ void CharpyDemo::showMessage()
 		infoMsg(buf);
 		sprintf(buf,"mode(F1-F4)=F%d: %s",mode,modes[mode]);
 		infoMsg(buf);
+		sprintf(buf, "viewMode(<Shift>F1-F2)=F%d: %s", m_viewMode, viewModes[m_viewMode]);
+		infoMsg(buf);
 		if (false){ // these do not currently seem interesting
 			sprintf(buf, "</> to change ccdMotionThreshHold, now=%1.8f m",
 				ccdMotionThreshHold);
@@ -560,9 +565,18 @@ void CharpyDemo::showMessage()
 
 }
 
+void CharpyDemo::updateView(){
+	switch (viewMode){
+	case 1:
+		break;
+	case 2:
+		break;
+	}
+}
 
 void CharpyDemo::displayCallback(void) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+	updateView();
 	renderme();
 	showMessage();
 	if (m_dynamicsWorld)
@@ -585,15 +599,39 @@ void resetCollisionMargin()
 	}
 }
 
+void CharpyDemo::setViewMode(int viewMode){
+	m_viewMode = viewMode;
+	switch (viewMode){
+	case 1:
+		setCameraDistance(btScalar(0.5));
+		m_cameraPosition.setX(btScalar(0.3));
+		m_cameraUp = y_up;
+		m_frustumZNear = btScalar(0.01);
+		m_frustumZFar = btScalar(10);
+		break;
+	}
+}
+
 void CharpyDemo::specialKeyboard(int key, int x, int y){
+	updateModifierKeys();
+
 	switch (key){
 	case GLUT_KEY_F1:
-		mode = 1;
-		clientResetScene();
+		if (m_modifierKeys& BT_ACTIVE_SHIFT){
+			setViewMode(1);
+		}else{
+		  mode = 1;
+		  clientResetScene();
+		}
 		break;
 	case GLUT_KEY_F2:
-		mode = 2;
-		clientResetScene();
+		if (m_modifierKeys& BT_ACTIVE_SHIFT){
+			setViewMode(2);
+		}
+		else{
+			mode = 2;
+			clientResetScene();
+		}
 		break;
 	case GLUT_KEY_F3:
 		mode = 3;

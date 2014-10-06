@@ -36,6 +36,7 @@ class CharpyDemo : public PlatformDemoApplication
 	btConstraintSolver*	m_solver;
 
 	btDefaultCollisionConfiguration* m_collisionConfiguration;
+	int m_viewMode;
 
 	void showMessage();
 
@@ -58,6 +59,8 @@ class CharpyDemo : public PlatformDemoApplication
 		
 	virtual void keyboardCallback(unsigned char key, int x, int y);
 	virtual void specialKeyboard(int key, int x, int y);
+	virtual void setViewMode(int viewMode);
+	virtual void updateView();
 
 	virtual void clientResetScene();
 
