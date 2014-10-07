@@ -36,7 +36,6 @@ btScalar simulationTimeStep(timeStep);
 bool variableTimeStep = false;
 btScalar currentTime;
 int mode=2;
-int viewMode = 1;
 const char *modes[] =
 {
 "None",
@@ -48,8 +47,8 @@ const char *modes[] =
 const char *viewModes[] =
 {
 	"None",
-	"Lookat [0,0,0]",
-	"Look from hammer to specimen",
+	"Look at anvil",
+	"Follow specimen",
 };
 btScalar btZero(0);
 btScalar btOne(1);
@@ -62,6 +61,7 @@ float energy = 0;
 float maxEnergy;
 btDynamicsWorld* dw;
 btVector3 y_up(0.01, 1., 0.01);
+btRigidBody *specimenBody,*hammerBody;
 
 btScalar getBodySpeed2(const btCollisionObject* o){
 	return o->getInterpolationLinearVelocity().length2();
@@ -330,6 +330,7 @@ void	CharpyDemo::initPhysics()
 			ctr.setOrigin(cpos);
 			ta.push_back(ctr);
 		}
+		specimenBody = ha[0];
 		switch(mode) {
 		case 2:
 			addSpringConstraints(ha,ta);
@@ -390,6 +391,7 @@ void	CharpyDemo::initPhysics()
 		cTr*=btTransform(cRot);
 		cTr*=downTr;
 		btRigidBody *hBody=localCreateRigidBody(hMass+aMass,cTr,compound);
+		hammerBody = hBody;
 		btVector3 aDims(btScalar(0.01),btScalar(0.01),btScalar(0.05));
 		btCollisionShape* axil = 
 		new btCylinderShapeZ(aDims);
@@ -496,7 +498,8 @@ void CharpyDemo::clientMoveAndDisplay()
 		m_dynamicsWorld->debugDrawWorld();
 	}
 	currentTime += simulationTimeStep;
-	renderme(); 
+	updateView();
+	renderme();
 	showMessage();
 	glFlush();
 	swapBuffers();
@@ -566,10 +569,12 @@ void CharpyDemo::showMessage()
 }
 
 void CharpyDemo::updateView(){
-	switch (viewMode){
+	switch (m_viewMode){
 	case 1:
 		break;
 	case 2:
+		m_cameraPosition=hammerBody->getCenterOfMassPosition();
+		m_cameraTargetPosition = specimenBody->getCenterOfMassPosition();
 		break;
 	}
 }
@@ -605,8 +610,9 @@ void CharpyDemo::setViewMode(int viewMode){
 	case 1:
 		setCameraDistance(btScalar(0.5));
 		m_cameraPosition.setX(btScalar(0.3));
+		m_cameraTargetPosition = btVector3(0, 0.2, 0);
 		m_cameraUp = y_up;
-		m_frustumZNear = btScalar(0.01);
+		m_frustumZNear = btScalar(0.001);
 		m_frustumZFar = btScalar(10);
 		break;
 	}
