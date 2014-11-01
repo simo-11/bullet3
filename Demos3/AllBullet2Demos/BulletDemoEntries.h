@@ -18,58 +18,71 @@
 #include "../ImportURDFDemo/ImportURDFSetup.h"
 #include "../ImportObjDemo/ImportObjSetup.h"
 #include "../ImportSTLDemo/ImportSTLSetup.h"
+#include "../ImportColladaDemo/ImportColladaSetup.h"
+
 #include "../../Demos/SerializeDemo/SerializeSetup.h"
 #include "../bullet2/MultiBodyDemo/TestJointTorqueSetup.h"
+#include "../bullet2/CollisionDetection/SupportFuncDemo.h"
+#include "../bullet2/BasicConcepts/CoordinateSystemDemo.h"
 
-static BulletDemoInterface* TestJointTorqueCreateFunc(SimpleOpenGL3App* app)
+static BulletDemoInterface* TestJointTorqueCreateFunc(CommonGraphicsApp* app)
 {
        CommonPhysicsSetup* physicsSetup = new TestJointTorqueSetup();
        return new BasicDemo(app, physicsSetup);
 }
 
-static BulletDemoInterface* LuaDemoCreateFunc(SimpleOpenGL3App* app)
+static BulletDemoInterface* LuaDemoCreateFunc(CommonGraphicsApp* app)
 {
        CommonPhysicsSetup* physicsSetup = new LuaPhysicsSetup(app);
        return new BasicDemo(app, physicsSetup);
 }
 
-static BulletDemoInterface* MyCcdPhysicsDemoCreateFunc(SimpleOpenGL3App* app)
+static BulletDemoInterface* MyCcdPhysicsDemoCreateFunc(CommonGraphicsApp* app)
 {
 	CommonPhysicsSetup* physicsSetup = new CcdPhysicsSetup();
 	return new BasicDemo(app, physicsSetup);
 }
 
-static BulletDemoInterface* MyKinematicObjectCreateFunc(SimpleOpenGL3App* app)
+static BulletDemoInterface* MyKinematicObjectCreateFunc(CommonGraphicsApp* app)
 {
 	CommonPhysicsSetup* physicsSetup = new KinematicObjectSetup();
 	return new BasicDemo(app, physicsSetup);
 }
-static BulletDemoInterface* MySerializeCreateFunc(SimpleOpenGL3App* app)
+static BulletDemoInterface* MySerializeCreateFunc(CommonGraphicsApp* app)
 {
     CommonPhysicsSetup* physicsSetup = new SerializeSetup();
 	return new BasicDemo(app, physicsSetup);
 }
-static BulletDemoInterface* MyConstraintCreateFunc(SimpleOpenGL3App* app)
+static BulletDemoInterface* MyConstraintCreateFunc(CommonGraphicsApp* app)
 {
 	CommonPhysicsSetup* physicsSetup = new ConstraintPhysicsSetup();
 	return new BasicDemo(app, physicsSetup);
 }
 
-static BulletDemoInterface* MyImportUrdfCreateFunc(SimpleOpenGL3App* app)
+static BulletDemoInterface* MyImportUrdfCreateFunc(CommonGraphicsApp* app)
 {
     CommonPhysicsSetup* physicsSetup = new ImportUrdfDemo();
 	return new BasicDemo(app, physicsSetup);
 }
-static BulletDemoInterface* MyImportObjCreateFunc(SimpleOpenGL3App* app)
+static BulletDemoInterface* MyImportObjCreateFunc(CommonGraphicsApp* app)
 {
     CommonPhysicsSetup* physicsSetup = new ImportObjDemo(app);
 	return new BasicDemo(app, physicsSetup);
 }
-static BulletDemoInterface* MyImportSTLCreateFunc(SimpleOpenGL3App* app)
+static BulletDemoInterface* MyImportSTLCreateFunc(CommonGraphicsApp* app)
 {
     CommonPhysicsSetup* physicsSetup = new ImportSTLDemo(app);
 	return new BasicDemo(app, physicsSetup);
 }
+
+static BulletDemoInterface* MyImportColladaCreateFunc(CommonGraphicsApp* app)
+{
+    CommonPhysicsSetup* physicsSetup = new ImportColladaSetup(app);
+	return new BasicDemo(app, physicsSetup);
+}
+
+
+
 
 
 struct BulletDemoEntry
@@ -83,6 +96,9 @@ struct BulletDemoEntry
 static BulletDemoEntry allDemos[]=
 {
 
+    {0,"Basic Concepts",0},
+    {1,"Basis Frame", &CoordinateSystemDemo::CreateFunc},
+	{1,"SupportFunc", &MySupportFuncDemo::CreateFunc},
 	//{"emptydemo",EmptyBulletDemo::MyCreateFunc},
 	{0,"API Demos", 0},
 
@@ -93,11 +109,12 @@ static BulletDemoEntry allDemos[]=
 	{ 1, "LuaDemo",LuaDemoCreateFunc},
 
 	{0,"File Formats", 0},
-//@todo(erwincoumans)	{ 1, "bullet", MyImportSTLCreateFunc},
+
     { 1, ".bullet",MySerializeCreateFunc},
 	{ 1, "Wavefront Obj", MyImportObjCreateFunc},
     { 1, "URDF", MyImportUrdfCreateFunc },
 	{ 1, "STL", MyImportSTLCreateFunc},
+	{ 1, "COLLADA", MyImportColladaCreateFunc},
 
 /*	{1,"ChainDemo",ChainDemo::MyCreateFunc},
 //	{0, "Stress tests", 0 },
