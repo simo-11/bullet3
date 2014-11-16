@@ -1,5 +1,8 @@
 /*
-Simo Nikula 2014 based on bullet3 Demos
+Simo Nikula 2014 based on bullet3 Demos.
+
+For video and other links see  http://youtu.be/3xU2uohZWCk
+
 Lots of details are described so that newcomers 
 missing graphics 
 or structural analysis background should be able to follow.
@@ -20,7 +23,8 @@ target is to break objects using plasticity.
 #include "btBulletDynamicsCommon.h"
 #include "BulletDynamics/ConstraintSolver/btGeneric6DofSpring2Constraint.h"
 
-#include <stdio.h> //printf debugging
+#include <stdio.h> 
+#include <time.h>
 
 GLDebugDrawer	gDebugDrawer;
 int sFrameNumber = 0;
@@ -62,6 +66,44 @@ float maxEnergy;
 btDynamicsWorld* dw;
 btVector3 y_up(0.01, 1., 0.01);
 btRigidBody *specimenBody,*hammerBody;
+btHingeConstraint *hammerHinge;
+btJointFeedback hammerHingeJointFeedback;
+btJointFeedback specimenJointFeedback;
+float maxForces[6];
+FILE *fp;
+boolean openGraphFile = false;
+
+/*
+Writes sgraph value
+*/
+void wgv(float f){
+	fprintf(fp, "%6.2f;", f);
+}
+/**
+Writes graph data if file can be opened
+*/
+void writeGraphData(){
+	if (!openGraphFile){
+		return;
+	}
+	if (!fp){
+		char buf[100];
+		sprintf(buf, "d:/wrk/charpyGraph-%ld.txt", time(NULL));
+		fp = fopen(buf, "w");
+		if (!fp){
+			openGraphFile = false;
+			return;
+		}
+	}
+	wgv(currentTime);
+	for (int i = 0; i < 3; i++){
+		wgv(specimenJointFeedback.m_appliedForceBodyA[i]);
+	}
+	for (int i = 0; i < 3; i++){
+		wgv(specimenJointFeedback.m_appliedTorqueBodyA[i]);
+	}
+	fprintf(fp, "\n");
+}
 
 btScalar getBodySpeed2(const btCollisionObject* o){
 	return o->getInterpolationLinearVelocity().length2();
@@ -79,6 +121,7 @@ void addSpringConstraints(btAlignedObjectArray<btRigidBody*> ha,
 	btGeneric6DofSpringConstraint *sc=
 				new btGeneric6DofSpringConstraint(*ha[0],*ha[1], 
 	ta[0], ta[1],true);
+	sc->setJointFeedback(&specimenJointFeedback);
 	btScalar b(w);
 	btScalar h(w-0.002); // notch is 2 mm
 	btScalar I1(b*h*h*h/12);
@@ -111,6 +154,7 @@ void addSpring2Constraints(btAlignedObjectArray<btRigidBody*> ha,
 	btGeneric6DofSpring2Constraint *sc =
 		new btGeneric6DofSpring2Constraint(*ha[0], *ha[1],
 		ta[0], ta[1]);
+	sc->setJointFeedback(&specimenJointFeedback);
 	btScalar b(w);
 	btScalar h(w - 0.002); // notch is 2 mm
 	btScalar I1(b*h*h*h / 12);
@@ -143,6 +187,7 @@ void addFixedConstraints(btAlignedObjectArray<btRigidBody*> ha,
 	btGeneric6DofConstraint *sc=
 				new btGeneric6DofConstraint(*ha[0],*ha[1], 
 	ta[0], ta[1],true);
+	sc->setJointFeedback(&specimenJointFeedback);
 	dw->addConstraint(sc, true);
 	for (int i=0;i<6;i++){	
 		sc->setLimit(i,0,0); // make fixed
@@ -242,8 +287,8 @@ void	CharpyDemo::initPhysics()
 	// dw->getSolverInfo().m_erp = 0.6; // default is 0.2
 	// dw->getSolverInfo().m_splitImpulse = true; // default is true
 	// dw->getSolverInfo().m_splitImpulsePenetrationThreshold = -0.002; // default is -0.04
-	// Tuning did not help
-
+	// dw->getSolverInfo().m_numIterations = 100;
+	// Tuning of values above did not help
 	// floor
 	{
 		btCollisionShape* groundShape = new btBoxShape(btVector3(5,floorHE,5));
@@ -344,6 +389,9 @@ void	CharpyDemo::initPhysics()
 		}
 	}
 	// hammer with arm and hinge
+	// hammer is 0.5 m wide and 0.25 m high, thickness is 0.02
+	// hammer and hinge are positioned so that impact is horizontal 
+	// (global x-direction)
 	// hammer should be able to provide impact of about 500 J
 	// m*g*h=500
 	// m~500/2/10~25 kg
@@ -368,11 +416,13 @@ void	CharpyDemo::initPhysics()
 		btTransform cTr;
 		// move compound down so that axis-position
 		// corresponding to armPivot is at y=0
-		// rotate and then move back up
+		// rotate and then move back up and in
+		// x-direction so that at impact time hammer is in down position
 		// up so that center of hammer is about y=0.2
 		const btVector3 armPivot(btZero,
 			btScalar(1),btZero);
 		btVector3 cPos(btZero,btScalar(1.2),btZero);
+		btVector3 lPos(btScalar(0.25 + w), btZero, btZero);
 		btTransform downTr;
 		btTransform upTr;
 		upTr.setIdentity();
@@ -384,9 +434,14 @@ void	CharpyDemo::initPhysics()
 		cRot.setRotation(axis,btScalar(startAngle)); // pi means up
 		btTransform axTr;
 		axTr.setIdentity();
-		axTr.setOrigin(cPos);
+		axTr.setOrigin(cPos+lPos);
+		//
+		btTransform leftTr;
+		leftTr.setIdentity();
+		leftTr.setOrigin(lPos);
 		// multiply transformations in reverse order
 		cTr.setIdentity();
+		cTr*=leftTr;
 		cTr*=upTr;
 		cTr*=btTransform(cRot);
 		cTr*=downTr;
@@ -399,9 +454,10 @@ void	CharpyDemo::initPhysics()
 		btRigidBody *axilBody=localCreateRigidBody(btZero,axTr,axil);
 		const btVector3 axilPivot(btZero,btZero,btZero);
 		btVector3 pivotAxis(btZero,btZero,btScalar(1)); 
-		btHingeConstraint *hammerHinge=
+		hammerHinge=
 			new btHingeConstraint( *hBody,*axilBody, 
 			armPivot, axilPivot, pivotAxis,pivotAxis, false );
+		hammerHinge->setJointFeedback(&hammerHingeJointFeedback);
 		m_dynamicsWorld->addConstraint(hammerHinge, true);
 	}
 	resetCcdMotionThreshHold();
@@ -422,6 +478,31 @@ btScalar minCurrentCollisionDistance(0);
 btScalar minCollisionDistance(0);
 btScalar maxImpact(0);
 btScalar maxSpeed2(0);
+
+void updateMaxForces(int baseIndex, const btVector3 &v){
+	for (int i = 0; i < 3; i++){
+		int j = baseIndex + i;
+		float absValue = btFabs(v.m_floats[i]);
+		if (absValue>maxForces[j]){
+			maxForces[j] = absValue;
+		}
+	}
+}
+
+void addForces(char *buf, const btVector3 &v){
+	sprintf(buf, "Constraint forces:X/Y/Z %9.4f/%9.4f/%9.4f N",
+		v.m_floats[0], v.m_floats[1], v.m_floats[2]);
+	updateMaxForces(0,v);
+}
+
+void addMoments(char *buf, const btVector3 &v){
+	sprintf(buf, "Constraint moments:X/Y/Z %9.4f/%9.4f/%9.4f Nm",
+		v.m_floats[0], v.m_floats[1], v.m_floats[2]);
+	updateMaxForces(3, v);
+}
+
+void checkConstraints(){
+}
 
 void checkCollisions(){
 	btScalar maxCurrentSpeed2 = btScalar(0);
@@ -495,6 +576,7 @@ void CharpyDemo::clientMoveAndDisplay()
 		}
 		checkCollisions();
 		updateEnergy();
+		checkConstraints();
 		m_dynamicsWorld->debugDrawWorld();
 	}
 	currentTime += simulationTimeStep;
@@ -516,7 +598,8 @@ void infoMsg(const char * buf){
 void CharpyDemo::showMessage()
 {
 	if((getDebugMode() & btIDebugDraw::DBG_DrawText))
-	{
+	{	
+		writeGraphData();
 		setOrthographicProjection();
 		glDisable(GL_LIGHTING);
 		glColor3f(0, 0, 0);
@@ -527,6 +610,10 @@ void CharpyDemo::showMessage()
 
 		sprintf(buf, "energy:max/current/loss %9.3g/%9.3g/%9.3g J", 
 			maxEnergy,energy,maxEnergy-energy);
+		infoMsg(buf);
+		addForces(buf, specimenJointFeedback.m_appliedForceBodyA);
+		infoMsg(buf);
+		addMoments(buf, specimenJointFeedback.m_appliedTorqueBodyA);
 		infoMsg(buf);
 		sprintf(buf, "minCollisionDistance: simulation/step %1.3f/%1.3f",
 			minCollisionDistance, minCurrentCollisionDistance);
@@ -764,9 +851,21 @@ void	CharpyDemo::exitPhysics()
 	printf("maxCollision was %f m\n",(float)(-1.*minCollisionDistance));
 	printf("maxImpact was %f J\n",maxImpact);
 	printf("maxSpeed was %f m/s\n",sqrtf(maxSpeed2));
-	maxSpeed2=btScalar(0);
+	printf("maximum constraint forces were:");
+	for (int i = 0; i < 6; i++){
+	   printf(" %6.2f", maxForces[i]);
+	}
+	printf("\n");
+	if (fp){
+		fclose(fp);
+		fp = NULL;
+	}
+	maxSpeed2 = btScalar(0);
 	maxImpact=btScalar(0);
 	minCollisionDistance=btScalar(0.f);
+	for (int i = 0; i < 6; i++){
+		maxForces[i]=0.f;
+	}
 	int i;
 
 	//cleanup in the reverse order of creation/initialization
