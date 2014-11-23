@@ -39,7 +39,7 @@ btScalar timeStep(defaultTimeStep);
 btScalar simulationTimeStep(timeStep);
 bool variableTimeStep = false;
 btScalar currentTime;
-int mode=2;
+int mode=5;
 const char *modes[] =
 {
 "None",
@@ -47,6 +47,7 @@ const char *modes[] =
 "two objects and springConstraints",
 "two objects and constraints with zero limits",
 "two objects and spring2Constraints",
+"two objects and hingeConstraint",
 };
 const char *viewModes[] =
 {
@@ -69,6 +70,8 @@ btRigidBody *specimenBody,*hammerBody;
 btHingeConstraint *hammerHinge;
 btJointFeedback hammerHingeJointFeedback;
 btJointFeedback specimenJointFeedback;
+btHingeConstraint *mode5Hinge;
+btScalar w1;
 float maxForces[6];
 FILE *fp;
 boolean openGraphFile = false;
@@ -129,7 +132,7 @@ void addSpringConstraints(btAlignedObjectArray<btRigidBody*> ha,
 	btScalar k0(E*b*h/l/2);
 	btScalar k1(48*E*I1/l/l/l);
 	btScalar k2(48*E*I1/l/l/l);
-	btScalar w1(fu*b*h*h/4);
+	w1=fu*b*h*h/4;
 	btScalar w2(fu*b*b*h/4);
 	sc->setStiffness(0,k0);
 	sc->setStiffness(1,k1);
@@ -162,7 +165,7 @@ void addSpring2Constraints(btAlignedObjectArray<btRigidBody*> ha,
 	btScalar k0(E*b*h / l / 2);
 	btScalar k1(48 * E*I1 / l / l / l);
 	btScalar k2(48 * E*I1 / l / l / l);
-	btScalar w1(fu*b*h*h / 4);
+	w1=fu*b*h*h / 4;
 	btScalar w2(fu*b*b*h / 4);
 	sc->setStiffness(0, k0);
 	sc->setStiffness(1, k1);
@@ -192,6 +195,23 @@ void addFixedConstraints(btAlignedObjectArray<btRigidBody*> ha,
 	for (int i=0;i<6;i++){	
 		sc->setLimit(i,0,0); // make fixed
 	}
+}
+
+void addHingeConstraint(btAlignedObjectArray<btRigidBody*> ha){
+	btVector3 pivotAxis(btZero, btScalar(1), btZero);
+	btVector3 pivotInA(btZero, btZero, l/4);
+	btVector3 pivotInB(btZero, btZero, -l/4);
+	btHingeConstraint *sc =
+		new btHingeConstraint(*ha[0], *ha[1],
+		pivotInA,pivotInB ,pivotAxis,pivotAxis, false);
+	mode5Hinge = sc;
+	btScalar b(w);
+	btScalar h(w - 0.002); // notch is 2 mm
+	w1=fu*b*h*h/4;
+	sc->setJointFeedback(&specimenJointFeedback);
+	sc->setLimit(-SIMD_PI, SIMD_PI); // until parts are overturn
+	sc->enableAngularMotor(true, 0, w1*timeStep);
+	dw->addConstraint(sc, true);
 }
 
 /**
@@ -252,6 +272,11 @@ void updateEnergy(){
 	}
 }
 
+/*
+X axis is horizontal, positive to direction where hammer comes from (left)
+Y axis is vertical, positive up
+Z axis is horizontal and Z=0 is symmetry plane
+*/
 void	CharpyDemo::initPhysics()
 {
 	if(firstRun){
@@ -385,6 +410,8 @@ void	CharpyDemo::initPhysics()
 			break;
 		case 4:
 			addSpring2Constraints(ha, ta);
+		case 5:
+			addHingeConstraint(ha);
 			break;
 		}
 	}
@@ -560,6 +587,16 @@ void checkCollisions(){
 	}
 }
 
+void tuneMode5(){
+	mode5Hinge->setMaxMotorImpulse(w1*timeStep);
+}
+
+void beforeStepSimulation(){
+	if (mode == 5){
+		tuneMode5();
+	}
+}
+
 
 void CharpyDemo::clientMoveAndDisplay()
 {
@@ -568,10 +605,12 @@ void CharpyDemo::clientMoveAndDisplay()
 	if (m_dynamicsWorld)	{
 		if(timeStep!=defaultTimeStep){
 			simulationTimeStep=timeStep;
+			beforeStepSimulation();
 			m_dynamicsWorld->stepSimulation(simulationTimeStep, 30, simulationTimeStep);
 		} else{
 			float ms = getDeltaTimeMicroseconds();
 			simulationTimeStep=btScalar(ms/1e6);
+			beforeStepSimulation();
 			m_dynamicsWorld->stepSimulation(simulationTimeStep, 10);
 		}
 		checkCollisions();
@@ -633,7 +672,7 @@ void CharpyDemo::showMessage()
 		infoMsg(buf);
 		sprintf(buf,"v/V to change specimen length, now=%1.6f m",l);
 		infoMsg(buf);
-		sprintf(buf,"mode(F1-F4)=F%d: %s",mode,modes[mode]);
+		sprintf(buf,"mode(F1-F5)=F%d: %s",mode,modes[mode]);
 		infoMsg(buf);
 		sprintf(buf, "viewMode(<Shift>F1-F2)=F%d: %s", m_viewMode, viewModes[m_viewMode]);
 		infoMsg(buf);
@@ -732,6 +771,10 @@ void CharpyDemo::specialKeyboard(int key, int x, int y){
 		break;
 	case GLUT_KEY_F4:
 		mode = 4;
+		clientResetScene();
+		break;
+	case GLUT_KEY_F5:
+		mode = 5;
 		clientResetScene();
 		break;
 	default:
