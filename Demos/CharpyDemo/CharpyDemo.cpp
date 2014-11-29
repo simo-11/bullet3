@@ -22,6 +22,7 @@ target is to break objects using plasticity.
 ///btBulletDynamicsCommon.h is the main Bullet include file, contains most common include files.
 #include "btBulletDynamicsCommon.h"
 #include "BulletDynamics/ConstraintSolver/btGeneric6DofSpring2Constraint.h"
+#include "btPlasticHingeConstraint.h"
 
 #include <stdio.h> 
 #include <time.h>
@@ -39,7 +40,7 @@ btScalar timeStep(defaultTimeStep);
 btScalar simulationTimeStep(timeStep);
 bool variableTimeStep = false;
 btScalar currentTime;
-int mode=5;
+int mode=6;
 const char *modes[] =
 {
 "None",
@@ -48,6 +49,7 @@ const char *modes[] =
 "two objects and constraints with zero limits",
 "two objects and spring2Constraints",
 "two objects and hingeConstraint",
+"two objects and plasticHingeConstraint",
 };
 const char *viewModes[] =
 {
@@ -66,11 +68,12 @@ float energy = 0;
 float maxEnergy;
 btDynamicsWorld* dw;
 btVector3 y_up(0.01, 1., 0.01);
-btRigidBody *specimenBody,*hammerBody;
+btRigidBody *specimenBody,*hammerBody,*specimenBody2;
 btHingeConstraint *hammerHinge;
 btJointFeedback hammerHingeJointFeedback;
 btJointFeedback specimenJointFeedback;
 btHingeConstraint *mode5Hinge;
+btPlasticHingeConstraint *mode6Hinge;
 btScalar w1;
 float maxForces[6];
 FILE *fp;
@@ -114,7 +117,7 @@ btScalar getBodySpeed2(const btCollisionObject* o){
 
 btScalar getManifoldSpeed2(btPersistentManifold* manifold){
 	btScalar s0=getBodySpeed2(manifold->getBody0());
-	btScalar s1=getBodySpeed2(manifold->getBody0());
+	btScalar s1=getBodySpeed2(manifold->getBody1());
 	return s0>s1?s0:s1;
 }
 
@@ -213,6 +216,24 @@ void addHingeConstraint(btAlignedObjectArray<btRigidBody*> ha){
 	sc->enableAngularMotor(true, 0, w1*timeStep);
 	dw->addConstraint(sc, true);
 }
+
+void addPlasticHingeConstraint(btAlignedObjectArray<btRigidBody*> ha){
+	btVector3 pivotAxis(btZero, btScalar(1), btZero);
+	btVector3 pivotInA(btZero, btZero, l / 4);
+	btVector3 pivotInB(btZero, btZero, -l / 4);
+	btPlasticHingeConstraint *sc =
+		new btPlasticHingeConstraint(*ha[0], *ha[1],
+		pivotInA, pivotInB, pivotAxis, pivotAxis, false);
+	mode6Hinge = sc;
+	btScalar b(w);
+	btScalar h(w - 0.002); // notch is 2 mm
+	w1 = fu*b*h*h / 4;
+	sc->setJointFeedback(&specimenJointFeedback);
+	sc->setLimit(-SIMD_PI, SIMD_PI); // until parts are overturn
+	sc->enableAngularMotor(true, 0, w1*timeStep);
+	dw->addConstraint(sc, true);
+}
+
 
 /**
 http://www.bulletphysics.org/mediawiki-1.5.8/index.php?title=Anti_tunneling_by_Motion_Clamping
@@ -401,6 +422,9 @@ void	CharpyDemo::initPhysics()
 			ta.push_back(ctr);
 		}
 		specimenBody = ha[0];
+		if (mode != 1){
+			specimenBody2 = ha[1];
+		}
 		switch(mode) {
 		case 2:
 			addSpringConstraints(ha,ta);
@@ -591,9 +615,17 @@ void tuneMode5(){
 	mode5Hinge->setMaxMotorImpulse(w1*timeStep);
 }
 
+void tuneMode6(){
+	mode6Hinge->setMaxMotorImpulse(w1*timeStep);
+}
+
+
 void beforeStepSimulation(){
 	if (mode == 5){
 		tuneMode5();
+	}
+	else if (mode == 6){
+		tuneMode6();
 	}
 }
 
