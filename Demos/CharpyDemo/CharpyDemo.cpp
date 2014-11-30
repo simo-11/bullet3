@@ -477,7 +477,16 @@ void	CharpyDemo::initPhysics()
 		const btVector3 armPivot(btZero,
 			btScalar(1),btZero);
 		btVector3 cPos(btZero,btScalar(1.2),btZero);
-		btVector3 lPos(btScalar(0.25 + w), btZero, btZero);
+		btScalar xPos;
+		// tune for cases where angle is negative and hammer hits from
+		// opposite (negative) side
+		if (startAngle > 0){
+			xPos = btScalar(0.25 + w);
+		}
+		else{
+			xPos = btScalar(-0.25);
+		}
+		btVector3 lPos(xPos, btZero, btZero);
 		btTransform downTr;
 		btTransform upTr;
 		upTr.setIdentity();
