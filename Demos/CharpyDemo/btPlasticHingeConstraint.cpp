@@ -50,7 +50,9 @@ btPlasticHingeConstraint::btPlasticHingeConstraint(btRigidBody& rbA,btRigidBody&
 									 m_normalCFM(0),
 									 m_normalERP(0),
 									 m_stopCFM(0),
-									 m_stopERP(0)
+									 m_stopERP(0),
+									 m_previousHingeAngle(0),
+									 m_hingeAngle(0)
 {
 	m_rbAFrame.getOrigin() = pivotInA;
 	
@@ -110,7 +112,9 @@ m_flags(0),
 m_normalCFM(0),
 m_normalERP(0),
 m_stopCFM(0),
-m_stopERP(0)
+m_stopERP(0),
+m_previousHingeAngle(0),
+m_hingeAngle(0)
 {
 
 	// since no frame is given, assume this to be zero angle and just pick rb transform axis
@@ -164,7 +168,9 @@ m_flags(0),
 m_normalCFM(0),
 m_normalERP(0),
 m_stopCFM(0),
-m_stopERP(0)
+m_stopERP(0),
+m_previousHingeAngle(0),
+m_hingeAngle(0)
 {
 #ifndef	_BT_USE_CENTER_LIMIT_
 	//start with free
@@ -194,7 +200,9 @@ m_flags(0),
 m_normalCFM(0),
 m_normalERP(0),
 m_stopCFM(0),
-m_stopERP(0)
+m_stopERP(0),
+m_previousHingeAngle(0),
+m_hingeAngle(0)
 {
 	///not providing rigidbody B means implicitly using worldspace for body B
 
@@ -699,6 +707,7 @@ btScalar btPlasticHingeConstraint::getHingeAngle(const btTransform& transA,const
 void btPlasticHingeConstraint::testLimit(const btTransform& transA,const btTransform& transB)
 {
 	// Compute limit information
+	m_previousHingeAngle = m_hingeAngle;
 	m_hingeAngle = getHingeAngle(transA,transB);
 #ifdef	_BT_USE_CENTER_LIMIT_
 	m_limit.test(m_hingeAngle);
@@ -1126,4 +1135,8 @@ btScalar btPlasticHingeConstraint::getParam(int num, int axis) const
 	return retVal;
 }
 
+btScalar btPlasticHingeConstraint::getAbsorbedEnergy(){
+	btScalar angleChange = btFabs(m_hingeAngle - m_previousHingeAngle);
+	return btScalar(m_plasticMoment*angleChange);
+}
 

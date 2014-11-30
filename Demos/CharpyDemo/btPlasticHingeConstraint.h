@@ -81,6 +81,8 @@ public:
 
 	btScalar	m_accLimitImpulse;
 	btScalar	m_hingeAngle;
+	btScalar    m_plasticMoment;
+	btScalar    m_previousHingeAngle;
 	btScalar	m_referenceSign;
 
 	bool		m_angularOnly;
@@ -246,6 +248,14 @@ public:
 
 	///The getHingeAngle gives the hinge angle in range [-PI,PI]
 	btScalar getHingeAngle();
+	btScalar getPreviousHingeAngle();
+	void inline setPlasticMoment(const btScalar plasticMoment){
+		m_plasticMoment = plasticMoment;
+	}
+	btScalar inline getPlasticMoment(){
+		return m_plasticMoment;
+	}
+	btScalar getAbsorbedEnergy();
 
 	btScalar getHingeAngle(const btTransform& transA,const btTransform& transB);
 

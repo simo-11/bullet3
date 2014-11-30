@@ -30,6 +30,7 @@ target is to break objects using plasticity.
 GLDebugDrawer	gDebugDrawer;
 int sFrameNumber = 0;
 bool firstRun=true;
+bool hammerHitsSpecimen;
 btScalar startAngle(0.3);
 long displayWait=10;
 btScalar ccdMotionThreshHold(0.001);
@@ -229,8 +230,8 @@ void addPlasticHingeConstraint(btAlignedObjectArray<btRigidBody*> ha){
 	btScalar h(w - 0.002); // notch is 2 mm
 	w1 = fu*b*h*h / 4;
 	sc->setJointFeedback(&specimenJointFeedback);
-	sc->setLimit(-SIMD_PI, SIMD_PI); // until parts are overturn
-	sc->enableAngularMotor(true, 0, w1*timeStep);
+	sc->setLimit(-SIMD_HALF_PI, SIMD_HALF_PI); // until parts are overturn
+	sc->setPlasticMoment(w1);
 	dw->addConstraint(sc, true);
 }
 
@@ -559,6 +560,7 @@ void checkConstraints(){
 }
 
 void checkCollisions(){
+	hammerHitsSpecimen = false;
 	btScalar maxCurrentSpeed2 = btScalar(0);
 	minCurrentCollisionDistance = btScalar(0);
 	int numManifolds = dw->getDispatcher()->getNumManifolds();
@@ -594,6 +596,11 @@ void checkCollisions(){
 				maxCurrentSpeed2 = maxManifoldSpeed2;
 			}
 		}
+		if ((obA == hammerBody && obB == specimenBody) ||
+			(obB == hammerBody && obA == specimenBody)
+			){
+			hammerHitsSpecimen = true;
+		}
 	}
 	if (variableTimeStep){
 		/**
@@ -615,11 +622,39 @@ void checkCollisions(){
 }
 
 void tuneMode5(){
+	// this is currently no-op if target speed is zero
 	mode5Hinge->setMaxMotorImpulse(w1*timeStep);
 }
 
+/**
+* tunes hammerSpeed
+*/
 void tuneMode6(){
-	mode6Hinge->setMaxMotorImpulse(w1*timeStep);
+	if (!hammerHitsSpecimen){
+		return;
+	}
+	btScalar energyLoss=mode6Hinge->getAbsorbedEnergy();
+	if (energyLoss > 0){
+		btRigidBody* ro = hammerBody;
+		btScalar iM = ro->getInvMass();
+		btVector3 v = ro->getLinearVelocity();
+		btScalar m = 1 / iM;
+		float linearEnergy = 0.5*m*v.length2();
+		const btVector3 rv = ro->getAngularVelocity();
+		const btVector3 iI = ro->getInvInertiaDiagLocal();
+		float inertiaEnergy = 0;
+		float rx = getRotationEnergy(iI.getX(), rv.getX());
+		float ry = getRotationEnergy(iI.getY(), rv.getY());
+		float rz = getRotationEnergy(iI.getZ(), rv.getZ());
+		float currentEnergy = linearEnergy + rx + ry + rz;
+		float velMultiplier = 0;
+		if (currentEnergy > energyLoss){
+			velMultiplier = btSqrt(1 - (energyLoss / currentEnergy));
+		}
+		ro->setLinearVelocity(velMultiplier*ro->getLinearVelocity());
+		ro->setAngularVelocity(velMultiplier*ro->getAngularVelocity());
+	}
+
 }
 
 
