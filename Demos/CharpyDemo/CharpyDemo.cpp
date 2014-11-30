@@ -437,6 +437,9 @@ void	CharpyDemo::initPhysics()
 		case 5:
 			addHingeConstraint(ha);
 			break;
+		case 6:
+			addPlasticHingeConstraint(ha);
+			break;
 		}
 	}
 	// hammer with arm and hinge
@@ -704,7 +707,7 @@ void CharpyDemo::showMessage()
 		infoMsg(buf);
 		sprintf(buf,"v/V to change specimen length, now=%1.6f m",l);
 		infoMsg(buf);
-		sprintf(buf,"mode(F1-F5)=F%d: %s",mode,modes[mode]);
+		sprintf(buf,"mode(F1-F6)=F%d: %s",mode,modes[mode]);
 		infoMsg(buf);
 		sprintf(buf, "viewMode(<Shift>F1-F2)=F%d: %s", m_viewMode, viewModes[m_viewMode]);
 		infoMsg(buf);
@@ -807,6 +810,10 @@ void CharpyDemo::specialKeyboard(int key, int x, int y){
 		break;
 	case GLUT_KEY_F5:
 		mode = 5;
+		clientResetScene();
+		break;
+	case GLUT_KEY_F6:
+		mode = 6;
 		clientResetScene();
 		break;
 	default:
