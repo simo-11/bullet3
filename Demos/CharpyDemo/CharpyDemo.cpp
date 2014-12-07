@@ -232,6 +232,7 @@ void addPlasticHingeConstraint(btAlignedObjectArray<btRigidBody*> ha){
 	sc->setJointFeedback(&specimenJointFeedback);
 	sc->setLimit(-SIMD_HALF_PI, SIMD_HALF_PI); // until parts are overturn
 	sc->setPlasticMoment(w1);
+	sc->setLimit(0, 0);
 	dw->addConstraint(sc, true);
 }
 
@@ -619,6 +620,9 @@ void checkCollisions(){
 		if (maxCurrentSpeed2>0){
 			btScalar speed = btSqrt(maxCurrentSpeed2);
 			timeStep = w / 10 / speed;
+			if (timeStep < 1e-6 || timeStep>defaultTimeStep){
+				timeStep = defaultTimeStep;
+			}
 		}else{
 			/**
 			* no manifolds -> increase timeStep
@@ -642,6 +646,15 @@ void tuneMode6(){
 	if (!hammerHitsSpecimen){
 		return;
 	}
+	if (!mode6Hinge->isPlastic()){
+		if (specimenJointFeedback.m_appliedTorqueBodyA[1]>
+			mode6Hinge->getPlasticMoment()){
+			mode6Hinge->setPlastic(true);
+		}
+		else{
+			return;
+		}
+	}
 	btScalar energyLoss=mode6Hinge->getAbsorbedEnergy();
 	if (energyLoss > 0){
 		btRigidBody* ro = hammerBody;
@@ -659,6 +672,10 @@ void tuneMode6(){
 		float velMultiplier = 0;
 		if (currentEnergy > energyLoss){
 			velMultiplier = btSqrt(1 - (energyLoss / currentEnergy));
+		}
+		// reactive elastic behaviour for current angle
+		else{
+			mode6Hinge->setPlastic(false);
 		}
 		ro->setLinearVelocity(velMultiplier*ro->getLinearVelocity());
 		ro->setAngularVelocity(velMultiplier*ro->getAngularVelocity());

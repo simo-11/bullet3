@@ -80,9 +80,12 @@ public:
 
 
 	btScalar	m_accLimitImpulse;
+	// new fields for plasticity
 	btScalar	m_hingeAngle;
 	btScalar    m_plasticMoment;
 	btScalar    m_previousHingeAngle;
+	bool        m_plastic=false;
+	// end of new fields for plasticity
 	btScalar	m_referenceSign;
 
 	bool		m_angularOnly;
@@ -256,6 +259,10 @@ public:
 		return m_plasticMoment;
 	}
 	btScalar getAbsorbedEnergy();
+	void setPlastic(bool plastic);
+	bool inline isPlastic(){
+		return m_plastic;
+	}
 
 	btScalar getHingeAngle(const btTransform& transA,const btTransform& transB);
 

@@ -1140,3 +1140,13 @@ btScalar btPlasticHingeConstraint::getAbsorbedEnergy(){
 	return btScalar(m_plasticMoment*angleChange);
 }
 
+void btPlasticHingeConstraint::setPlastic(bool plastic){
+	if (plastic){
+		setLimit(-SIMD_HALF_PI, SIMD_HALF_PI); // until parts are overturn
+	}
+	else{
+		btScalar currentAngle = getHingeAngle();
+		setLimit(currentAngle,currentAngle);
+	}
+	m_plastic = plastic;
+}
