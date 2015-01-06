@@ -75,6 +75,7 @@ btJointFeedback hammerHingeJointFeedback;
 btJointFeedback specimenJointFeedback;
 btHingeConstraint *mode5Hinge;
 btPlasticHingeConstraint *mode6Hinge;
+btScalar maxPlasticRotation = 3;
 btScalar w1;
 float maxForces[6];
 FILE *fp;
@@ -226,6 +227,7 @@ void addPlasticHingeConstraint(btAlignedObjectArray<btRigidBody*> ha){
 		new btPlasticHingeConstraint(*ha[0], *ha[1],
 		pivotInA, pivotInB, pivotAxis, pivotAxis, false);
 	mode6Hinge = sc;
+	mode6Hinge->setMaxPlasticRotation(maxPlasticRotation);
 	btScalar b(w);
 	btScalar h(w - 0.002); // notch is 2 mm
 	w1 = fu*b*h*h / 4;
@@ -643,12 +645,16 @@ void tuneMode5(){
 * tunes hammerSpeed
 */
 void tuneMode6(){
+	if (!mode6Hinge->isEnabled()){
+		return;
+	}
 	if (!hammerHitsSpecimen){
 		return;
 	}
 	if (!mode6Hinge->isPlastic()){
-		if (specimenJointFeedback.m_appliedTorqueBodyA[1]>
-			mode6Hinge->getPlasticMoment()){
+		btScalar applied = specimenJointFeedback.m_appliedTorqueBodyA[1];
+		btScalar capacity = mode6Hinge->getPlasticMoment();
+		if (applied>capacity){
 			mode6Hinge->setPlastic(true);
 		}
 		else{
@@ -674,11 +680,10 @@ void tuneMode6(){
 			velMultiplier = btSqrt(1 - (energyLoss / currentEnergy));
 		}
 		// reactive elastic behaviour for current angle
-		else{
-			mode6Hinge->setPlastic(false);
-		}
+		mode6Hinge->setPlastic(false);
 		ro->setLinearVelocity(velMultiplier*ro->getLinearVelocity());
 		ro->setAngularVelocity(velMultiplier*ro->getAngularVelocity());
+		mode6Hinge->updateCurrentPlasticRotation();
 	}
 
 }
@@ -759,6 +764,14 @@ void CharpyDemo::showMessage()
 		infoMsg(buf);
 		if (mode == 2 || mode == 4){
 			sprintf(buf, "(/) to change damping, now=%1.1f", damping);
+			infoMsg(buf);
+		}
+		if (mode==6){
+			sprintf(buf, "^a/^A to change mpr, "
+				"mpr=%1.3f, cpr=%1.3f, ha=%1.3f", 
+				mode6Hinge->getMaxPlasticRotation(),
+				mode6Hinge->getCurrentPlasticRotation(),
+				btFabs(mode6Hinge->getHingeAngle()));
 			infoMsg(buf);
 		}
 		sprintf(buf, "./:/,/; to change timeStep, now=%2.2f/%2.2f ms, auto(;)=%s",
@@ -883,25 +896,60 @@ void CharpyDemo::specialKeyboard(int key, int x, int y){
 	}
 }
 
-/**  no free keys */
-void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
-{
-	switch (key)
-	{
+void scaleMode6HingeMaxPlasticRotation(btScalar scale){
+	if (mode != 6){
+		return;
+	}
+	maxPlasticRotation = mode6Hinge->getMaxPlasticRotation();
+	maxPlasticRotation *= scale;
+	mode6Hinge->setMaxPlasticRotation(maxPlasticRotation);
+}
+
+/*
+handle control keys
+*/
+void ctrlKeyboardCallback(unsigned char key, int x, int y, int modifiers){
+	bool shiftActive=false;
+	if (modifiers & BT_ACTIVE_SHIFT){
+		shiftActive = true;
+	}
+	switch (key){
+	case 1: // a
+		if (shiftActive){
+			scaleMode6HingeMaxPlasticRotation(1.2);
+		}
+		else{
+			scaleMode6HingeMaxPlasticRotation(0.8);
+		}
+		break;
 	case '{':
 		if (displayWait < 10 && displayWait>0){
 			displayWait--;
-		}else{
-			displayWait =(long)(displayWait/1.2);
+		}
+		else{
+			displayWait = (long)(displayWait / 1.2);
 		}
 		break;
 	case '}':
 		if (displayWait < 10){
 			displayWait++;
-		}else{
+		}
+		else{
 			displayWait *= 1.2;
 		}
 		break;
+	}
+}
+/**  no free keys without modifiers */
+void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
+{
+	updateModifierKeys();
+	if (m_modifierKeys& BT_ACTIVE_CTRL){
+		ctrlKeyboardCallback(key, x, y, m_modifierKeys);
+		return;
+	}
+	switch (key)
+	{
 	case '+':
 			startAngle+=0.1;
 			clientResetScene();

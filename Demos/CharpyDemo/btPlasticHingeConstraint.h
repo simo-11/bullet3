@@ -84,6 +84,8 @@ public:
 	btScalar	m_hingeAngle;
 	btScalar    m_plasticMoment;
 	btScalar    m_previousHingeAngle;
+	btScalar    m_maxPlasticRotation=3;
+	btScalar    m_currentPlasticRotation=0;
 	bool        m_plastic=false;
 	// end of new fields for plasticity
 	btScalar	m_referenceSign;
@@ -263,8 +265,12 @@ public:
 	bool inline isPlastic(){
 		return m_plastic;
 	}
-
-	btScalar getHingeAngle(const btTransform& transA,const btTransform& transB);
+	void setMaxPlasticRotation(btScalar maxPlasticRotation);
+	btScalar getMaxPlasticRotation();
+	void setCurrentPlasticRotation(btScalar currentPlasticRotation);
+	btScalar getCurrentPlasticRotation();
+	void updateCurrentPlasticRotation();
+	btScalar getHingeAngle(const btTransform& transA, const btTransform& transB);
 
 	void testLimit(const btTransform& transA,const btTransform& transB);
 

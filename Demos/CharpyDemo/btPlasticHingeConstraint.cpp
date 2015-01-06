@@ -1140,6 +1140,13 @@ btScalar btPlasticHingeConstraint::getAbsorbedEnergy(){
 	return btScalar(m_plasticMoment*angleChange);
 }
 
+void btPlasticHingeConstraint::updateCurrentPlasticRotation(){
+	m_currentPlasticRotation += btFabs(m_hingeAngle - m_previousHingeAngle);
+	if (m_currentPlasticRotation > m_maxPlasticRotation){
+		setEnabled(false);
+	}
+}
+
 void btPlasticHingeConstraint::setPlastic(bool plastic){
 	if (plastic){
 		setLimit(-SIMD_HALF_PI, SIMD_HALF_PI); // until parts are overturn
@@ -1149,4 +1156,17 @@ void btPlasticHingeConstraint::setPlastic(bool plastic){
 		setLimit(currentAngle,currentAngle);
 	}
 	m_plastic = plastic;
+}
+
+void btPlasticHingeConstraint::setMaxPlasticRotation(btScalar plasticRotation){
+	m_maxPlasticRotation = plasticRotation;
+}
+void btPlasticHingeConstraint::setCurrentPlasticRotation(btScalar plasticRotation){
+	m_currentPlasticRotation = plasticRotation;
+}
+btScalar btPlasticHingeConstraint::getCurrentPlasticRotation(){
+	return m_currentPlasticRotation;
+}
+btScalar btPlasticHingeConstraint::getMaxPlasticRotation(){
+	return m_maxPlasticRotation;
 }
