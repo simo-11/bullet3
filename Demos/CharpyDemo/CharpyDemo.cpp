@@ -39,6 +39,8 @@ btScalar floorHE(0.1);
 btScalar defaultTimeStep(1./60);
 btScalar timeStep(defaultTimeStep);
 btScalar simulationTimeStep(timeStep);
+btScalar initialTimeStep = 0.01;
+btScalar setTimeStep = initialTimeStep;
 bool variableTimeStep = false;
 btScalar currentTime;
 int mode=6;
@@ -81,6 +83,9 @@ float maxForces[6];
 FILE *fp;
 boolean openGraphFile = false;
 
+btScalar getHammerAngle(){
+	return hammerBody->getCenterOfMassTransform().getRotation().getZ();
+}
 /*
 Writes sgraph value
 */
@@ -573,7 +578,6 @@ void checkConstraints(){
 
 void checkCollisions(){
 	hammerHitsSpecimen = false;
-	btScalar maxCurrentSpeed2 = btScalar(0);
 	minCurrentCollisionDistance = btScalar(0);
 	int numManifolds = dw->getDispatcher()->getNumManifolds();
 	for (int i=0;i<numManifolds;i++)
@@ -603,11 +607,6 @@ void checkCollisions(){
 		if (maxManifoldSpeed2>maxSpeed2){
 			maxSpeed2 = maxManifoldSpeed2;
 		}
-		if (variableTimeStep){
-			if (maxManifoldSpeed2 > maxCurrentSpeed2){
-				maxCurrentSpeed2 = maxManifoldSpeed2;
-			}
-		}
 		if ((obA == hammerBody && obB == specimenBody) ||
 			(obB == hammerBody && obA == specimenBody)
 			){
@@ -616,22 +615,13 @@ void checkCollisions(){
 	}
 	if (variableTimeStep){
 		/**
-		* tune timeStep so that it 1/10 of specimen width
-		is done in one step
+		* tune timeStep so that it 1/10 of set value if we are near hitting
 		*/
-		if (maxCurrentSpeed2>0){
-			btScalar speed = btSqrt(maxCurrentSpeed2);
-			timeStep = w / 10 / speed;
-			if (timeStep < 1e-6 || timeStep>defaultTimeStep){
-				timeStep = defaultTimeStep;
-			}
+		btScalar distance = btFabs(getHammerAngle());
+		if (distance<0.01){
+			timeStep = setTimeStep/10;
 		}else{
-			/**
-			* no manifolds -> increase timeStep
-			*/
-			if (timeStep < defaultTimeStep/1.2){
-				timeStep *= 1.2;
-			}
+			timeStep=setTimeStep;
 		}
 	}
 }
@@ -774,7 +764,7 @@ void CharpyDemo::showMessage()
 				btFabs(mode6Hinge->getHingeAngle()));
 			infoMsg(buf);
 		}
-		sprintf(buf, "./:/,/; to change timeStep, now=%2.2f/%2.2f ms, auto(;)=%s",
+		sprintf(buf, "./:/,/; to change timeStep, now=%2.3f/%2.3f ms, auto(;)=%s",
 		timeStep*1000,simulationTimeStep*1000,(variableTimeStep?"on":"off"));
 		infoMsg(buf);
 		sprintf(buf,"k/K to change specimen width, now=%1.6f m",w);
@@ -795,7 +785,8 @@ void CharpyDemo::showMessage()
 				floorHE);
 			infoMsg(buf);
 		}
-		sprintf(buf, "space to restart, currentTime=%3.4f s", currentTime);
+		sprintf(buf, "space to restart, currentTime=%3.4f s, currentAngle=%1.4f", 
+			currentTime, getHammerAngle());
 		infoMsg(buf);
 		resetPerspectiveProjection();
 		glEnable(GL_LIGHTING);
@@ -1012,12 +1003,15 @@ void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
 			break;
 	case ':':
 			timeStep=btScalar(timeStep/0.8);
+			setTimeStep = timeStep;
 			break;
 	case '.':
 			timeStep=btScalar(timeStep*0.8);
+			setTimeStep = timeStep;
 			break;
 	case ',':
 			timeStep=defaultTimeStep;
+			setTimeStep = initialTimeStep;
 			break;
 	case ';':
 			variableTimeStep = !variableTimeStep;
