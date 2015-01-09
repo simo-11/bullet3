@@ -31,17 +31,18 @@ GLDebugDrawer	gDebugDrawer;
 int sFrameNumber = 0;
 bool firstRun=true;
 bool hammerHitsSpecimen;
-btScalar startAngle(0.3);
+btScalar startAngle(1.8);
 long displayWait=10;
+long setDisplayWait = displayWait;
 btScalar ccdMotionThreshHold(0.001);
 btScalar margin(0.001);
 btScalar floorHE(0.1);
 btScalar defaultTimeStep(1./60);
 btScalar timeStep(defaultTimeStep);
 btScalar simulationTimeStep(timeStep);
-btScalar initialTimeStep = 0.01;
+btScalar initialTimeStep = 1e-4;
 btScalar setTimeStep = initialTimeStep;
-bool variableTimeStep = false;
+bool variableTimeStep = true;
 btScalar currentTime;
 int mode=6;
 const char *modes[] =
@@ -59,6 +60,7 @@ const char *viewModes[] =
 	"None",
 	"Look at anvil",
 	"Follow specimen",
+	"Follow specimen2",
 };
 btScalar btZero(0);
 btScalar btOne(1);
@@ -85,6 +87,11 @@ boolean openGraphFile = false;
 
 btScalar getHammerAngle(){
 	return hammerBody->getCenterOfMassTransform().getRotation().getZ();
+}
+
+btScalar getSpecimenDistance(){
+	btScalar d = specimenBody->getCenterOfMassPosition().length();
+	return d;
 }
 /*
 Writes sgraph value
@@ -316,6 +323,7 @@ void	CharpyDemo::initPhysics()
 		setViewMode(1);
 		firstRun=false;
 	}
+	timeStep = setTimeStep;
 	energy = 0;
 	maxEnergy = energy;
 	printf("startAngle=%f timeStep=%f\n",startAngle,timeStep);
@@ -419,6 +427,9 @@ void	CharpyDemo::initPhysics()
 				= new btDefaultMotionState(tr);
 			btRigidBody::btRigidBodyConstructionInfo 
 				rbInfo(sMass,myMotionState,shape,localInertia);
+			if (mode == 6){
+				rbInfo.m_restitution = 1;
+			}
 			btRigidBody* body =
 				new btRigidBody(rbInfo);
 			m_dynamicsWorld->addRigidBody(body);
@@ -460,22 +471,22 @@ void	CharpyDemo::initPhysics()
 	// m~500/2/10~25 kg
 	{
 		btCompoundShape* compound = new btCompoundShape();
-		btCollisionShape* hammer = 
-			new btBoxShape(btVector3(0.25,0.125,0.01));
-		btScalar hMass=0.5*0.25*0.02*7800;
+		btCollisionShape* hammer =
+			new btBoxShape(btVector3(0.25, 0.125, 0.01));
+		btScalar hMass = 0.5*0.25*0.02 * 7800;
 		btTransform hTr;
 		hTr.setIdentity();
 		// create hammer at y=0
-		compound->addChildShape(hTr,hammer);
-		btCollisionShape* arm = 
-			new btBoxShape(btVector3(0.02,0.5,0.02));
-		btScalar aMass=0.04*1.0*0.04*7800;
+		compound->addChildShape(hTr, hammer);
+		btCollisionShape* arm =
+			new btBoxShape(btVector3(0.02, 0.5, 0.02));
+		btScalar aMass = 0.04*1.0*0.04 * 7800;
 		btTransform aTr;
 		aTr.setIdentity();
 		// arm above hammer
-		btVector3 aPos(btZero,btScalar(0.5+0.125),btZero);
+		btVector3 aPos(btZero, btScalar(0.5 + 0.125), btZero);
 		aTr.setOrigin(aPos);
-		compound->addChildShape(aTr,arm);
+		compound->addChildShape(aTr, arm);
 		btTransform cTr;
 		// move compound down so that axis-position
 		// corresponding to armPivot is at y=0
@@ -483,8 +494,8 @@ void	CharpyDemo::initPhysics()
 		// x-direction so that at impact time hammer is in down position
 		// up so that center of hammer is about y=0.2
 		const btVector3 armPivot(btZero,
-			btScalar(1),btZero);
-		btVector3 cPos(btZero,btScalar(1.2),btZero);
+			btScalar(1), btZero);
+		btVector3 cPos(btZero, btScalar(1.2), btZero);
 		btScalar xPos;
 		// tune for cases where angle is negative and hammer hits from
 		// opposite (negative) side
@@ -502,23 +513,26 @@ void	CharpyDemo::initPhysics()
 		downTr.setIdentity();
 		downTr.setOrigin(btScalar(-1)*armPivot);
 		btQuaternion cRot;
-		btVector3 axis(btZero,btZero,btScalar(1));
-		cRot.setRotation(axis,btScalar(startAngle)); // pi means up
+		btVector3 axis(btZero, btZero, btScalar(1));
+		cRot.setRotation(axis, btScalar(startAngle)); // pi means up
 		btTransform axTr;
 		axTr.setIdentity();
-		axTr.setOrigin(cPos+lPos);
+		axTr.setOrigin(cPos + lPos);
 		//
 		btTransform leftTr;
 		leftTr.setIdentity();
 		leftTr.setOrigin(lPos);
 		// multiply transformations in reverse order
 		cTr.setIdentity();
-		cTr*=leftTr;
-		cTr*=upTr;
-		cTr*=btTransform(cRot);
-		cTr*=downTr;
-		btRigidBody *hBody=localCreateRigidBody(hMass+aMass,cTr,compound);
+		cTr *= leftTr;
+		cTr *= upTr;
+		cTr *= btTransform(cRot);
+		cTr *= downTr;
+		btRigidBody *hBody = localCreateRigidBody(hMass + aMass, cTr, compound);
 		hammerBody = hBody;
+		if (mode == 6){
+			hammerBody->setRestitution(1);
+		}
 		btVector3 aDims(btScalar(0.01),btScalar(0.01),btScalar(0.05));
 		btCollisionShape* axil = 
 		new btCylinderShapeZ(aDims);
@@ -576,6 +590,14 @@ void addMoments(char *buf, const btVector3 &v){
 void checkConstraints(){
 }
 
+void tuneDisplayWait(){
+	if (timeStep<1e-3){
+		displayWait = 2;
+	}else{
+		displayWait = setDisplayWait;
+	}
+
+}
 void checkCollisions(){
 	hammerHitsSpecimen = false;
 	minCurrentCollisionDistance = btScalar(0);
@@ -615,14 +637,24 @@ void checkCollisions(){
 	}
 	if (variableTimeStep){
 		/**
-		* tune timeStep so that it 1/10 of set value if we are near hitting
+		* tune timeStep so that simulation goes hm times
+		* faster if hammer or specimen is outside impact area 
 		*/
+		btScalar specimenDistance = getSpecimenDistance();
 		btScalar distance = btFabs(getHammerAngle());
-		if (distance<0.01){
-			timeStep = setTimeStep/10;
+		btScalar lowLimit = 0.05;
+		btScalar highLimit = 0.2;
+		btScalar specimenLimit = 0.5;
+		btScalar hm = 10;
+		if (specimenDistance>specimenLimit || distance > highLimit){
+			timeStep = setTimeStep * hm;
+		}else if (distance<lowLimit){
+			timeStep = setTimeStep;
 		}else{
-			timeStep=setTimeStep;
+			btScalar m = (distance - lowLimit) / (highLimit - lowLimit);
+			timeStep=(1+m*(hm-1))*setTimeStep;
 		}
+		tuneDisplayWait();
 	}
 }
 
@@ -748,7 +780,7 @@ void CharpyDemo::showMessage()
 		sprintf(buf, "minCollisionDistance: simulation/step %1.3f/%1.3f",
 			minCollisionDistance, minCurrentCollisionDistance);
 		infoMsg(buf);
-		sprintf(buf, "{/} to change displayWait, now=%3ld ms", displayWait);
+		sprintf(buf, "{/} to change displayWait, now=%3ld/%3ld ms", setDisplayWait,displayWait);
 		infoMsg(buf);
 		sprintf(buf,"+/- to change start angle, now=%1.1f",startAngle);
 		infoMsg(buf);
@@ -764,8 +796,8 @@ void CharpyDemo::showMessage()
 				btFabs(mode6Hinge->getHingeAngle()));
 			infoMsg(buf);
 		}
-		sprintf(buf, "./:/,/; to change timeStep, now=%2.3f/%2.3f ms, auto(;)=%s",
-		timeStep*1000,simulationTimeStep*1000,(variableTimeStep?"on":"off"));
+		sprintf(buf, "timeStep ./:/,/; now=%2.3f/%2.3f/%2.3f ms, auto(;)=%s",
+		setTimeStep*1000,timeStep*1000,simulationTimeStep*1000,(variableTimeStep?"on":"off"));
 		infoMsg(buf);
 		sprintf(buf,"k/K to change specimen width, now=%1.6f m",w);
 		infoMsg(buf);
@@ -773,7 +805,7 @@ void CharpyDemo::showMessage()
 		infoMsg(buf);
 		sprintf(buf,"mode(F1-F6)=F%d: %s",mode,modes[mode]);
 		infoMsg(buf);
-		sprintf(buf, "viewMode(<Shift>F1-F2)=F%d: %s", m_viewMode, viewModes[m_viewMode]);
+		sprintf(buf, "viewMode(<Shift>F1-F3)=F%d: %s", m_viewMode, viewModes[m_viewMode]);
 		infoMsg(buf);
 		if (false){ // these do not currently seem interesting
 			sprintf(buf, "</> to change ccdMotionThreshHold, now=%1.8f m",
@@ -801,6 +833,10 @@ void CharpyDemo::updateView(){
 	case 2:
 		m_cameraPosition=hammerBody->getCenterOfMassPosition();
 		m_cameraTargetPosition = specimenBody->getCenterOfMassPosition();
+		break;
+	case 3:
+		m_cameraPosition = hammerBody->getCenterOfMassPosition();
+		m_cameraTargetPosition = specimenBody2->getCenterOfMassPosition();
 		break;
 	}
 }
@@ -859,15 +895,18 @@ void CharpyDemo::specialKeyboard(int key, int x, int y){
 	case GLUT_KEY_F2:
 		if (m_modifierKeys& BT_ACTIVE_SHIFT){
 			setViewMode(2);
-		}
-		else{
+		}else{
 			mode = 2;
 			clientResetScene();
 		}
 		break;
 	case GLUT_KEY_F3:
-		mode = 3;
-		clientResetScene();
+		if (m_modifierKeys& BT_ACTIVE_SHIFT){
+			setViewMode(3);
+		}else{
+			mode = 3;
+			clientResetScene();
+		}
 		break;
 	case GLUT_KEY_F4:
 		mode = 4;
@@ -914,20 +953,22 @@ void ctrlKeyboardCallback(unsigned char key, int x, int y, int modifiers){
 		}
 		break;
 	case '{':
-		if (displayWait < 10 && displayWait>0){
-			displayWait--;
+		if (setDisplayWait < 10 && setDisplayWait>0){
+			setDisplayWait--;
 		}
 		else{
-			displayWait = (long)(displayWait / 1.2);
+			setDisplayWait = (long)(setDisplayWait / 1.2);
 		}
+		displayWait = setDisplayWait;
 		break;
 	case '}':
-		if (displayWait < 10){
-			displayWait++;
+		if (setDisplayWait < 10){
+			setDisplayWait++;
 		}
 		else{
-			displayWait *= 1.2;
+			setDisplayWait *= 1.2;
 		}
+		displayWait = setDisplayWait;
 		break;
 	}
 }
@@ -1002,19 +1043,17 @@ void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
 			clientResetScene();
 			break;
 	case ':':
-			timeStep=btScalar(timeStep/0.8);
-			setTimeStep = timeStep;
+			setTimeStep=btScalar(setTimeStep/0.8);
 			break;
 	case '.':
-			timeStep=btScalar(timeStep*0.8);
-			setTimeStep = timeStep;
+			setTimeStep = btScalar(setTimeStep*0.8);
 			break;
 	case ',':
-			timeStep=defaultTimeStep;
 			setTimeStep = initialTimeStep;
 			break;
 	case ';':
 			variableTimeStep = !variableTimeStep;
+			displayWait = setDisplayWait;
 			break;
 	case 'i':
 		getDeltaTimeMicroseconds(); // get net time
