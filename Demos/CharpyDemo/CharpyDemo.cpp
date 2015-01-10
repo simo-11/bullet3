@@ -79,6 +79,7 @@ btJointFeedback hammerHingeJointFeedback;
 btJointFeedback specimenJointFeedback;
 btHingeConstraint *mode5Hinge;
 btPlasticHingeConstraint *mode6Hinge;
+btScalar restitution = 0.;
 btScalar maxPlasticRotation = 3;
 btScalar w1;
 float maxForces[6];
@@ -309,6 +310,12 @@ void updateEnergy(){
 	}
 }
 
+void tuneRestitution(btRigidBody* rb){
+	if (mode == 6){
+		rb->setRestitution(restitution);
+	}
+}
+
 /*
 X axis is horizontal, positive to direction where hammer comes from (left)
 Y axis is vertical, positive up
@@ -354,7 +361,7 @@ void	CharpyDemo::initPhysics()
 	// Tuning of values above did not help
 	// floor
 	{
-		btCollisionShape* groundShape = new btBoxShape(btVector3(5,floorHE,5));
+		btCollisionShape* groundShape = new btBoxShape(btVector3(50,floorHE,50));
 		m_collisionShapes.push_back(groundShape);
 		btTransform groundTransform;
 		groundTransform.setIdentity();
@@ -376,7 +383,8 @@ void	CharpyDemo::initPhysics()
 			tr.setIdentity();
 			btVector3 pos(0,btScalar(0.1),btScalar((i==0?-1:1)*0.04));
 			tr.setOrigin(pos);
-			localCreateRigidBody(0.f,tr,shape);
+			btRigidBody* rb=localCreateRigidBody(0.f,tr,shape);
+			tuneRestitution(rb);
 		}
 	}
 	{ // back support
@@ -394,7 +402,8 @@ void	CharpyDemo::initPhysics()
 				btScalar(0.22+w),
 				btScalar((i==0?-1:1)*0.04));
 			tr.setOrigin(pos);
-			localCreateRigidBody(0.f,tr,shape);
+			btRigidBody* rb=localCreateRigidBody(0.f, tr, shape);
+			tuneRestitution(rb);
 		}
 	}
 
@@ -427,11 +436,9 @@ void	CharpyDemo::initPhysics()
 				= new btDefaultMotionState(tr);
 			btRigidBody::btRigidBodyConstructionInfo 
 				rbInfo(sMass,myMotionState,shape,localInertia);
-			if (mode == 6){
-				rbInfo.m_restitution = 1;
-			}
 			btRigidBody* body =
 				new btRigidBody(rbInfo);
+			tuneRestitution(body);
 			m_dynamicsWorld->addRigidBody(body);
 			ha.push_back(body);
 			btTransform ctr;
@@ -530,9 +537,7 @@ void	CharpyDemo::initPhysics()
 		cTr *= downTr;
 		btRigidBody *hBody = localCreateRigidBody(hMass + aMass, cTr, compound);
 		hammerBody = hBody;
-		if (mode == 6){
-			hammerBody->setRestitution(1);
-		}
+		tuneRestitution(hammerBody);
 		btVector3 aDims(btScalar(0.01),btScalar(0.01),btScalar(0.05));
 		btCollisionShape* axil = 
 		new btCylinderShapeZ(aDims);
@@ -784,6 +789,10 @@ void CharpyDemo::showMessage()
 		infoMsg(buf);
 		sprintf(buf,"+/- to change start angle, now=%1.1f",startAngle);
 		infoMsg(buf);
+		sprintf(buf, "^b/^B restitution %1.3f, ^c/^C for fu %9.3e Pa",
+			restitution,
+			fu);
+		infoMsg(buf);
 		if (mode == 2 || mode == 4){
 			sprintf(buf, "(/) to change damping, now=%1.1f", damping);
 			infoMsg(buf);
@@ -938,7 +947,7 @@ void scaleMode6HingeMaxPlasticRotation(btScalar scale){
 /*
 handle control keys
 */
-void ctrlKeyboardCallback(unsigned char key, int x, int y, int modifiers){
+bool ctrlKeyboardCallback(unsigned char key, int x, int y, int modifiers){
 	bool shiftActive=false;
 	if (modifiers & BT_ACTIVE_SHIFT){
 		shiftActive = true;
@@ -952,6 +961,25 @@ void ctrlKeyboardCallback(unsigned char key, int x, int y, int modifiers){
 			scaleMode6HingeMaxPlasticRotation(0.8);
 		}
 		break;
+	case 2: //b
+		if (shiftActive){
+			if (restitution < 1){
+				restitution += 0.1;
+				return true;
+			}
+		}
+		else if (restitution>0.){
+			restitution -= 0.1;
+			return true;
+		}
+		break;
+	case 3: //c
+		if (shiftActive){
+			fu *= 1.2;
+		} else {
+			fu /= 1.2;
+		}
+		return true;
 	case '{':
 		if (setDisplayWait < 10 && setDisplayWait>0){
 			setDisplayWait--;
@@ -971,13 +999,16 @@ void ctrlKeyboardCallback(unsigned char key, int x, int y, int modifiers){
 		displayWait = setDisplayWait;
 		break;
 	}
+	return false;
 }
 /**  no free keys without modifiers */
 void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
 {
 	updateModifierKeys();
 	if (m_modifierKeys& BT_ACTIVE_CTRL){
-		ctrlKeyboardCallback(key, x, y, m_modifierKeys);
+		if (ctrlKeyboardCallback(key, x, y, m_modifierKeys)){
+			clientResetScene();
+		}
 		return;
 	}
 	switch (key)
