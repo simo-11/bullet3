@@ -37,9 +37,8 @@ long setDisplayWait = displayWait;
 btScalar ccdMotionThreshHold(0.001);
 btScalar margin(0.001);
 btScalar floorHE(0.1);
-btScalar defaultTimeStep(1./60);
+btScalar defaultTimeStep(0.005);
 btScalar timeStep(defaultTimeStep);
-btScalar simulationTimeStep(timeStep);
 btScalar initialTimeStep = 1e-4;
 btScalar setTimeStep = initialTimeStep;
 bool variableTimeStep = true;
@@ -48,7 +47,7 @@ int mode=6;
 const char *modes[] =
 {
 "None",
-"single object",
+"single rigid object",
 "two objects and springConstraints",
 "two objects and constraints with zero limits",
 "two objects and spring2Constraints",
@@ -90,9 +89,19 @@ btScalar getHammerAngle(){
 	return hammerBody->getCenterOfMassTransform().getRotation().getZ();
 }
 
-btScalar getSpecimenDistance(){
-	btScalar d = specimenBody->getCenterOfMassPosition().length();
-	return d;
+// set in initPhysics
+btVector3* basePoint;
+/**
+* return distance of specimen squared from base point
+*/
+btScalar getSpecimenDistance2(){
+	btVector3 p1 = specimenBody->getCenterOfMassPosition();
+	if (mode == 1){
+		return (p1-*basePoint).length2();
+	}
+	btVector3 p2 = specimenBody2->getCenterOfMassPosition();
+	return (((p1 + p2) / 2) - *basePoint).length2();
+
 }
 /*
 Writes sgraph value
@@ -311,9 +320,7 @@ void updateEnergy(){
 }
 
 void tuneRestitution(btRigidBody* rb){
-	if (mode == 6){
-		rb->setRestitution(restitution);
-	}
+	rb->setRestitution(restitution);
 }
 
 /*
@@ -334,6 +341,7 @@ void	CharpyDemo::initPhysics()
 	energy = 0;
 	maxEnergy = energy;
 	printf("startAngle=%f timeStep=%f\n",startAngle,timeStep);
+	basePoint = new btVector3(w / 2, 0.2 + w / 2, 0);
 	///collision configuration contains default setup for memory, collision setup
 	m_collisionConfiguration = new btDefaultCollisionConfiguration();
 	//m_collisionConfiguration->setConvexConvexMultipointIterations();
@@ -645,13 +653,13 @@ void checkCollisions(){
 		* tune timeStep so that simulation goes hm times
 		* faster if hammer or specimen is outside impact area 
 		*/
-		btScalar specimenDistance = getSpecimenDistance();
+		btScalar specimenDistance2 = getSpecimenDistance2();
 		btScalar distance = btFabs(getHammerAngle());
 		btScalar lowLimit = 0.05;
 		btScalar highLimit = 0.2;
-		btScalar specimenLimit = 0.5;
-		btScalar hm = 10;
-		if (specimenDistance>specimenLimit || distance > highLimit){
+		btScalar specimenLimit2 = l*l; // compare ^2
+		btScalar hm = defaultTimeStep/setTimeStep;
+		if (specimenDistance2>specimenLimit2 || distance > highLimit){
 			timeStep = setTimeStep * hm;
 		}else if (distance<lowLimit){
 			timeStep = setTimeStep;
@@ -731,22 +739,14 @@ void CharpyDemo::clientMoveAndDisplay()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 	///step the simulation
 	if (m_dynamicsWorld)	{
-		if(timeStep!=defaultTimeStep){
-			simulationTimeStep=timeStep;
-			beforeStepSimulation();
-			m_dynamicsWorld->stepSimulation(simulationTimeStep, 30, simulationTimeStep);
-		} else{
-			float ms = getDeltaTimeMicroseconds();
-			simulationTimeStep=btScalar(ms/1e6);
-			beforeStepSimulation();
-			m_dynamicsWorld->stepSimulation(simulationTimeStep, 10);
-		}
+		beforeStepSimulation();
+		m_dynamicsWorld->stepSimulation(timeStep, 30, timeStep);
 		checkCollisions();
 		updateEnergy();
 		checkConstraints();
 		m_dynamicsWorld->debugDrawWorld();
 	}
-	currentTime += simulationTimeStep;
+	currentTime += timeStep;
 	updateView();
 	renderme();
 	showMessage();
@@ -805,8 +805,8 @@ void CharpyDemo::showMessage()
 				btFabs(mode6Hinge->getHingeAngle()));
 			infoMsg(buf);
 		}
-		sprintf(buf, "timeStep ./:/,/; now=%2.3f/%2.3f/%2.3f ms, auto(;)=%s",
-		setTimeStep*1000,timeStep*1000,simulationTimeStep*1000,(variableTimeStep?"on":"off"));
+		sprintf(buf, "timeStep ./:/,/; now=%2.3f/%2.3f ms, auto(;)=%s",
+		setTimeStep*1000,timeStep*1000,(variableTimeStep?"on":"off"));
 		infoMsg(buf);
 		sprintf(buf,"k/K to change specimen width, now=%1.6f m",w);
 		infoMsg(buf);
@@ -1167,6 +1167,8 @@ void	CharpyDemo::exitPhysics()
 	delete m_collisionConfiguration;
 	m_collisionConfiguration=0;
 
+	delete basePoint;
+	basePoint = 0;
 }
 
 
