@@ -374,7 +374,9 @@ void	CharpyDemo::initPhysics()
 		btTransform groundTransform;
 		groundTransform.setIdentity();
 		groundTransform.setOrigin(btVector3(0,-floorHE,0));
-		localCreateRigidBody(0.f,groundTransform,groundShape);
+		btRigidBody* rb=localCreateRigidBody(0.f, groundTransform, groundShape);
+		rb->setFriction(0.8); //
+		rb->setRollingFriction(0.8); //
 	}
 
 
