@@ -22,6 +22,10 @@ target is to break objects using plasticity.
 ///btBulletDynamicsCommon.h is the main Bullet include file, contains most common include files.
 #include "btBulletDynamicsCommon.h"
 #include "BulletDynamics/ConstraintSolver/btGeneric6DofSpring2Constraint.h"
+#include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
+#include "BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h"
+#include "BulletDynamics/MLCPSolvers/btMLCPSolver.h"
+#include "BulletDynamics/ConstraintSolver/btNNCGConstraintSolver.h"
 #include "btPlasticHingeConstraint.h"
 
 #include <stdio.h> 
@@ -84,6 +88,64 @@ btScalar w1;
 float maxForces[6];
 FILE *fp;
 boolean openGraphFile = false;
+int solverType = 1;
+btConstraintSolverType solverTypes[] = {
+	BT_SEQUENTIAL_IMPULSE_SOLVER,
+	BT_SEQUENTIAL_IMPULSE_SOLVER,
+	BT_MLCP_SOLVER,
+	BT_NNCG_SOLVER
+};
+const char * solverTypeNames[] = {
+	"",
+	"SI (Sequential Impulse)",
+	"MLCP (Mixed Linear Complementarity Problem)",
+	"NNCG (Nonlinear Nonsmooth Conjugate Gradient)"
+};
+
+btConstraintSolver* getSolver(){
+	btConstraintSolver* sol;
+	switch (solverTypes[solverType]){
+	case BT_SEQUENTIAL_IMPULSE_SOLVER:
+		sol = new btSequentialImpulseConstraintSolver;
+		break;
+	case BT_MLCP_SOLVER:
+		{
+		btDantzigSolver* mlcp = new btDantzigSolver();
+		sol = new btMLCPSolver(mlcp);
+		}
+		break;
+	case BT_NNCG_SOLVER:
+		sol=new btNNCGConstraintSolver();
+		break;
+	}
+	return sol;
+}
+
+/* 
+Adapted from ForkLiftDemo
+Should not make big difference in this case but may be useful if larger adaptions are used
+
+*/
+void tuneSolver(){
+	switch (solverTypes[solverType]){
+	case BT_SEQUENTIAL_IMPULSE_SOLVER:
+		dw->getSolverInfo().m_minimumSolverBatchSize = 128;
+		break;
+	case BT_MLCP_SOLVER:
+		dw->getSolverInfo().m_minimumSolverBatchSize = 1;
+		break;
+	default:
+		dw->getSolverInfo().m_minimumSolverBatchSize = 128;
+		break;
+	}
+	// dw->getSolverInfo().m_erp2 = 0.95; // default is 0.8
+	// dw->getSolverInfo().m_erp = 0.6; // default is 0.2
+	// dw->getSolverInfo().m_splitImpulse = true; // default is true
+	// dw->getSolverInfo().m_splitImpulsePenetrationThreshold = -0.002; // default is -0.04
+	// dw->getSolverInfo().m_numIterations = 100;
+	// Tuning of values above did not make big difference
+}
+
 
 btScalar getHammerAngle(){
 	return hammerBody->getCenterOfMassTransform().getRotation().getZ();
@@ -351,9 +413,7 @@ void	CharpyDemo::initPhysics()
 
 	m_broadphase = new btDbvtBroadphase();
 
-	///the default constraint solver. For parallel processing you can use a different solver (see Extras/BulletMultiThreaded)
-	btSequentialImpulseConstraintSolver* sol = new btSequentialImpulseConstraintSolver;
-	m_solver = sol;
+	m_solver = getSolver();
 
 	//m_dynamicsWorld = new btDiscreteDynamicsWorld(m_dispatcher,m_broadphase,m_solver,m_collisionConfiguration);
 
@@ -361,12 +421,7 @@ void	CharpyDemo::initPhysics()
 		new btDiscreteDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collisionConfiguration);
 	m_dynamicsWorld = btWorld;
 	dw=m_dynamicsWorld;
-	// dw->getSolverInfo().m_erp2 = 0.95; // default is 0.8
-	// dw->getSolverInfo().m_erp = 0.6; // default is 0.2
-	// dw->getSolverInfo().m_splitImpulse = true; // default is true
-	// dw->getSolverInfo().m_splitImpulsePenetrationThreshold = -0.002; // default is -0.04
-	// dw->getSolverInfo().m_numIterations = 100;
-	// Tuning of values above did not help
+	tuneSolver();
 	// floor
 	{
 		btCollisionShape* groundShape = new btBoxShape(btVector3(50,floorHE,50));
@@ -818,6 +873,8 @@ void CharpyDemo::showMessage()
 		infoMsg(buf);
 		sprintf(buf, "viewMode(<Shift>F1-F3)=F%d: %s", m_viewMode, viewModes[m_viewMode]);
 		infoMsg(buf);
+		sprintf(buf, "solverType(<Ctrl>F1-F3)=F%d: %s", solverType, solverTypeNames[solverType]);
+		infoMsg(buf);
 		if (false){ // these do not currently seem interesting
 			sprintf(buf, "</> to change ccdMotionThreshHold, now=%1.8f m",
 				ccdMotionThreshHold);
@@ -891,49 +948,66 @@ void CharpyDemo::setViewMode(int viewMode){
 	}
 }
 
+void setSolverType(int val){
+	solverType = val;
+}
+
 void CharpyDemo::specialKeyboard(int key, int x, int y){
 	updateModifierKeys();
-
+	bool resetScene = false;
 	switch (key){
 	case GLUT_KEY_F1:
-		if (m_modifierKeys& BT_ACTIVE_SHIFT){
+		if (m_modifierKeys& BT_ACTIVE_CTRL){
+			setSolverType(1);
+			resetScene = true;
+		}else if (m_modifierKeys& BT_ACTIVE_SHIFT){
 			setViewMode(1);
-		}else{
-		  mode = 1;
-		  clientResetScene();
+		}
+		else{
+			mode = 1;
+			resetScene = true;
 		}
 		break;
 	case GLUT_KEY_F2:
-		if (m_modifierKeys& BT_ACTIVE_SHIFT){
+		if (m_modifierKeys& BT_ACTIVE_CTRL){
+			setSolverType(2);
+			resetScene = true;
+		} else if (m_modifierKeys& BT_ACTIVE_SHIFT){
 			setViewMode(2);
-		}else{
+		} else{
 			mode = 2;
-			clientResetScene();
+			resetScene = true;
 		}
 		break;
 	case GLUT_KEY_F3:
-		if (m_modifierKeys& BT_ACTIVE_SHIFT){
+		if (m_modifierKeys& BT_ACTIVE_CTRL){
+			setSolverType(3);
+			resetScene = true;
+		} else 	if (m_modifierKeys& BT_ACTIVE_SHIFT){
 			setViewMode(3);
-		}else{
+		} else{
 			mode = 3;
-			clientResetScene();
+			resetScene = true;
 		}
 		break;
 	case GLUT_KEY_F4:
 		mode = 4;
-		clientResetScene();
+		resetScene = true;
 		break;
 	case GLUT_KEY_F5:
 		mode = 5;
-		clientResetScene();
+		resetScene = true;
 		break;
 	case GLUT_KEY_F6:
 		mode = 6;
-		clientResetScene();
+		resetScene = true;
 		break;
 	default:
 		PlatformDemoApplication::specialKeyboard(key, x, y);
 		break;
+	}
+	if (resetScene)	{
+		clientResetScene();
 	}
 }
 
