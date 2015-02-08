@@ -1007,9 +1007,11 @@ void btPlasticHingeConstraint::getInfo2InternalUsingFrameOffset(btConstraintInfo
 			}
 			if(lostop == histop) 
 			{
-				// limited low and high simultaneously
-				info->m_lowerLimit[srow] = -SIMD_INFINITY;
-				info->m_upperLimit[srow] = SIMD_INFINITY;
+				// begin plasticHingeConstraint change
+				btScalar maxImpulse = m_plasticMoment / info->fps;
+				info->m_lowerLimit[srow] = -maxImpulse;
+				info->m_upperLimit[srow] = maxImpulse;
+				// end plasticHingeConstraint change
 			}
 			else if(limit == 1) 
 			{ // low limit
