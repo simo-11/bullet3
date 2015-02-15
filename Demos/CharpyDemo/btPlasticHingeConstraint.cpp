@@ -707,7 +707,6 @@ btScalar btPlasticHingeConstraint::getHingeAngle(const btTransform& transA,const
 void btPlasticHingeConstraint::testLimit(const btTransform& transA,const btTransform& transB)
 {
 	// Compute limit information
-	m_previousHingeAngle = m_hingeAngle;
 	m_hingeAngle = getHingeAngle(transA,transB);
 #ifdef	_BT_USE_CENTER_LIMIT_
 	m_limit.test(m_hingeAngle);
@@ -1008,6 +1007,8 @@ void btPlasticHingeConstraint::getInfo2InternalUsingFrameOffset(btConstraintInfo
 			if(lostop == histop) 
 			{
 				// begin plasticHingeConstraint change
+				// SIMD_INFINITY replaced by maximum impulse
+				// based on plasticMoment*timeStep
 				btScalar maxImpulse = m_plasticMoment / info->fps;
 				info->m_lowerLimit[srow] = -maxImpulse;
 				info->m_upperLimit[srow] = maxImpulse;
@@ -1143,21 +1144,15 @@ btScalar btPlasticHingeConstraint::getAbsorbedEnergy(){
 }
 
 void btPlasticHingeConstraint::updateCurrentPlasticRotation(){
+	if (true){
+		btScalar currentAngle = getHingeAngle();
+		setLimit(currentAngle, currentAngle);
+	}
 	m_currentPlasticRotation += btFabs(m_hingeAngle - m_previousHingeAngle);
+	m_previousHingeAngle = m_hingeAngle;
 	if (m_currentPlasticRotation > m_maxPlasticRotation){
 		setEnabled(false);
 	}
-}
-
-void btPlasticHingeConstraint::setPlastic(bool plastic){
-	if (plastic){
-		setLimit(-SIMD_HALF_PI, SIMD_HALF_PI); // until parts are overturn
-	}
-	else{
-		btScalar currentAngle = getHingeAngle();
-		setLimit(currentAngle,currentAngle);
-	}
-	m_plastic = plastic;
 }
 
 void btPlasticHingeConstraint::setMaxPlasticRotation(btScalar plasticRotation){

@@ -735,6 +735,7 @@ void tuneMode5(){
 
 /**
 * tunes hammerSpeed
+* currently mostly no-op as moment is handled in btHingeConstraint.
 */
 void tuneMode6(){
 	if (!mode6Hinge->isEnabled()){
@@ -743,17 +744,13 @@ void tuneMode6(){
 	if (!hammerHitsSpecimen){
 		return;
 	}
-	if (!mode6Hinge->isPlastic()){
-		btScalar applied = specimenJointFeedback.m_appliedTorqueBodyA[1];
-		btScalar capacity = mode6Hinge->getPlasticMoment();
-		if (applied>capacity){
-			mode6Hinge->setPlastic(true);
-		}
-		else{
-			return;
-		}
+	btScalar applied = specimenJointFeedback.m_appliedTorqueBodyA[1];
+	btScalar capacity = mode6Hinge->getPlasticMoment();
+	if (applied>=capacity){
+		mode6Hinge->updateCurrentPlasticRotation();
 	}
-	btScalar energyLoss=mode6Hinge->getAbsorbedEnergy();
+	return;
+	btScalar energyLoss = mode6Hinge->getAbsorbedEnergy();
 	if (energyLoss > 0){
 		btRigidBody* ro = hammerBody;
 		btScalar iM = ro->getInvMass();
@@ -771,11 +768,8 @@ void tuneMode6(){
 		if (currentEnergy > energyLoss){
 			velMultiplier = btSqrt(1 - (energyLoss / currentEnergy));
 		}
-		// reactive elastic behaviour for current angle
-		mode6Hinge->setPlastic(false);
 		ro->setLinearVelocity(velMultiplier*ro->getLinearVelocity());
 		ro->setAngularVelocity(velMultiplier*ro->getAngularVelocity());
-		mode6Hinge->updateCurrentPlasticRotation();
 	}
 
 }
@@ -854,7 +848,12 @@ void CharpyDemo::showMessage()
 			sprintf(buf, "(/) to change damping, now=%1.1f", damping);
 			infoMsg(buf);
 		}
-		if (mode==6){
+		if (mode == 5){
+			sprintf(buf, "hingeAngle=%1.3f",
+				btFabs(mode5Hinge->getHingeAngle()));
+			infoMsg(buf);
+		}
+		if (mode == 6){
 			sprintf(buf, "^a/^A to change mpr, "
 				"mpr=%1.3f, cpr=%1.3f, ha=%1.3f", 
 				mode6Hinge->getMaxPlasticRotation(),

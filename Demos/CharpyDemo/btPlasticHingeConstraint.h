@@ -261,10 +261,6 @@ public:
 		return m_plasticMoment;
 	}
 	btScalar getAbsorbedEnergy();
-	void setPlastic(bool plastic);
-	bool inline isPlastic(){
-		return m_plastic;
-	}
 	void setMaxPlasticRotation(btScalar maxPlasticRotation);
 	btScalar getMaxPlasticRotation();
 	void setCurrentPlasticRotation(btScalar currentPlasticRotation);
