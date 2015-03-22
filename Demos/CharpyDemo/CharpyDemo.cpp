@@ -88,6 +88,7 @@ btScalar w1;
 float maxForces[6];
 FILE *fp;
 boolean openGraphFile = false;
+char gfn[100];
 int solverType = 1;
 btConstraintSolverType solverTypes[] = {
 	BT_SEQUENTIAL_IMPULSE_SOLVER,
@@ -166,35 +167,53 @@ btScalar getSpecimenDistance2(){
 
 }
 /*
-Writes sgraph value
+Writes sgraph value using given format
+*/
+void wgfv(char*format, float f){
+	fprintf(fp, format, f);
+}
+/*
+Writes sgraph value using default format
 */
 void wgv(float f){
-	fprintf(fp, "%6.2f;", f);
+	wgfv("%6.2f,", f);
+}
+void toggleGraphFile(){
+	openGraphFile = !openGraphFile;
+	if (fp){
+		fprintf(fp, "];\n");
+		fclose(fp);
+		fp = NULL;
+	}else{
+		sprintf(gfn, "d:/wrk/cgd.m", time(NULL));
+		fp = fopen(gfn, "w");
+		if (!fp){
+			strcpy(gfn, "");
+			openGraphFile = false;
+			return;
+		}
+		fprintf(fp,"cgd=[");
+	}
 }
 /**
 Writes graph data if file can be opened
 */
 void writeGraphData(){
-	if (!openGraphFile){
+	if (!openGraphFile || !fp){
 		return;
 	}
-	if (!fp){
-		char buf[100];
-		sprintf(buf, "d:/wrk/charpyGraph-%ld.txt", time(NULL));
-		fp = fopen(buf, "w");
-		if (!fp){
-			openGraphFile = false;
-			return;
+	wgfv("%8.4f,",currentTime);
+	wgv(energy);
+	wgv(maxEnergy-energy);
+	if (mode>1){
+		for (int i = 0; i < 3; i++){
+			wgv(specimenJointFeedback.m_appliedForceBodyA[i]);
+		}
+		for (int i = 0; i < 3; i++){
+			wgv(specimenJointFeedback.m_appliedTorqueBodyA[i]);
 		}
 	}
-	wgv(currentTime);
-	for (int i = 0; i < 3; i++){
-		wgv(specimenJointFeedback.m_appliedForceBodyA[i]);
-	}
-	for (int i = 0; i < 3; i++){
-		wgv(specimenJointFeedback.m_appliedTorqueBodyA[i]);
-	}
-	fprintf(fp, "\n");
+	fprintf(fp, ";\n");
 }
 
 btScalar getBodySpeed2(const btCollisionObject* o){
@@ -798,6 +817,7 @@ void CharpyDemo::clientMoveAndDisplay()
 		m_dynamicsWorld->debugDrawWorld();
 	}
 	currentTime += timeStep;
+	writeGraphData();
 	updateView();
 	renderme();
 	showMessage();
@@ -817,7 +837,6 @@ void CharpyDemo::showMessage()
 {
 	if((getDebugMode() & btIDebugDraw::DBG_DrawText))
 	{	
-		writeGraphData();
 		setOrthographicProjection();
 		glDisable(GL_LIGHTING);
 		glColor3f(0, 0, 0);
@@ -884,7 +903,13 @@ void CharpyDemo::showMessage()
 				floorHE);
 			infoMsg(buf);
 		}
-		sprintf(buf, "space to restart, currentTime=%3.4f s, currentAngle=%1.4f", 
+		if (openGraphFile){
+			sprintf(buf,"Writing data to %s, disable with ^d",gfn);
+		}else{
+			sprintf(buf, "Enable writing data to file with ^d");
+		}
+		infoMsg(buf);
+		sprintf(buf, "space to restart, currentTime=%3.4f s, currentAngle=%1.4f",
 			currentTime, getHammerAngle());
 		infoMsg(buf);
 		resetPerspectiveProjection();
@@ -1021,6 +1046,7 @@ void scaleMode6HingeMaxPlasticRotation(btScalar scale){
 
 /*
 handle control keys
+@return true if scene should be reset i.e. simulation should be restarted
 */
 bool ctrlKeyboardCallback(unsigned char key, int x, int y, int modifiers){
 	bool shiftActive=false;
@@ -1055,6 +1081,9 @@ bool ctrlKeyboardCallback(unsigned char key, int x, int y, int modifiers){
 			fu /= 1.2;
 		}
 		return true;
+	case 4: //d
+		toggleGraphFile();
+		return false;
 	case '{':
 		if (setDisplayWait < 10 && setDisplayWait>0){
 			setDisplayWait--;
