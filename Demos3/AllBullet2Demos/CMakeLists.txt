@@ -14,6 +14,8 @@ SET(App_AllBullet2Demos_SRCS
 	../../Demos/BasicDemo/BasicDemoPhysicsSetup.h
 	../../Demos/CcdPhysicsDemo/CcdPhysicsSetup.cpp
 	../../Demos/CcdPhysicsDemo/CcdPhysicsSetup.h
+	../../Demos/Raytracer/RaytracerSetup.cpp
+	../../Demos/Raytracer/RaytracerSetup.h
 	../../Demos/SerializeDemo/SerializeSetup.cpp
         ../../Extras/Serialize/BulletFileLoader/bChunk.cpp
         ../../Extras/Serialize/BulletFileLoader/bDNA.cpp
@@ -44,9 +46,12 @@ SET(App_AllBullet2Demos_SRCS
 #	../bullet2/RagdollDemo/RagdollDemo.h
 	../bullet2/LuaDemo/LuaPhysicsSetup.cpp
 	../bullet2/LuaDemo/LuaPhysicsSetup.h
+	../ImportURDFDemo/URDF2Bullet.cpp
 	../ImportURDFDemo/ImportURDFSetup.cpp
 	../ImportURDFDemo/ImportURDFSetup.h
 	../ImportObjDemo/ImportObjSetup.cpp
+	../ImportObjDemo/LoadMeshFromObj.cpp
+	../ImportObjDemo/LoadMeshFromObj.h
 	../ImportObjDemo/Wavefront2GLInstanceGraphicsShape.cpp
 	 	../ImportColladaDemo/ImportColladaSetup.cpp
 	 	../ImportColladaDemo/LoadMeshFromCollada.cpp
