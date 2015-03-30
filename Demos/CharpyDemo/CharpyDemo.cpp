@@ -84,6 +84,8 @@ btHingeConstraint *mode5Hinge;
 btPlasticHingeConstraint *mode6Hinge;
 btScalar restitution = 0.;
 btScalar maxPlasticRotation = 3;
+btTypedConstraint *tc; // points to specimen constraint
+btScalar breakingImpulseThreshold=0;
 btScalar w1;
 float maxForces[6];
 FILE *fp;
@@ -226,12 +228,29 @@ btScalar getManifoldSpeed2(btPersistentManifold* manifold){
 	return s0>s1?s0:s1;
 }
 
+/* Just for making breaking possible.
+This calculation has no known scientific background.
+Maximum impulse that can be generated is about 300 Ns
+(20 kg * 15 m/s)
+For basic case with 1.8 start angle 120 Ns (20*6)
+*/
+btScalar getBreakingImpulseThreshold(){
+	btScalar b(w);
+	btScalar h(w - 0.002); // notch is 2 mm
+	btScalar w1(fu*b*h*h / 4);
+	btScalar M(w1*maxPlasticRotation);
+	btScalar v(60); // m/s but no known physical meaning
+	breakingImpulseThreshold = M / v;
+	return breakingImpulseThreshold;
+}
 
 void addSpringConstraints(btAlignedObjectArray<btRigidBody*> ha,
 		btAlignedObjectArray<btTransform> ta){
 	btGeneric6DofSpringConstraint *sc=
 				new btGeneric6DofSpringConstraint(*ha[0],*ha[1], 
 	ta[0], ta[1],true);
+	tc = sc;
+	sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
 	sc->setJointFeedback(&specimenJointFeedback);
 	btScalar b(w);
 	btScalar h(w-0.002); // notch is 2 mm
@@ -265,6 +284,8 @@ void addSpring2Constraints(btAlignedObjectArray<btRigidBody*> ha,
 	btGeneric6DofSpring2Constraint *sc =
 		new btGeneric6DofSpring2Constraint(*ha[0], *ha[1],
 		ta[0], ta[1]);
+	tc = sc;
+	sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
 	sc->setJointFeedback(&specimenJointFeedback);
 	btScalar b(w);
 	btScalar h(w - 0.002); // notch is 2 mm
@@ -293,12 +314,15 @@ void addSpring2Constraints(btAlignedObjectArray<btRigidBody*> ha,
 	sc->setEquilibriumPoint();
 }
 
+
 void addFixedConstraints(btAlignedObjectArray<btRigidBody*> ha,
 		btAlignedObjectArray<btTransform> ta){
 	btGeneric6DofConstraint *sc=
 				new btGeneric6DofConstraint(*ha[0],*ha[1], 
 	ta[0], ta[1],true);
+	tc = sc;
 	sc->setJointFeedback(&specimenJointFeedback);
+	sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
 	dw->addConstraint(sc, true);
 	for (int i=0;i<6;i++){	
 		sc->setLimit(i,0,0); // make fixed
@@ -312,7 +336,10 @@ void addHingeConstraint(btAlignedObjectArray<btRigidBody*> ha){
 	btHingeConstraint *sc =
 		new btHingeConstraint(*ha[0], *ha[1],
 		pivotInA,pivotInB ,pivotAxis,pivotAxis, false);
+	tc = sc;
+	sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
 	mode5Hinge = sc;
+	tc = sc;
 	btScalar b(w);
 	btScalar h(w - 0.002); // notch is 2 mm
 	w1=fu*b*h*h/4;
@@ -329,6 +356,7 @@ void addPlasticHingeConstraint(btAlignedObjectArray<btRigidBody*> ha){
 	btPlasticHingeConstraint *sc =
 		new btPlasticHingeConstraint(*ha[0], *ha[1],
 		pivotInA, pivotInB, pivotAxis, pivotAxis, false);
+	tc = sc;
 	mode6Hinge = sc;
 	mode6Hinge->setMaxPlasticRotation(maxPlasticRotation);
 	btScalar b(w);
@@ -872,13 +900,32 @@ void CharpyDemo::showMessage()
 				btFabs(mode5Hinge->getHingeAngle()));
 			infoMsg(buf);
 		}
-		if (mode == 6){
+		switch (mode){
+		case 1:
+			break;
+		case 6:
 			sprintf(buf, "^a/^A to change mpr, "
-				"mpr=%1.3f, cpr=%1.3f, ha=%1.3f", 
+				"mpr=%1.3f, cpr=%1.3f, ha=%1.3f",
 				mode6Hinge->getMaxPlasticRotation(),
 				mode6Hinge->getCurrentPlasticRotation(),
 				btFabs(mode6Hinge->getHingeAngle()));
 			infoMsg(buf);
+			break;
+		default:
+			sprintf(buf, "^a/^A to change mpr, mpr=%1.3f, bith=%6.3f",
+				maxPlasticRotation,
+				breakingImpulseThreshold);
+			infoMsg(buf);
+			break;
+		}
+		switch (mode){
+		case 1:
+			break;
+		default:
+			sprintf(buf, "%sbroken",
+				(tc->isEnabled()?"un":""));
+			infoMsg(buf);
+			break;
 		}
 		sprintf(buf, "timeStep ./:/,/; now=%2.3f/%2.3f ms, auto(;)=%s",
 		setTimeStep*1000,timeStep*1000,(variableTimeStep?"on":"off"));
@@ -1036,12 +1083,13 @@ void CharpyDemo::specialKeyboard(int key, int x, int y){
 }
 
 void scaleMode6HingeMaxPlasticRotation(btScalar scale){
-	if (mode != 6){
+	if (mode == 1){
 		return;
 	}
-	maxPlasticRotation = mode6Hinge->getMaxPlasticRotation();
 	maxPlasticRotation *= scale;
-	mode6Hinge->setMaxPlasticRotation(maxPlasticRotation);
+	if (mode == 6){
+		mode6Hinge->setMaxPlasticRotation(maxPlasticRotation);
+	}
 }
 
 /*
