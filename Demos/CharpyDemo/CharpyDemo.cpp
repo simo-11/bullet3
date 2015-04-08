@@ -1087,6 +1087,7 @@ void scaleMode6HingeMaxPlasticRotation(btScalar scale){
 		return;
 	}
 	maxPlasticRotation *= scale;
+	getBreakingImpulseThreshold();
 	if (mode == 6){
 		mode6Hinge->setMaxPlasticRotation(maxPlasticRotation);
 	}
