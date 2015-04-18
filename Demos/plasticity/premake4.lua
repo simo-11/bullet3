@@ -19,7 +19,7 @@ function createDemos( demos, incdirs, linknames)
 		configuration { "Windows" }
 			defines { "GLEW_STATIC"}
 	 		links { "opengl32","glu32","winmm"}
-			includedirs{	"Glut"	}
+			includedirs{	"../Glut"	}
 	 		libdirs {"../Glut"}
 	 		files   { "../../build3/bullet.rc" }
 	 		
@@ -39,8 +39,8 @@ function createDemos( demos, incdirs, linknames)
 	
 		
 		files     { 
-		 	"./" .. name .. "/*.cpp" ,
-		 	"./" .. name .. "/*.h"
+		 	"../" .. name .. "/*.cpp" ,
+		 	"../" .. name .. "/*.h"
 		 }
 	end
 end
@@ -50,7 +50,7 @@ end
   }
 
 
-createDemos(localdemos,{"../src","../OpenGL","../btgui",},{"OpenGLSupport","BulletDynamics", "BulletCollision", "LinearMath"})
+createDemos(localdemos,{"../../src","../OpenGL","../btgui",},{"OpenGLSupport","BulletDynamics", "BulletCollision", "LinearMath"})
 include "../OpenGL"
  
  
