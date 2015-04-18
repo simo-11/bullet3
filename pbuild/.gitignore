@@ -1,0 +1,8 @@
+*.exe
+*.ilk
+*.pdb
+bin
+lib
+vs2010
+vs2012
+vs2013
