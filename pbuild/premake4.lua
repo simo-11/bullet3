@@ -18,45 +18,6 @@
         act = _ACTION
     end
 
-	newoption
-        {
-                trigger = "force_dlopen_opengl",
-                description = "Dynamically load OpenGL (instead of static/dynamic linking)"
-        }
-
-	newoption
-        {
-                trigger = "force_dlopen_x11",
-                description = "Dynamically load OpenGL (instead of static/dynamic linking)"
-        }
-
-
-	newoption
-	{
-		trigger = "midi",
-		description = "Use Midi controller to control parameters"
-	}
-
---	_OPTIONS["midi"] = "1";
-
-	newoption
-	{
-		trigger = "bullet2demos",
-		description = "Compile the Bullet 2 demos (Demo/Extra folder)"
-	}
-
-	newoption
-	{
-		trigger = "enet",
-		description = "Enable enet NAT punchthrough test"
-	}
-
-	newoption
-	{
-		trigger = "without-gtest",
-		description = "Disable unit tests using gtest"
-	}
-
 	configurations {"Release", "Debug","ReleaseDouble","DebugDouble"}
 	configuration "Release"
 		flags { "Optimize", "EnableSSE2","StaticRuntime", "NoMinimalRebuild", "FloatFast"}
@@ -64,10 +25,11 @@
 		defines {"_DEBUG=1"}
 		flags { "Symbols", "StaticRuntime" , "NoMinimalRebuild", "NoEditAndContinue" ,"FloatFast"}
 	configuration "ReleaseDouble"
-		defines {"_DEBUG=1","BT_USE_DOUBLE_PRECISION"}
+		defines {"BT_USE_DOUBLE_PRECISION"}
 		flags { "Optimize", "EnableSSE2","StaticRuntime", "NoMinimalRebuild", "FloatFast"}
 	configuration "DebugDouble"
-		defines {"_DEBUG=1","BT_USE_DOUBLE_PRECISION"}
+		defines {"_DEBUG=1","BT_USE_DOUBLE_PRECISION",
+		"_CTR_SECURE_NO_WARNINGS","_CRT_SECURE_NO_DEPRECATE"}
 		flags { "Symbols", "StaticRuntime" , "NoMinimalRebuild", "NoEditAndContinue" ,"FloatFast"}
 
 	if os.is("Linux") then
