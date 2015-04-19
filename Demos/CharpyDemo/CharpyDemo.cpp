@@ -35,8 +35,10 @@ GLDebugDrawer	gDebugDrawer;
 int sFrameNumber = 0;
 bool firstRun=true;
 bool hammerHitsSpecimen;
-btScalar startAngle(1.8);
-long displayWait=10;
+btScalar initialStartAngle(1.8);
+btScalar startAngle(initialStartAngle);
+long  initialDisplayWait = 10;
+long displayWait = initialDisplayWait;
 long setDisplayWait = displayWait;
 btScalar ccdMotionThreshHold(0.001);
 btScalar margin(0.001);
@@ -47,7 +49,8 @@ btScalar initialTimeStep = 1e-4;
 btScalar setTimeStep = initialTimeStep;
 bool variableTimeStep = true;
 btScalar currentTime;
-int mode=6;
+int initialMode = 6;
+int mode = initialMode;
 const char *modes[] =
 {
 "None",
@@ -67,10 +70,13 @@ const char *viewModes[] =
 };
 btScalar btZero(0);
 btScalar btOne(1);
-btScalar l(0.055);
-btScalar w(0.01);
+btScalar initialL(0.055);
+btScalar l(initialL);
+btScalar initialW(0.01);
+btScalar w(initialW);
 btScalar E(200E9);
-btScalar fu(400e6);
+btScalar initialFu(400e6);
+btScalar fu(initialFu);
 btScalar damping(0.2);
 float energy = 0;
 float maxEnergy;
@@ -82,8 +88,10 @@ btJointFeedback hammerHingeJointFeedback;
 btJointFeedback specimenJointFeedback;
 btHingeConstraint *mode5Hinge;
 btPlasticHingeConstraint *mode6Hinge;
-btScalar restitution = 0.;
-btScalar maxPlasticRotation = 3;
+btScalar initialRestitution(0.);
+btScalar restitution(initialRestitution);
+btScalar initialMaxPlasticRotation(3.);
+btScalar maxPlasticRotation(initialMaxPlasticRotation);
 btTypedConstraint *tc; // points to specimen constraint
 btScalar breakingImpulseThreshold=0;
 btScalar w1;
@@ -91,7 +99,8 @@ float maxForces[6];
 FILE *fp;
 boolean openGraphFile = false;
 char gfn[100];
-int solverType = 1;
+int initialSolverType = 1;
+int solverType = initialSolverType;
 btConstraintSolverType solverTypes[] = {
 	BT_SEQUENTIAL_IMPULSE_SOLVER,
 	BT_SEQUENTIAL_IMPULSE_SOLVER,
@@ -443,6 +452,12 @@ void	CharpyDemo::initPhysics()
 		setTexturing(true);
 		setShadows(true);
 		setDebugMode(btIDebugDraw::DBG_DrawText|btIDebugDraw::DBG_NoHelpText);
+		m_cameraDistance = 15.0;
+		m_ele = 20.f;
+		m_azi = 0.f;
+		m_cameraPosition = btVector3(0.f, 0.f, 0.f);
+		m_cameraTargetPosition = btVector3(0.f, 0.f, 0.f);
+		m_cameraUp = btVector3(0, 1, 0);
 		setViewMode(1);
 		firstRun=false;
 	}
@@ -956,8 +971,10 @@ void CharpyDemo::showMessage()
 			sprintf(buf, "Enable writing data to file with ^d");
 		}
 		infoMsg(buf);
-		sprintf(buf, "space to restart, currentTime=%3.4f s, currentAngle=%1.4f",
+		sprintf(buf, "currentTime=%3.4f s, currentAngle=%1.4f",
 			currentTime, getHammerAngle());
+		infoMsg(buf);
+		sprintf(buf, "q=quit, space to restart, ^r to reset, t to toggle this help");
 		infoMsg(buf);
 		resetPerspectiveProjection();
 		glEnable(GL_LIGHTING);
@@ -1093,6 +1110,29 @@ void scaleMode6HingeMaxPlasticRotation(btScalar scale){
 	}
 }
 
+/** 
+Bring back to state right after starting
+*/
+void reinit(){
+	startAngle = initialStartAngle;
+	displayWait = initialDisplayWait;
+	setDisplayWait = displayWait;
+	timeStep = defaultTimeStep;
+	setTimeStep = initialTimeStep;
+	variableTimeStep = true;
+	mode = initialMode;
+	restitution = initialRestitution;
+	maxPlasticRotation = initialMaxPlasticRotation;
+	solverType = initialSolverType;
+	fu = initialFu;
+	l = initialL;
+	w = initialW;
+	firstRun = true;
+	if (openGraphFile){
+		toggleGraphFile();
+	}
+}
+
 /*
 handle control keys
 @return true if scene should be reset i.e. simulation should be restarted
@@ -1132,6 +1172,51 @@ bool ctrlKeyboardCallback(unsigned char key, int x, int y, int modifiers){
 		return true;
 	case 4: //d
 		toggleGraphFile();
+		return false;
+	case 5: //e
+		return false;
+	case 6: //f
+		return false;
+	case 7: //g
+		return false;
+	case 8: //h
+		return false;
+	case 9: //i
+		return false;
+	case 10: //j
+		return false;
+	case 11: //k
+		return false;
+	case 12: //l
+		return false;
+	case 13: //m
+		return false;
+	case 14: //n
+		return false;
+	case 15: //o
+		return false;
+	case 16: //p
+		return false;
+	case 17: //q
+		return false;
+	case 18: //r
+		reinit();
+		return true;
+	case 19: //s
+		return false;
+	case 20: //t
+		return false;
+	case 21: //u
+		return false;
+	case 22: //v
+		return false;
+	case 23: //w
+		return false;
+	case 24: //x
+		return false;
+	case 25: //y
+		return false;
+	case 26: //z
 		return false;
 	case '{':
 		if (setDisplayWait < 10 && setDisplayWait>0){
