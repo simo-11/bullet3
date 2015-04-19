@@ -196,7 +196,7 @@ void toggleGraphFile(){
 		fclose(fp);
 		fp = NULL;
 	}else{
-		sprintf(gfn, "d:/wrk/cgd.m", time(NULL));
+		sprintf(gfn, "d:/wrk/cgd.m");
 		fp = fopen(gfn, "w");
 		if (!fp){
 			strcpy(gfn, "");
