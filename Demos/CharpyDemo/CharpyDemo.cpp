@@ -232,7 +232,7 @@ btScalar getManifoldSpeed2(btPersistentManifold* manifold){
 This calculation has no known scientific background.
 Maximum impulse that can be generated is about 300 Ns
 (20 kg * 15 m/s)
-For basic case with 1.8 start angle 120 Ns (20*6)
+For basic case with 1.8 start angle 120 Ns (20 kg * 6 m/s)
 */
 btScalar getBreakingImpulseThreshold(){
 	btScalar b(w);
@@ -1323,7 +1323,3 @@ void	CharpyDemo::exitPhysics()
 	delete basePoint;
 	basePoint = 0;
 }
-
-
-
-
