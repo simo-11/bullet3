@@ -47,6 +47,8 @@ btScalar defaultTimeStep(0.005);
 btScalar timeStep(defaultTimeStep);
 btScalar initialTimeStep = 1e-4;
 btScalar setTimeStep = initialTimeStep;
+int initialNumIterations = 70;
+int numIterations = initialNumIterations;
 bool variableTimeStep = true;
 btScalar currentTime;
 int initialMode = 6;
@@ -154,8 +156,8 @@ void tuneSolver(){
 	// dw->getSolverInfo().m_erp = 0.6; // default is 0.2
 	// dw->getSolverInfo().m_splitImpulse = true; // default is true
 	// dw->getSolverInfo().m_splitImpulsePenetrationThreshold = -0.002; // default is -0.04
-	// dw->getSolverInfo().m_numIterations = 100;
 	// Tuning of values above did not make big difference
+	dw->getSolverInfo().m_numIterations = numIterations;
 }
 
 
@@ -945,9 +947,9 @@ void CharpyDemo::showMessage()
 		sprintf(buf, "timeStep ./:/,/; now=%2.3f/%2.3f ms, auto(;)=%s",
 		setTimeStep*1000,timeStep*1000,(variableTimeStep?"on":"off"));
 		infoMsg(buf);
-		sprintf(buf,"k/K to change specimen width, now=%1.6f m",w);
+		sprintf(buf, "^n/^N for numIterations, %d", numIterations);
 		infoMsg(buf);
-		sprintf(buf,"v/V to change specimen length, now=%1.6f m",l);
+		sprintf(buf, "k/K v/V to change width/length, now=%1.6f/%1.6f m", w, l);
 		infoMsg(buf);
 		sprintf(buf,"mode(F1-F6)=F%d: %s",mode,modes[mode]);
 		infoMsg(buf);
@@ -1119,6 +1121,7 @@ void reinit(){
 	setDisplayWait = displayWait;
 	timeStep = defaultTimeStep;
 	setTimeStep = initialTimeStep;
+	numIterations = initialNumIterations;
 	variableTimeStep = true;
 	mode = initialMode;
 	restitution = initialRestitution;
@@ -1192,6 +1195,15 @@ bool ctrlKeyboardCallback(unsigned char key, int x, int y, int modifiers){
 	case 13: //m
 		return false;
 	case 14: //n
+		if (shiftActive){
+			numIterations++;
+		}
+		else if (numIterations>1){
+			numIterations--;
+		}
+		if (NULL!=dw){
+			dw->getSolverInfo().m_numIterations = numIterations;
+		}
 		return false;
 	case 15: //o
 		return false;
