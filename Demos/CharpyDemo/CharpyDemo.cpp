@@ -27,6 +27,8 @@ target is to break objects using plasticity.
 #include "BulletDynamics/MLCPSolvers/btMLCPSolver.h"
 #include "BulletDynamics/ConstraintSolver/btNNCGConstraintSolver.h"
 #include "btPlasticHingeConstraint.h"
+#include "bt6DofElasticPlasticConstraint.h"
+#include "bt6DofElasticPlastic2Constraint.h"
 
 #include <stdio.h> 
 #include <time.h>
@@ -62,6 +64,8 @@ const char *modes[] =
 "two objects and spring2Constraints",
 "two objects and hingeConstraint",
 "two objects and plasticHingeConstraint",
+"two objects and 6DofElasticPlasticConstraint",
+"two objects and 6DofElasticPlastic2Constraint",
 };
 const char *viewModes[] =
 {
@@ -255,7 +259,7 @@ btScalar getBreakingImpulseThreshold(){
 	return breakingImpulseThreshold;
 }
 
-void addSpringConstraints(btAlignedObjectArray<btRigidBody*> ha,
+void addSpringConstraint(btAlignedObjectArray<btRigidBody*> ha,
 		btAlignedObjectArray<btTransform> ta){
 	btGeneric6DofSpringConstraint *sc=
 				new btGeneric6DofSpringConstraint(*ha[0],*ha[1], 
@@ -290,7 +294,7 @@ void addSpringConstraints(btAlignedObjectArray<btRigidBody*> ha,
 	sc->setEquilibriumPoint();	
 }
 
-void addSpring2Constraints(btAlignedObjectArray<btRigidBody*> ha,
+void addSpring2Constraint(btAlignedObjectArray<btRigidBody*> ha,
 	btAlignedObjectArray<btTransform> ta){
 	btGeneric6DofSpring2Constraint *sc =
 		new btGeneric6DofSpring2Constraint(*ha[0], *ha[1],
@@ -326,7 +330,7 @@ void addSpring2Constraints(btAlignedObjectArray<btRigidBody*> ha,
 }
 
 
-void addFixedConstraints(btAlignedObjectArray<btRigidBody*> ha,
+void addFixedConstraint(btAlignedObjectArray<btRigidBody*> ha,
 		btAlignedObjectArray<btTransform> ta){
 	btGeneric6DofConstraint *sc=
 				new btGeneric6DofConstraint(*ha[0],*ha[1], 
@@ -360,6 +364,9 @@ void addHingeConstraint(btAlignedObjectArray<btRigidBody*> ha){
 	dw->addConstraint(sc, true);
 }
 
+/*
+mode 6
+*/
 void addPlasticHingeConstraint(btAlignedObjectArray<btRigidBody*> ha){
 	btVector3 pivotAxis(btZero, btScalar(1), btZero);
 	btVector3 pivotInA(btZero, btZero, l / 4);
@@ -379,6 +386,83 @@ void addPlasticHingeConstraint(btAlignedObjectArray<btRigidBody*> ha){
 	sc->setLimit(0, 0);
 	dw->addConstraint(sc, true);
 }
+
+/*
+Mode 7
+*/
+void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha,
+	btAlignedObjectArray<btTransform> ta){
+	bt6DofElasticPlasticConstraint *sc =
+		new bt6DofElasticPlasticConstraint(*ha[0], *ha[1],
+		ta[0], ta[1], true);
+	tc = sc;
+	sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
+	sc->setJointFeedback(&specimenJointFeedback);
+	btScalar b(w);
+	btScalar h(w - 0.002); // notch is 2 mm
+	btScalar I1(b*h*h*h / 12);
+	btScalar I2(h*b*b*b / 12);
+	btScalar k0(E*b*h / l / 2);
+	btScalar k1(48 * E*I1 / l / l / l);
+	btScalar k2(48 * E*I1 / l / l / l);
+	w1 = fu*b*h*h / 4;
+	btScalar w2(fu*b*b*h / 4);
+	sc->setStiffness(0, k0);
+	sc->setStiffness(1, k1);
+	sc->setStiffness(2, k2);
+	sc->setStiffness(3, w1); // not very exact
+	sc->setStiffness(4, w2);
+	sc->setStiffness(5, w1);
+	dw->addConstraint(sc, true);
+	for (int i = 0; i<6; i++)
+	{
+		sc->enableSpring(i, true);
+	}
+	for (int i = 0; i<6; i++)
+	{
+		sc->setDamping(i, damping);
+	}
+	sc->setEquilibriumPoint();
+}
+
+/**
+mode 8
+*/
+void addElasticPlastic2Constraint(btAlignedObjectArray<btRigidBody*> ha,
+	btAlignedObjectArray<btTransform> ta){
+	bt6DofElasticPlastic2Constraint *sc =
+		new bt6DofElasticPlastic2Constraint(*ha[0], *ha[1],
+		ta[0], ta[1]);
+	tc = sc;
+	sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
+	sc->setJointFeedback(&specimenJointFeedback);
+	btScalar b(w);
+	btScalar h(w - 0.002); // notch is 2 mm
+	btScalar I1(b*h*h*h / 12);
+	btScalar I2(h*b*b*b / 12);
+	btScalar k0(E*b*h / l / 2);
+	btScalar k1(48 * E*I1 / l / l / l);
+	btScalar k2(48 * E*I1 / l / l / l);
+	w1 = fu*b*h*h / 4;
+	btScalar w2(fu*b*b*h / 4);
+	sc->setStiffness(0, k0);
+	sc->setStiffness(1, k1);
+	sc->setStiffness(2, k2);
+	sc->setStiffness(3, w1); // not very exact
+	sc->setStiffness(4, w2);
+	sc->setStiffness(5, w1);
+	dw->addConstraint(sc, true);
+	for (int i = 0; i<6; i++)
+	{
+		sc->enableSpring(i, true);
+	}
+	for (int i = 0; i<6; i++)
+	{
+		sc->setDamping(i, damping);
+	}
+	sc->setEquilibriumPoint();
+}
+
 
 
 /**
@@ -583,18 +667,24 @@ void	CharpyDemo::initPhysics()
 		}
 		switch(mode) {
 		case 2:
-			addSpringConstraints(ha,ta);
+			addSpringConstraint(ha,ta);
 			break;
 		case 3:
-			addFixedConstraints(ha,ta);
+			addFixedConstraint(ha,ta);
 			break;
 		case 4:
-			addSpring2Constraints(ha, ta);
+			addSpring2Constraint(ha, ta);
 		case 5:
 			addHingeConstraint(ha);
 			break;
 		case 6:
 			addPlasticHingeConstraint(ha);
+			break;
+		case 7:
+			addElasticPlasticConstraint(ha,ta);
+			break;
+		case 8:
+			addElasticPlastic2Constraint(ha,ta);
 			break;
 		}
 	}
@@ -951,7 +1041,7 @@ void CharpyDemo::showMessage()
 		infoMsg(buf);
 		sprintf(buf, "k/K v/V to change width/length, now=%1.6f/%1.6f m", w, l);
 		infoMsg(buf);
-		sprintf(buf,"mode(F1-F6)=F%d: %s",mode,modes[mode]);
+		sprintf(buf,"mode(F1-F8)=F%d: %s",mode,modes[mode]);
 		infoMsg(buf);
 		sprintf(buf, "viewMode(<Shift>F1-F3)=F%d: %s", m_viewMode, viewModes[m_viewMode]);
 		infoMsg(buf);
@@ -1090,6 +1180,14 @@ void CharpyDemo::specialKeyboard(int key, int x, int y){
 		break;
 	case GLUT_KEY_F6:
 		mode = 6;
+		resetScene = true;
+		break;
+	case GLUT_KEY_F7:
+		mode = 7;
+		resetScene = true;
+		break;
+	case GLUT_KEY_F8:
+		mode = 8;
 		resetScene = true;
 		break;
 	default:

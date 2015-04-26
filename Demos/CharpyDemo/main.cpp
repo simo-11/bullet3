@@ -20,7 +20,7 @@ char * btScalarType="double precision";
 char * btScalarType="single precision";
 #endif
 char buf[100];
-sprintf(buf, "BulletCharpy 0.5.1 - %d-%02d-%02d - %s",
+sprintf(buf, "BulletCharpy 0.6.0-alpha - %d-%02d-%02d - %s",
 	tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
 	btScalarType);
 	return glutmain(argc, argv,640,480,buf,&ccdDemo);
