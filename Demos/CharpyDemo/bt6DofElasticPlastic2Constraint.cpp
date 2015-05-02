@@ -14,7 +14,9 @@ subject to the following restrictions:
 */
 
 /*
-2014 May: bt6DofElasticPlastic2Constraint is created from the original (2.82.2712) btGeneric6DofConstraint by Gabor Puhr and Tamas Umenhoffer
+2015 May bt6DofElasticPlastic2Constraint is based on btGeneric6DofSpring2Constraint
+2014 May: btGeneric6DofSpring2Constraint is created 
+from the original (2.82.2712) btGeneric6DofConstraint by Gabor Puhr and Tamas Umenhoffer
 Pros:
 - Much more accurate and stable in a lot of situation. (Especially when a sleeping chain of RBs connected with 6dof2 is pulled)
 - Stable and accurate spring with minimal energy loss that works with all of the solvers. (latter is not true for the original 6dof spring)

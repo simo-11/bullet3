@@ -80,7 +80,9 @@ btScalar initialL(0.055);
 btScalar l(initialL);
 btScalar initialW(0.01);
 btScalar w(initialW);
-btScalar E(200E9);
+btScalar E(200E9); // Steel
+btScalar nu(0.3); // Steel
+btScalar G(E / (2 * (1 + nu)));
 btScalar initialFu(400e6);
 btScalar fu(initialFu);
 btScalar damping(0.2);
@@ -94,6 +96,7 @@ btJointFeedback hammerHingeJointFeedback;
 btJointFeedback specimenJointFeedback;
 btHingeConstraint *mode5Hinge;
 btPlasticHingeConstraint *mode6Hinge;
+bt6DofElasticPlasticConstraint *mode7c;
 btScalar initialRestitution(0.);
 btScalar restitution(initialRestitution);
 btScalar initialMaxPlasticRotation(3.);
@@ -396,31 +399,36 @@ void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha,
 		new bt6DofElasticPlasticConstraint(*ha[0], *ha[1],
 		ta[0], ta[1], true);
 	tc = sc;
-	sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
+	mode7c = sc;
+	mode7c->setMaxPlasticRotation(maxPlasticRotation);
+	mode7c->setMaxPlasticStrain(maxPlasticRotation/3*w);
 	sc->setJointFeedback(&specimenJointFeedback);
 	btScalar b(w);
 	btScalar h(w - 0.002); // notch is 2 mm
 	btScalar I1(b*h*h*h / 12);
 	btScalar I2(h*b*b*b / 12);
+	btScalar It(0.14*b*h*h*h);
 	btScalar k0(E*b*h / l / 2);
 	btScalar k1(48 * E*I1 / l / l / l);
 	btScalar k2(48 * E*I1 / l / l / l);
 	w1 = fu*b*h*h / 4;
 	btScalar w2(fu*b*b*h / 4);
 	sc->setStiffness(0, k0);
+	sc->setMaxForce(0, fu*b*h);
 	sc->setStiffness(1, k1);
+	sc->setMaxForce(1, fu*b*h/2);
 	sc->setStiffness(2, k2);
-	sc->setStiffness(3, w1); // not very exact
-	sc->setStiffness(4, w2);
-	sc->setStiffness(5, w1);
+	sc->setMaxForce(2, fu*b*h / 2);
+	sc->setStiffness(3, G*It/l); // not very exact
+	sc->setMaxForce(3, fu/2*It/(h/2)); // not very exact
+	sc->setStiffness(4, 3*E*I1/l); // not very exact
+	sc->setMaxForce(4, w2);
+	sc->setStiffness(5, 3*E*I2/l); // not very exact
+	sc->setMaxForce(5, w1);
 	dw->addConstraint(sc, true);
 	for (int i = 0; i<6; i++)
 	{
 		sc->enableSpring(i, true);
-	}
-	for (int i = 0; i<6; i++)
-	{
-		sc->setDamping(i, damping);
 	}
 	sc->setEquilibriumPoint();
 }
@@ -525,6 +533,68 @@ void updateEnergy(){
 
 void tuneRestitution(btRigidBody* rb){
 	rb->setRestitution(restitution);
+}
+
+void tuneMode5(){
+	// this is currently no-op if target speed is zero
+	mode5Hinge->setMaxMotorImpulse(w1*timeStep);
+}
+
+/**
+* tunes hammerSpeed
+* currently mostly no-op as moment is handled in btHingeConstraint.
+*/
+void tuneMode6(){
+	if (!mode6Hinge->isEnabled()){
+		return;
+	}
+	if (!hammerHitsSpecimen){
+		return;
+	}
+	btScalar applied = specimenJointFeedback.m_appliedTorqueBodyA[1];
+	btScalar capacity = mode6Hinge->getPlasticMoment();
+	if (applied >= capacity){
+		mode6Hinge->updateCurrentPlasticRotation();
+	}
+	return;
+	btScalar energyLoss = mode6Hinge->getAbsorbedEnergy();
+	if (energyLoss > 0){
+		btRigidBody* ro = hammerBody;
+		btScalar iM = ro->getInvMass();
+		btVector3 v = ro->getLinearVelocity();
+		btScalar m = 1 / iM;
+		float linearEnergy = 0.5*m*v.length2();
+		const btVector3 rv = ro->getAngularVelocity();
+		const btVector3 iI = ro->getInvInertiaDiagLocal();
+		float inertiaEnergy = 0;
+		float rx = getRotationEnergy(iI.getX(), rv.getX());
+		float ry = getRotationEnergy(iI.getY(), rv.getY());
+		float rz = getRotationEnergy(iI.getZ(), rv.getZ());
+		float currentEnergy = linearEnergy + rx + ry + rz;
+		float velMultiplier = 0;
+		if (currentEnergy > energyLoss){
+			velMultiplier = btSqrt(1 - (energyLoss / currentEnergy));
+		}
+		ro->setLinearVelocity(velMultiplier*ro->getLinearVelocity());
+		ro->setAngularVelocity(velMultiplier*ro->getAngularVelocity());
+	}
+
+}
+
+/*
+dw->setInternalTickCallback(mode#callback);
+*/
+void mode5callback(btDynamicsWorld *world, btScalar timeStep) {
+	tuneMode5();
+}
+void mode6callback(btDynamicsWorld *world, btScalar timeStep) {
+	tuneMode6();
+}
+void mode7callback(btDynamicsWorld *world, btScalar timeStep) {
+	if (!mode7c->isEnabled()){
+		return;
+	}
+	mode7c->updatePlasticity(specimenJointFeedback);
 }
 
 /*
@@ -676,12 +746,15 @@ void	CharpyDemo::initPhysics()
 			addSpring2Constraint(ha, ta);
 		case 5:
 			addHingeConstraint(ha);
+			dw->setInternalTickCallback(mode7callback);
 			break;
 		case 6:
 			addPlasticHingeConstraint(ha);
+			dw->setInternalTickCallback(mode6callback);
 			break;
 		case 7:
 			addElasticPlasticConstraint(ha,ta);
+			dw->setInternalTickCallback(mode7callback);
 			break;
 		case 8:
 			addElasticPlastic2Constraint(ha,ta);
@@ -882,61 +955,6 @@ void checkCollisions(){
 	}
 }
 
-void tuneMode5(){
-	// this is currently no-op if target speed is zero
-	mode5Hinge->setMaxMotorImpulse(w1*timeStep);
-}
-
-/**
-* tunes hammerSpeed
-* currently mostly no-op as moment is handled in btHingeConstraint.
-*/
-void tuneMode6(){
-	if (!mode6Hinge->isEnabled()){
-		return;
-	}
-	if (!hammerHitsSpecimen){
-		return;
-	}
-	btScalar applied = specimenJointFeedback.m_appliedTorqueBodyA[1];
-	btScalar capacity = mode6Hinge->getPlasticMoment();
-	if (applied>=capacity){
-		mode6Hinge->updateCurrentPlasticRotation();
-	}
-	return;
-	btScalar energyLoss = mode6Hinge->getAbsorbedEnergy();
-	if (energyLoss > 0){
-		btRigidBody* ro = hammerBody;
-		btScalar iM = ro->getInvMass();
-		btVector3 v = ro->getLinearVelocity();
-		btScalar m = 1 / iM;
-		float linearEnergy = 0.5*m*v.length2();
-		const btVector3 rv = ro->getAngularVelocity();
-		const btVector3 iI = ro->getInvInertiaDiagLocal();
-		float inertiaEnergy = 0;
-		float rx = getRotationEnergy(iI.getX(), rv.getX());
-		float ry = getRotationEnergy(iI.getY(), rv.getY());
-		float rz = getRotationEnergy(iI.getZ(), rv.getZ());
-		float currentEnergy = linearEnergy + rx + ry + rz;
-		float velMultiplier = 0;
-		if (currentEnergy > energyLoss){
-			velMultiplier = btSqrt(1 - (energyLoss / currentEnergy));
-		}
-		ro->setLinearVelocity(velMultiplier*ro->getLinearVelocity());
-		ro->setAngularVelocity(velMultiplier*ro->getAngularVelocity());
-	}
-
-}
-
-
-void beforeStepSimulation(){
-	if (mode == 5){
-		tuneMode5();
-	}
-	else if (mode == 6){
-		tuneMode6();
-	}
-}
 
 
 void CharpyDemo::clientMoveAndDisplay()
@@ -944,7 +962,6 @@ void CharpyDemo::clientMoveAndDisplay()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 	///step the simulation
 	if (m_dynamicsWorld)	{
-		beforeStepSimulation();
 		m_dynamicsWorld->stepSimulation(timeStep, 30, timeStep);
 		checkCollisions();
 		updateEnergy();

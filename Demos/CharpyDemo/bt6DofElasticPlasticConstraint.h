@@ -50,7 +50,14 @@ protected:
 	bool		m_springEnabled[6];
 	btScalar	m_equilibriumPoint[6];
 	btScalar	m_springStiffness[6];
-	btScalar	m_springDamping[6]; // between 0 and 1 (1 == no damping)
+	// new fields for plasticity
+	btScalar	m_maxForce[6];
+	btScalar    m_currentPlasticStrain;
+	btScalar    m_maxPlasticStrain;
+	btScalar    m_maxPlasticRotation = 3;
+	btScalar    m_currentPlasticRotation = 0;
+	// end of new fields for plasticity
+
 	void init();
 	void internalUpdateSprings(btConstraintInfo2* info);
 public: 
@@ -61,7 +68,10 @@ public:
     bt6DofElasticPlasticConstraint(btRigidBody& rbB, const btTransform& frameInB, bool useLinearReferenceFrameB);
 	void enableSpring(int index, bool onOff);
 	void setStiffness(int index, btScalar stiffness);
-	void setDamping(int index, btScalar damping);
+	void setMaxForce(int index, btScalar damping);
+	void setMaxPlasticStrain(btScalar value);
+	void setMaxPlasticRotation(btScalar value);
+	void updatePlasticity(btJointFeedback& forces);
 	void setEquilibriumPoint(); // set the current constraint position/orientation as an equilibrium point for all DOF
 	void setEquilibriumPoint(int index);  // set the current constraint position/orientation as an equilibrium point for given DOF
 	void setEquilibriumPoint(int index, btScalar val);
@@ -84,7 +94,6 @@ struct bt6DofElasticPlasticConstraintData
 	int			m_springEnabled[6];
 	float		m_equilibriumPoint[6];
 	float		m_springStiffness[6];
-	float		m_springDamping[6];
 };
 
 struct bt6DofElasticPlasticConstraintDoubleData2
@@ -113,7 +122,6 @@ SIMD_FORCE_INLINE	const char*	bt6DofElasticPlasticConstraint::serialize(void* da
 	for (i=0;i<6;i++)
 	{
 		dof->m_equilibriumPoint[i] = m_equilibriumPoint[i];
-		dof->m_springDamping[i] = m_springDamping[i];
 		dof->m_springEnabled[i] = m_springEnabled[i]? 1 : 0;
 		dof->m_springStiffness[i] = m_springStiffness[i];
 	}
