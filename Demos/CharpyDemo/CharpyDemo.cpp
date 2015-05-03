@@ -746,7 +746,7 @@ void	CharpyDemo::initPhysics()
 			addSpring2Constraint(ha, ta);
 		case 5:
 			addHingeConstraint(ha);
-			dw->setInternalTickCallback(mode7callback);
+			dw->setInternalTickCallback(mode5callback);
 			break;
 		case 6:
 			addPlasticHingeConstraint(ha);
@@ -1188,24 +1188,48 @@ void CharpyDemo::specialKeyboard(int key, int x, int y){
 		}
 		break;
 	case GLUT_KEY_F4:
-		mode = 4;
-		resetScene = true;
+		if (m_modifierKeys& BT_ACTIVE_CTRL){
+		}else if (m_modifierKeys& BT_ACTIVE_SHIFT){
+		}else{
+			mode = 4;
+			resetScene = true;
+		}
 		break;
 	case GLUT_KEY_F5:
-		mode = 5;
-		resetScene = true;
+		if (m_modifierKeys& BT_ACTIVE_CTRL){
+		} else if (m_modifierKeys& BT_ACTIVE_SHIFT){
+		} else{
+			mode = 5;
+			resetScene = true;
+		}
 		break;
 	case GLUT_KEY_F6:
-		mode = 6;
-		resetScene = true;
+		if (m_modifierKeys& BT_ACTIVE_CTRL){
+		}else if (m_modifierKeys& BT_ACTIVE_SHIFT){
+		}else{
+			mode = 6;
+			resetScene = true;
+		}
 		break;
 	case GLUT_KEY_F7:
-		mode = 7;
-		resetScene = true;
+		if (m_modifierKeys& BT_ACTIVE_CTRL){
+		}
+		else if (m_modifierKeys& BT_ACTIVE_SHIFT){
+		}
+		else{
+			mode = 7;
+			resetScene = true;
+		}
 		break;
 	case GLUT_KEY_F8:
-		mode = 8;
-		resetScene = true;
+		if (m_modifierKeys& BT_ACTIVE_CTRL){
+		}
+		else if (m_modifierKeys& BT_ACTIVE_SHIFT){
+		}
+		else{
+			mode = 8;
+			resetScene = true;
+		}
 		break;
 	default:
 		PlatformDemoApplication::specialKeyboard(key, x, y);
