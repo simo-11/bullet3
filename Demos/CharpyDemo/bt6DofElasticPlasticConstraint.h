@@ -50,6 +50,7 @@ protected:
 	bool		m_springEnabled[6];
 	btScalar	m_equilibriumPoint[6];
 	btScalar	m_springStiffness[6];
+	btScalar	m_springDamping[6];
 	// new fields for plasticity
 	btScalar	m_maxForce[6];
 	btScalar    m_currentPlasticStrain;
@@ -57,7 +58,6 @@ protected:
 	btScalar    m_maxPlasticRotation = 3;
 	btScalar    m_currentPlasticRotation = 0;
 	// end of new fields for plasticity
-
 	void init();
 	void internalUpdateSprings(btConstraintInfo2* info);
 public: 
@@ -68,6 +68,7 @@ public:
     bt6DofElasticPlasticConstraint(btRigidBody& rbB, const btTransform& frameInB, bool useLinearReferenceFrameB);
 	void enableSpring(int index, bool onOff);
 	void setStiffness(int index, btScalar stiffness);
+	void setDamping(int index, btScalar damping);
 	void setMaxForce(int index, btScalar damping);
 	void setMaxPlasticStrain(btScalar value);
 	void setMaxPlasticRotation(btScalar value);
@@ -128,5 +129,5 @@ SIMD_FORCE_INLINE	const char*	bt6DofElasticPlasticConstraint::serialize(void* da
 	return bt6DofElasticPlasticConstraintDataName;
 }
 
-#endif // BT_GENERIC_6DOF_SPRING_CONSTRAINT_H
+#endif // BT_6DOF_ELASTIC_PLASTIC_CONSTRAINT_H
 

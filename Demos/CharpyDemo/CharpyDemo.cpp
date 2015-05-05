@@ -425,6 +425,10 @@ void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha,
 	sc->setMaxForce(4, w2);
 	sc->setStiffness(5, 3*E*I2/l); // not very exact
 	sc->setMaxForce(5, w1);
+	// lower spring constants values provide stable solution
+	sc->setStiffness(3, w1); // not very exact
+	sc->setStiffness(4, w2);
+	sc->setStiffness(5, w1);
 	dw->addConstraint(sc, true);
 	for (int i = 0; i<6; i++)
 	{

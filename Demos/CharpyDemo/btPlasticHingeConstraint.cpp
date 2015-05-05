@@ -1006,7 +1006,7 @@ void btPlasticHingeConstraint::getInfo2InternalUsingFrameOffset(btConstraintInfo
 			}
 			if(lostop == histop) 
 			{
-				// begin plasticHingeConstraint change
+				// bcc
 				// SIMD_INFINITY replaced by maximum impulse
 				// based on plasticMoment*timeStep
 				btScalar maxImpulse = m_plasticMoment / info->fps;
