@@ -80,9 +80,10 @@ btScalar initialL(0.055);
 btScalar l(initialL);
 btScalar initialW(0.01);
 btScalar w(initialW);
-btScalar E(200E9); // Steel
+btScalar initialE(200E9); // Steel
+btScalar E(initialE);
 btScalar nu(0.3); // Steel
-btScalar G(E / (2 * (1 + nu)));
+btScalar G(initialE / (2 * (1 + nu)));
 btScalar initialFu(400e6);
 btScalar fu(initialFu);
 btScalar damping(0.2);
@@ -425,10 +426,6 @@ void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha,
 	sc->setMaxForce(4, w2);
 	sc->setStiffness(5, 3*E*I2/l); // not very exact
 	sc->setMaxForce(5, w1);
-	// lower spring constants values provide stable solution
-	sc->setStiffness(3, w1); // not very exact
-	sc->setStiffness(4, w2);
-	sc->setStiffness(5, w1);
 	dw->addConstraint(sc, true);
 	for (int i = 0; i<6; i++)
 	{
@@ -1015,9 +1012,11 @@ void CharpyDemo::showMessage()
 		infoMsg(buf);
 		sprintf(buf,"+/- to change start angle, now=%1.1f",startAngle);
 		infoMsg(buf);
-		sprintf(buf, "^b/^B restitution %1.3f, ^c/^C for fu %9.3e Pa",
-			restitution,
-			fu);
+		sprintf(buf, "^b/^B restitution %1.3f",
+			restitution);
+		infoMsg(buf);
+		sprintf(buf, "^c/^C for fu %9.3e Pa, ^e/^E for E %9.3e Pa",
+			fu, E);
 		infoMsg(buf);
 		if (mode == 2 || mode == 4){
 			sprintf(buf, "(/) to change damping, now=%1.1f", damping);
@@ -1255,6 +1254,9 @@ void scaleMode6HingeMaxPlasticRotation(btScalar scale){
 	}
 }
 
+void initG(){
+	G = E / (2 * (1 + nu));
+}
 /** 
 Bring back to state right after starting
 */
@@ -1270,6 +1272,8 @@ void reinit(){
 	restitution = initialRestitution;
 	maxPlasticRotation = initialMaxPlasticRotation;
 	solverType = initialSolverType;
+	E = initialE;
+	initG();
 	fu = initialFu;
 	l = initialL;
 	w = initialW;
@@ -1320,7 +1324,14 @@ bool ctrlKeyboardCallback(unsigned char key, int x, int y, int modifiers){
 		toggleGraphFile();
 		return false;
 	case 5: //e
-		return false;
+		if (shiftActive){
+			E *= 1.2;
+		}
+		else {
+			E /= 1.2;
+		}
+		initG();
+		return true;
 	case 6: //f
 		return false;
 	case 7: //g
