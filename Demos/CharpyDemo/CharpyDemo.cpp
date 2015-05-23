@@ -431,6 +431,10 @@ void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha,
 	{
 		sc->enableSpring(i, true);
 	}
+	for (int i = 0; i<6; i++)
+	{
+		sc->setDamping(i, damping);
+	}
 	sc->setEquilibriumPoint();
 }
 
@@ -1018,7 +1022,7 @@ void CharpyDemo::showMessage()
 		sprintf(buf, "^c/^C for fu %9.3e Pa, ^e/^E for E %9.3e Pa",
 			fu, E);
 		infoMsg(buf);
-		if (mode == 2 || mode == 4){
+		if (mode == 2 || mode == 4 || mode == 7){
 			sprintf(buf, "(/) to change damping, now=%1.1f", damping);
 			infoMsg(buf);
 		}
