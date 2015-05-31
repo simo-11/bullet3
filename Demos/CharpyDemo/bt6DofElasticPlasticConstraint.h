@@ -51,13 +51,18 @@ protected:
 	btScalar	m_equilibriumPoint[6];
 	btScalar	m_springStiffness[6];
 	btScalar	m_springDamping[6];
-	// new fields for plasticity
+	// bcc, new fields for plasticity
 	btScalar	m_maxForce[6];
+	btScalar	m_fpsLimit[6];
+	// how many integration steps is needed for single period before
+	// elastic part is activated
+	// otherwise constraint tries to remain rigid
+	btScalar    m_frequencyRatio = 10;
 	btScalar    m_currentPlasticStrain;
 	btScalar    m_maxPlasticStrain;
 	btScalar    m_maxPlasticRotation = 3;
 	btScalar    m_currentPlasticRotation = 0;
-	// end of new fields for plasticity
+	// bcc end of new fields for plasticity
 	void init();
 	void internalUpdateSprings(btConstraintInfo2* info);
 public: 
@@ -69,10 +74,15 @@ public:
 	void enableSpring(int index, bool onOff);
 	void setStiffness(int index, btScalar stiffness);
 	void setDamping(int index, btScalar damping);
+	// bcc
 	void setMaxForce(int index, btScalar damping);
 	void setMaxPlasticStrain(btScalar value);
 	void setMaxPlasticRotation(btScalar value);
 	void updatePlasticity(btJointFeedback& forces);
+	void calculateFpsLimit(int index);
+	void setFrequencyRatio(btScalar frequencyRatio);
+	btScalar getFrequencyRatio();
+	// bcc
 	void setEquilibriumPoint(); // set the current constraint position/orientation as an equilibrium point for all DOF
 	void setEquilibriumPoint(int index);  // set the current constraint position/orientation as an equilibrium point for given DOF
 	void setEquilibriumPoint(int index, btScalar val);

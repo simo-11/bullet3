@@ -86,7 +86,10 @@ btScalar nu(0.3); // Steel
 btScalar G(initialE / (2 * (1 + nu)));
 btScalar initialFu(400e6);
 btScalar fu(initialFu);
-btScalar damping(0.2);
+btScalar initialDamping(0.2);
+btScalar damping(initialDamping);
+btScalar initialFrequencyRatio(10);
+btScalar frequencyRatio(initialFrequencyRatio);
 float energy = 0;
 float maxEnergy;
 btDynamicsWorld* dw;
@@ -435,6 +438,7 @@ void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha,
 	{
 		sc->setDamping(i, damping);
 	}
+	sc->setFrequencyRatio(frequencyRatio);
 	sc->setEquilibriumPoint();
 }
 
@@ -1023,7 +1027,13 @@ void CharpyDemo::showMessage()
 			fu, E);
 		infoMsg(buf);
 		if (mode == 2 || mode == 4 || mode == 7){
-			sprintf(buf, "(/) to change damping, now=%1.1f", damping);
+			if (mode == 7){
+				sprintf(buf, "(/) for damping, now=%1.1f, ^f/^F for frequencyRatio, now=%1.1f", 
+					damping, frequencyRatio);
+			}
+			else{
+				sprintf(buf, "(/) for damping, now=%1.1f", damping);
+			}
 			infoMsg(buf);
 		}
 		if (mode == 5){
@@ -1281,6 +1291,8 @@ void reinit(){
 	fu = initialFu;
 	l = initialL;
 	w = initialW;
+	frequencyRatio = initialFrequencyRatio;
+	damping = initialDamping;
 	firstRun = true;
 	if (openGraphFile){
 		toggleGraphFile();
@@ -1337,7 +1349,13 @@ bool ctrlKeyboardCallback(unsigned char key, int x, int y, int modifiers){
 		initG();
 		return true;
 	case 6: //f
-		return false;
+		if (shiftActive){
+			frequencyRatio *= 1.2;
+		}
+		else {
+			frequencyRatio /= 1.2;
+		}
+		return true;
 	case 7: //g
 		return false;
 	case 8: //h

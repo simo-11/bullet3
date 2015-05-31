@@ -65,12 +65,32 @@ void bt6DofElasticPlasticConstraint::enableSpring(int index, bool onOff)
 	}
 }
 
+/**
+Calculates limit for info->fps.
+Select smaller mass (larger inverse).
+*/
+void bt6DofElasticPlasticConstraint::calculateFpsLimit(int index){
+	btScalar k(m_springStiffness[index]);
+	btScalar m_a;
+	btScalar m_b;
+	if (index < 3){
+		m_a = m_rbA.getInvMass();
+		m_b = m_rbB.getInvMass();
+	}else{
+		m_a = m_rbA.getInvInertiaDiagLocal()[index - 3];
+		m_b = m_rbB.getInvInertiaDiagLocal()[index - 3];
+	}
+	btScalar inv_m = (m_a > m_b ? m_a : m_b);
+	btScalar fpsLimit(btSqrt(k * inv_m) / SIMD_2_PI);
+	m_fpsLimit[index] = fpsLimit;
+}
 
 
 void bt6DofElasticPlasticConstraint::setStiffness(int index, btScalar stiffness)
 {
 	btAssert((index >= 0) && (index < 6));
 	m_springStiffness[index] = stiffness;
+	calculateFpsLimit(index);
 }
 
 void bt6DofElasticPlasticConstraint::setDamping(int index, btScalar damping)
@@ -123,6 +143,13 @@ void bt6DofElasticPlasticConstraint::setEquilibriumPoint(int index, btScalar val
 	m_equilibriumPoint[index] = val;
 }
 
+void bt6DofElasticPlasticConstraint::setFrequencyRatio(btScalar frequencyRatio){
+	m_frequencyRatio = frequencyRatio;
+}
+
+btScalar bt6DofElasticPlasticConstraint::getFrequencyRatio(){
+	return m_frequencyRatio;
+}
 
 void bt6DofElasticPlasticConstraint::internalUpdateSprings(btConstraintInfo2* info)
 {
@@ -141,8 +168,15 @@ void bt6DofElasticPlasticConstraint::internalUpdateSprings(btConstraintInfo2* in
 			if (btFabs(force)>m_maxForce[i]){
 				force = (delta > 0 ? m_maxForce[i] : -m_maxForce[i]);
 			}
-			btScalar velFactor = info->fps * m_springDamping[i] / btScalar(info->m_numIterations);
-			m_linearLimits.m_targetVelocity[i] = velFactor * force;
+			btScalar ratio(info->fps/m_fpsLimit[i]);
+			if (ratio<m_frequencyRatio){
+				btScalar velFactor = info->fps * m_springDamping[i] /
+					btScalar(info->m_numIterations);
+				m_linearLimits.m_targetVelocity[i] = velFactor * force;
+			}
+			else{
+				m_linearLimits.m_targetVelocity[i] = 0;
+			}
 			m_linearLimits.m_maxMotorForce[i] = btFabs(force) / info->fps;
 		}
 	}
@@ -160,8 +194,15 @@ void bt6DofElasticPlasticConstraint::internalUpdateSprings(btConstraintInfo2* in
 			if (btFabs(force)>m_maxForce[i+3]){
 				force = (delta > 0 ? -m_maxForce[i+3] : m_maxForce[i+3]);
 			}
-			btScalar velFactor = info->fps * m_springDamping[i+3] / btScalar(info->m_numIterations);
-            m_angularLimits[i].m_targetVelocity = velFactor * force;
+			btScalar ratio(info->fps/m_fpsLimit[i + 3]);
+			if (ratio>m_frequencyRatio){
+				btScalar velFactor = info->fps * m_springDamping[i + 3] / 
+					btScalar(info->m_numIterations);
+				m_angularLimits[i].m_targetVelocity = velFactor * force;
+			}
+			else{
+				m_angularLimits[i].m_targetVelocity = 0;
+			}
             m_angularLimits[i].m_maxMotorForce = btFabs(force) / info->fps;
 		}
 	}
