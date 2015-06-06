@@ -78,6 +78,10 @@ public:
 	void setMaxForce(int index, btScalar damping);
 	void setMaxPlasticStrain(btScalar value);
 	void setMaxPlasticRotation(btScalar value);
+	btScalar getMaxPlasticStrain();
+	btScalar getMaxPlasticRotation();
+	btScalar getCurrentPlasticStrain();
+	btScalar getCurrentPlasticRotation();
 	void updatePlasticity(btJointFeedback& forces);
 	void calculateFpsLimit(int index);
 	void setFrequencyRatio(btScalar frequencyRatio);

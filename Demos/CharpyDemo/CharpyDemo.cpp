@@ -1052,6 +1052,16 @@ void CharpyDemo::showMessage()
 				btFabs(mode6Hinge->getHingeAngle()));
 			infoMsg(buf);
 			break;
+		case 7:
+			sprintf(buf, "^a/^A for mpr, "
+				"mpr=%1.3f, cpr=%1.3f, mps=%1.3f, cps=%1.3f",
+				mode7c->getMaxPlasticRotation(),
+				mode7c->getCurrentPlasticRotation(),
+				mode7c->getMaxPlasticStrain(),
+				mode7c->getCurrentPlasticStrain()
+				);
+			infoMsg(buf);
+			break;
 		default:
 			sprintf(buf, "^a/^A to change mpr, mpr=%1.3f, bith=%6.3f",
 				maxPlasticRotation,

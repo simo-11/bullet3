@@ -238,15 +238,27 @@ void bt6DofElasticPlasticConstraint::setAxis(const btVector3& axis1,const btVect
   calculateTransforms();
 }
 
+/*
+// bcc starts
+*/
 void bt6DofElasticPlasticConstraint::setMaxPlasticStrain(btScalar value){
 	m_maxPlasticStrain = value;
+}
+btScalar bt6DofElasticPlasticConstraint::getMaxPlasticStrain(){
+	return m_maxPlasticStrain;
+}
+btScalar bt6DofElasticPlasticConstraint::getCurrentPlasticStrain(){
+	return m_currentPlasticStrain;
 }
 void bt6DofElasticPlasticConstraint::setMaxPlasticRotation(btScalar value){
 	m_maxPlasticRotation = value;
 }
-/*
-// bcc
-*/
+btScalar bt6DofElasticPlasticConstraint::getMaxPlasticRotation(){
+	return m_maxPlasticRotation;
+}
+btScalar bt6DofElasticPlasticConstraint::getCurrentPlasticRotation(){
+	return m_currentPlasticRotation;
+}
 void bt6DofElasticPlasticConstraint::updatePlasticity(btJointFeedback& forces){
 	int i;
 	for (i = 0; i < 3; i++)
