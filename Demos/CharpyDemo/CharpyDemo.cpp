@@ -1028,7 +1028,7 @@ void CharpyDemo::showMessage()
 		infoMsg(buf);
 		if (mode == 2 || mode == 4 || mode == 7){
 			if (mode == 7){
-				sprintf(buf, "(/) for damping, now=%1.1f, ^f/^F for frequencyRatio, now=%1.1f", 
+				sprintf(buf, "(/) for damping, now=%1.1f, ^f/^F for frequencyRatio, now=%1.2f",
 					damping, frequencyRatio);
 			}
 			else{
@@ -1110,7 +1110,7 @@ void CharpyDemo::showMessage()
 		sprintf(buf, "currentTime=%3.4f s, currentAngle=%1.4f",
 			currentTime, getHammerAngle());
 		infoMsg(buf);
-		sprintf(buf, "q=quit, space to restart, ^r to reset, t to toggle this help");
+		sprintf(buf, "q=quit, space to restart, ^r to reset, t to toggle this info");
 		infoMsg(buf);
 		resetPerspectiveProjection();
 		glEnable(GL_LIGHTING);
@@ -1267,14 +1267,21 @@ void CharpyDemo::specialKeyboard(int key, int x, int y){
 	}
 }
 
-void scaleMode6HingeMaxPlasticRotation(btScalar scale){
+void scalePlasticity(btScalar scale){
 	if (mode == 1){
 		return;
 	}
 	maxPlasticRotation *= scale;
 	getBreakingImpulseThreshold();
-	if (mode == 6){
+	switch (mode){
+	case 6:
 		mode6Hinge->setMaxPlasticRotation(maxPlasticRotation);
+		break;
+	case 7:
+		mode7c->scalePlasticity(scale);
+		break;
+	case 8:
+		break;
 	}
 }
 
@@ -1321,10 +1328,10 @@ bool ctrlKeyboardCallback(unsigned char key, int x, int y, int modifiers){
 	switch (key){
 	case 1: // a
 		if (shiftActive){
-			scaleMode6HingeMaxPlasticRotation(1.2);
+			scalePlasticity(1.2);
 		}
 		else{
-			scaleMode6HingeMaxPlasticRotation(0.8);
+			scalePlasticity(0.8);
 		}
 		break;
 	case 2: //b

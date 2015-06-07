@@ -259,6 +259,10 @@ btScalar bt6DofElasticPlasticConstraint::getMaxPlasticRotation(){
 btScalar bt6DofElasticPlasticConstraint::getCurrentPlasticRotation(){
 	return m_currentPlasticRotation;
 }
+void bt6DofElasticPlasticConstraint::scalePlasticity(btScalar scale){
+	m_maxPlasticStrain *= scale;
+	m_maxPlasticRotation *= scale;
+}
 void bt6DofElasticPlasticConstraint::updatePlasticity(btJointFeedback& forces){
 	int i;
 	for (i = 0; i < 3; i++)
