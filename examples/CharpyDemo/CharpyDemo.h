@@ -4,13 +4,12 @@ Simo Nikula 2014 based on bullet3 Demos
 #ifndef CHARPY_DEMO_H
 #define CHARPY_DEMO_H
 
-#ifdef _WINDOWS
-#include "Win32DemoApplication.h"
-#define PlatformDemoApplication Win32DemoApplication
-#else
-#include "GlutDemoApplication.h"
-#define PlatformDemoApplication GlutDemoApplication
-#endif
+#include "../CommonInterfaces/CommonExampleInterface.h"
+#include "../CommonInterfaces/CommonGUIHelperInterface.h"
+#include "../CommonInterfaces/CommonRenderInterface.h"
+#include "../CommonInterfaces/CommonWindowInterface.h"
+#include "../CommonInterfaces/CommonGraphicsAppInterface.h"
+#include "../CommonInterfaces/CommonRigidBodyBase.h"
 
 #include "LinearMath/btAlignedObjectArray.h"
 
@@ -23,7 +22,7 @@ struct btCollisionAlgorithmCreateFunc;
 class btDefaultCollisionConfiguration;
 
 ///CharpyDemo shows basic breaking and glueing of objects
-class CharpyDemo : public PlatformDemoApplication
+class CharpyDemo : public CommonRigidBodyBase
 {
 
 	//keep the collision shapes, for deletion/cleanup
@@ -41,8 +40,8 @@ class CharpyDemo : public PlatformDemoApplication
 	void showMessage();
 
 	public:
-
-	CharpyDemo()
+	CharpyDemo(struct GUIHelperInterface* helper)
+			:CommonRigidBodyBase(helper)
 	{
 	}
 	virtual ~CharpyDemo()
@@ -64,17 +63,10 @@ class CharpyDemo : public PlatformDemoApplication
 
 	virtual void clientResetScene();
 
-	static DemoApplication* Create()
-	{
-		CharpyDemo* demo = new CharpyDemo;
-		demo->myinit();
-		demo->initPhysics();
-		return demo;
-	}
-
 	void	shootBox(const btVector3& destination);
-	
+	btRigidBody* localCreateRigidBody(btScalar mass, const btTransform& startTransform,
+		btCollisionShape* shape);
 };
-
+class CommonExampleInterface*    CharpyDemoCreateFunc(CommonExampleOptions& options);
 #endif //CHARPY_DEMO_H
 

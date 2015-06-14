@@ -17,8 +17,8 @@ subject to the following restrictions:
 
 ///todo: make this configurable in the gui
 bool useShadowMap=true;//false;//true;
-int shadowMapWidth=8192;
-int shadowMapHeight=8192;
+int shadowMapWidth=4096; // was 8192
+int shadowMapHeight=4096; // was 8192
 float shadowMapWorldSize=100;
 
 #define MAX_POINTS_IN_BATCH 1024
@@ -1310,26 +1310,31 @@ void GLInstancingRenderer::renderSceneInternal(int renderMode)
 	float depthProjectionMatrix[4][4];
 	GLfloat depthModelViewMatrix[4][4];
 	//GLfloat depthModelViewMatrix2[4][4];
+	GLuint err = glGetError();
+	err = glGetError();
 
 	// Compute the MVP matrix from the light's point of view
 	if (renderMode==B3_CREATE_SHADOWMAP_RENDERMODE)
 	{
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_FRONT);
-
+		err = glGetError();
 		if (!m_data->m_shadowMap)
 		{
 			glActiveTexture(GL_TEXTURE0);
-
+			err = glGetError();
 			glGenTextures(1,&m_data->m_shadowTexture);
-			glBindTexture(GL_TEXTURE_2D,m_data->m_shadowTexture);
+			err = glGetError();
+			glBindTexture(GL_TEXTURE_2D, m_data->m_shadowTexture);
+			err = glGetError();
 			//glTexImage2D(GL_TEXTURE_2D,0,GL_DEPTH_COMPONENT16,m_screenWidth,m_screenHeight,0,GL_DEPTH_COMPONENT,GL_FLOAT,0);
 			//glTexImage2D(GL_TEXTURE_2D,0,GL_DEPTH_COMPONENT32,m_screenWidth,m_screenHeight,0,GL_DEPTH_COMPONENT,GL_FLOAT,0);
 			glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, shadowMapWidth, shadowMapHeight, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
-
+			err = glGetError();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			err = glGetError();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
+			err = glGetError();
 			float l_ClampColor[] = {1.0, 1.0, 1.0, 1.0};
 			glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, l_ClampColor);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -1338,21 +1343,23 @@ void GLInstancingRenderer::renderSceneInternal(int renderMode)
 //			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-
+			err = glGetError();
 			m_data->m_shadowMap=new GLRenderToTexture();
 			m_data->m_shadowMap->init(shadowMapWidth, shadowMapHeight,m_data->m_shadowTexture,RENDERTEXTURE_DEPTH);
 		}
 		m_data->m_shadowMap->enable();
 		glViewport(0,0,shadowMapWidth,shadowMapHeight);
 		//glClearColor(1,1,1,1);
+		err = glGetError();
 		glClear(GL_DEPTH_BUFFER_BIT);
 		//glClearColor(0.3,0.3,0.3,1);
 
 //		m_data->m_shadowMap->disable();
 	//	return;
+		err = glGetError();
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_BACK); // Cull back-facing triangles -> draw only front-facing triangles
-
+		err = glGetError();
 	b3Assert(glGetError() ==GL_NO_ERROR);
 	} else
 	{

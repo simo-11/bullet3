@@ -16,10 +16,6 @@ CharpyDemo shows how to handle Charpy test.
 target is to break objects using plasticity.
 */
 #include "CharpyDemo.h"
-#include "GlutStuff.h"
-#include "GLDebugDrawer.h"
-#include "GLDebugFont.h"
-///btBulletDynamicsCommon.h is the main Bullet include file, contains most common include files.
 #include "btBulletDynamicsCommon.h"
 #include "BulletDynamics/ConstraintSolver/btGeneric6DofSpring2Constraint.h"
 #include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
@@ -33,7 +29,6 @@ target is to break objects using plasticity.
 #include <stdio.h> 
 #include <time.h>
 
-GLDebugDrawer	gDebugDrawer;
 int sFrameNumber = 0;
 bool firstRun=true;
 bool hammerHitsSpecimen;
@@ -110,7 +105,7 @@ btScalar breakingImpulseThreshold=0;
 btScalar w1;
 float maxForces[6];
 FILE *fp;
-boolean openGraphFile = false;
+bool openGraphFile = false;
 char gfn[100];
 int initialSolverType = 1;
 int solverType = initialSolverType;
@@ -606,6 +601,24 @@ void mode7callback(btDynamicsWorld *world, btScalar timeStep) {
 	mode7c->updatePlasticity(specimenJointFeedback);
 }
 
+btRigidBody* CharpyDemo::localCreateRigidBody(btScalar mass, const btTransform& startTransform, 
+	btCollisionShape* shape)
+{
+	btAssert((!shape || shape->getShapeType() != INVALID_SHAPE_PROXYTYPE));
+
+	//rigidbody is dynamic if and only if mass is non zero, otherwise static
+	bool isDynamic = (mass != 0.f);
+
+	btVector3 localInertia(0, 0, 0);
+	if (isDynamic)
+		shape->calculateLocalInertia(mass, localInertia);
+	btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+	btRigidBody::btRigidBodyConstructionInfo cInfo(mass, myMotionState, shape, localInertia);
+	btRigidBody* body = new btRigidBody(cInfo);
+	m_dynamicsWorld->addRigidBody(body);
+	return body;
+}
+
 /*
 X axis is horizontal, positive to direction where hammer comes from (left)
 Y axis is vertical, positive up
@@ -613,19 +626,6 @@ Z axis is horizontal and Z=0 is symmetry plane
 */
 void	CharpyDemo::initPhysics()
 {
-	if(firstRun){
-		setTexturing(true);
-		setShadows(true);
-		setDebugMode(btIDebugDraw::DBG_DrawText|btIDebugDraw::DBG_NoHelpText);
-		m_cameraDistance = 15.0;
-		m_ele = 20.f;
-		m_azi = 0.f;
-		m_cameraPosition = btVector3(0.f, 0.f, 0.f);
-		m_cameraTargetPosition = btVector3(0.f, 0.f, 0.f);
-		m_cameraUp = btVector3(0, 1, 0);
-		setViewMode(1);
-		firstRun=false;
-	}
 	timeStep = setTimeStep;
 	energy = 0;
 	maxEnergy = energy;
@@ -856,7 +856,7 @@ void	CharpyDemo::initPhysics()
 	updateEnergy();
 	btWorld->stepSimulation(timeStep,0);
 	currentTime=timeStep;
-	dw->setDebugDrawer(&gDebugDrawer);
+//	dw->setDebugDrawer(&gDebugDrawer);
 }
 
 
@@ -968,7 +968,7 @@ void checkCollisions(){
 
 void CharpyDemo::clientMoveAndDisplay()
 {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 	///step the simulation
 	if (m_dynamicsWorld)	{
 		m_dynamicsWorld->stepSimulation(timeStep, 30, timeStep);
@@ -980,22 +980,23 @@ void CharpyDemo::clientMoveAndDisplay()
 	currentTime += timeStep;
 	writeGraphData();
 	updateView();
-	renderme();
+//	renderme();
 	showMessage();
-	glFlush();
-	swapBuffers();
-	Sleep(displayWait);
+//	glFlush();
+//	swapBuffers();
+//	Sleep(displayWait);
 }
 
 int yStart;
 int xStart;
 btVector3 infoColor(1,1,1);
 void infoMsg(const char * buf){
-	GLDebugDrawStringInternal(xStart, yStart, buf, infoColor);
+//  GLDebugDrawStringInternal(xStart, yStart, buf, infoColor);
 	yStart += 20;
 }
 void CharpyDemo::showMessage()
 {
+#if 0
 	if((getDebugMode() & btIDebugDraw::DBG_DrawText))
 	{	
 		setOrthographicProjection();
@@ -1115,7 +1116,7 @@ void CharpyDemo::showMessage()
 		resetPerspectiveProjection();
 		glEnable(GL_LIGHTING);
 	}
-
+#endif
 }
 
 void CharpyDemo::updateView(){
@@ -1123,17 +1124,18 @@ void CharpyDemo::updateView(){
 	case 1:
 		break;
 	case 2:
-		m_cameraPosition=hammerBody->getCenterOfMassPosition();
-		m_cameraTargetPosition = specimenBody->getCenterOfMassPosition();
+//		m_cameraPosition=hammerBody->getCenterOfMassPosition();
+//		m_cameraTargetPosition = specimenBody->getCenterOfMassPosition();
 		break;
 	case 3:
-		m_cameraPosition = hammerBody->getCenterOfMassPosition();
-		m_cameraTargetPosition = specimenBody2->getCenterOfMassPosition();
+//		m_cameraPosition = hammerBody->getCenterOfMassPosition();
+//		m_cameraTargetPosition = specimenBody2->getCenterOfMassPosition();
 		break;
 	}
 }
 
 void CharpyDemo::displayCallback(void) {
+#if 0
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 	updateView();
 	renderme();
@@ -1143,6 +1145,7 @@ void CharpyDemo::displayCallback(void) {
 	glFlush();
 	swapBuffers();
 	Sleep(100); // save energy
+#endif
 }
 
 
@@ -1162,12 +1165,14 @@ void CharpyDemo::setViewMode(int viewMode){
 	m_viewMode = viewMode;
 	switch (viewMode){
 	case 1:
+#if 0
 		setCameraDistance(btScalar(0.5));
 		m_cameraPosition.setX(btScalar(0.3));
 		m_cameraTargetPosition = btVector3(0, 0.2, 0);
 		m_cameraUp = y_up;
 		m_frustumZNear = btScalar(0.001);
 		m_frustumZFar = btScalar(10);
+#endif
 		break;
 	}
 }
@@ -1177,6 +1182,7 @@ void setSolverType(int val){
 }
 
 void CharpyDemo::specialKeyboard(int key, int x, int y){
+#if 0
 	updateModifierKeys();
 	bool resetScene = false;
 	switch (key){
@@ -1265,6 +1271,7 @@ void CharpyDemo::specialKeyboard(int key, int x, int y){
 	if (resetScene)	{
 		clientResetScene();
 	}
+#endif
 }
 
 void scalePlasticity(btScalar scale){
@@ -1322,9 +1329,11 @@ handle control keys
 */
 bool ctrlKeyboardCallback(unsigned char key, int x, int y, int modifiers){
 	bool shiftActive=false;
+#if 0
 	if (modifiers & BT_ACTIVE_SHIFT){
 		shiftActive = true;
 	}
+#endif
 	switch (key){
 	case 1: // a
 		if (shiftActive){
@@ -1447,6 +1456,7 @@ bool ctrlKeyboardCallback(unsigned char key, int x, int y, int modifiers){
 /**  no free keys without modifiers */
 void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
 {
+#if 0
 	updateModifierKeys();
 	if (m_modifierKeys& BT_ACTIVE_CTRL){
 		if (ctrlKeyboardCallback(key, x, y, m_modifierKeys)){
@@ -1454,6 +1464,7 @@ void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
 		}
 		return;
 	}
+#endif
 	switch (key)
 	{
 	case '+':
@@ -1530,11 +1541,11 @@ void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
 			displayWait = setDisplayWait;
 			break;
 	case 'i':
-		getDeltaTimeMicroseconds(); // get net time
-		PlatformDemoApplication::keyboardCallback(key, x, y);
+//		getDeltaTimeMicroseconds(); // get net time
+//		PlatformDemoApplication::keyboardCallback(key, x, y);
 		break;
 	default:
-		PlatformDemoApplication::keyboardCallback(key,x,y);
+//		PlatformDemoApplication::keyboardCallback(key,x,y);
 		break;
 	}
 }
@@ -1612,4 +1623,8 @@ void	CharpyDemo::exitPhysics()
 
 	delete basePoint;
 	basePoint = 0;
+}
+CommonExampleInterface*    CharpyDemoCreateFunc(CommonExampleOptions& options)
+{
+	return new CharpyDemo(options.m_guiHelper);
 }

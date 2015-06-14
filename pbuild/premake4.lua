@@ -76,8 +76,13 @@
     dofile ("../build3/findOpenGLGlewGlut.lua")
 	language "C++"
 
-	include "../Demos/plasticity"
-	include "../btgui/OpenGLWindow"
+	include "../examples/plasticity"
+	include "../examples/OpenGLWindow"
+    include "../examples/ThirdPartyLibs/Gwen"	
+	include "../src/Bullet3Common"
+	include "../src/Bullet3Geometry"
+	include "../src/Bullet3Collision"
+	include "../src/Bullet3Dynamics"
 	include "../src/BulletSoftBody"
 	include "../src/BulletDynamics"
 	include "../src/BulletCollision"
