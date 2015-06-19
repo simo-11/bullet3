@@ -1,5 +1,5 @@
 /*
-Simo Nikula 2014-2015 based on bullet3 demos
+Simo Nikula 2015- based on bullet3 examples
 */
 /*
 
@@ -21,13 +21,11 @@ return glutmain(argc, argv,640,480,buf,&ccdDemo);
 }
 
 */
-#include "../ExampleBrowser/OpenGLExampleBrowser.h"
-typedef OpenGLExampleBrowser DefaultBrowser;
-
 #include "Bullet3Common/b3CommandLineArgs.h"
 #include "../Utils/b3Clock.h"
 
 #include "PlasticityExampleEntries.h"
+#include "PlasticityExampleBrowser.h"
 #include "Bullet3Common/b3Logging.h"
 int main(int argc, char* argv[])
 {
@@ -38,7 +36,7 @@ int main(int argc, char* argv[])
 	PlasticityExampleEntries examples;
 	examples.initExampleEntries();
 
-	ExampleBrowserInterface* exampleBrowser = new DefaultBrowser(&examples);
+	ExampleBrowserInterface* exampleBrowser = new PlasticityExampleBrowser(&examples);
 	bool init = exampleBrowser->init(argc, argv);
 	clock.reset();
 	if (init)

@@ -26,10 +26,16 @@
 		files {
 		"**.cpp",
 		"**.h",
+		"../ExampleBrowser/**.cpp",
+		"../ExampleBrowser/**.h",
 		"../CommonInterfaces/*",
 		"../CharpyDemo/*",
 		"../Utils/b3Clock.*",
-
+		}
+		excludes {
+		"../ExampleBrowser/OpenGLExampleBrowser.*",
+		"../ExampleBrowser/ExampleEntries.*",
+		"../ExampleBrowser/main.*",
 		}
 		
 if os.is("Linux") then 
