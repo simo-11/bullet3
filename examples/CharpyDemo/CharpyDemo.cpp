@@ -28,13 +28,59 @@ target is to break objects using plasticity.
 
 #include <stdio.h> 
 #include <time.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+class CharpyDemo : public CommonRigidBodyBase
+{
+
+	//keep the collision shapes, for deletion/cleanup
+	btAlignedObjectArray<btCollisionShape*>	m_collisionShapes;
+
+	btBroadphaseInterface*	m_broadphase;
+
+	btCollisionDispatcher*	m_dispatcher;
+
+	btConstraintSolver*	m_solver;
+
+	btDefaultCollisionConfiguration* m_collisionConfiguration;
+	int m_viewMode;
+
+	void showMessage();
+
+public:
+	CharpyDemo(struct GUIHelperInterface* helper)
+		:CommonRigidBodyBase(helper)
+	{
+	}
+	virtual ~CharpyDemo()
+	{
+	}
+	void	initPhysics();
+
+	void	exitPhysics();
+
+	virtual void clientMoveAndDisplay();
+
+	virtual void displayCallback();
+
+	virtual void keyboardCallback(unsigned char key, int x, int y);
+	virtual void specialKeyboard(int key, int x, int y);
+	virtual void setViewMode(int viewMode);
+	virtual void updateView();
+	virtual void renderScene();
+	virtual void clientResetScene();
+	btRigidBody* localCreateRigidBody(btScalar mass, const btTransform& startTransform,
+		btCollisionShape* shape);
+};
 
 int sFrameNumber = 0;
 bool firstRun=true;
 bool hammerHitsSpecimen;
 btScalar initialStartAngle(1.8);
 btScalar startAngle(initialStartAngle);
-long  initialDisplayWait = 10;
+long  initialDisplayWait = 20;
 long displayWait = initialDisplayWait;
 long setDisplayWait = displayWait;
 btScalar ccdMotionThreshHold(0.001);
@@ -964,7 +1010,14 @@ void checkCollisions(){
 	}
 }
 
+void CharpyDemo::renderScene(){
+	m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
+	m_guiHelper->render(m_dynamicsWorld);
+#ifdef _WIN32
+	Sleep(displayWait);
+#endif
 
+}
 
 void CharpyDemo::clientMoveAndDisplay()
 {
@@ -1550,10 +1603,6 @@ void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
 	}
 }
 
-// no-op
-void	CharpyDemo::shootBox(const btVector3& destination)
-{
-}
 
 void	CharpyDemo::exitPhysics()
 {
