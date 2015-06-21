@@ -31,10 +31,32 @@ struct ExampleEntry
 
 static ExampleEntry gDefaultExamples[]=
 {
-	ExampleEntry(0, "Plasticity"),
-	ExampleEntry(1,"Charpy",
-	"Simulate Charpy Impact test using various techniques"
-	, CharpyDemoCreateFunc),	
+	ExampleEntry(0, "Charpy Impact"),
+	ExampleEntry(1,"F1",
+	"single rigid object",
+	CharpyDemoF1CreateFunc),
+	ExampleEntry(1, "F2",
+	"two objects and springConstraints",
+	CharpyDemoF2CreateFunc),
+	ExampleEntry(1, "F3",
+	"two objects and constraints with zero limits",
+	CharpyDemoF3CreateFunc),
+	ExampleEntry(1, "F4",
+	"two objects and spring2Constraints",
+	CharpyDemoF4CreateFunc),
+	ExampleEntry(1, "F5",
+	"two objects and hingeConstraint",
+	CharpyDemoF5CreateFunc),
+	ExampleEntry(1, "F6",
+	"two objects and plasticHingeConstraint",
+	CharpyDemoF6CreateFunc),
+	ExampleEntry(1, "F7",
+	"two objects and 6DofElasticPlasticConstraint",
+	CharpyDemoF7CreateFunc),
+	ExampleEntry(1, "F8",
+	"two objects and 6DofElasticPlastic2Constraint",
+	CharpyDemoF8CreateFunc),
+
 };
 struct ExampleEntriesInternalData
 {

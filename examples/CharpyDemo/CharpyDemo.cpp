@@ -46,25 +46,29 @@ class CharpyDemo : public CommonRigidBodyBase
 
 	btDefaultCollisionConfiguration* m_collisionConfiguration;
 	int m_viewMode;
+	int m_mode;
 
 	void showMessage();
 
 public:
-	CharpyDemo(struct GUIHelperInterface* helper)
+	CharpyDemo(struct GUIHelperInterface* helper, int mode)
 		:CommonRigidBodyBase(helper)
 	{
+		m_mode = mode;
 	}
 	virtual ~CharpyDemo()
 	{
 	}
-	void	initPhysics();
-
-	void	exitPhysics();
-
-	virtual void clientMoveAndDisplay();
-
-	virtual void displayCallback();
-
+	virtual void	initPhysics();
+	virtual void	exitPhysics();
+	virtual void	stepSimulation(float deltaTime);
+	virtual void	physicsDebugDraw(int debugFlags){};
+	virtual void	resetCamera(){};
+	virtual bool	mouseMoveCallback(float x, float y){ return false; };
+	virtual bool	mouseButtonCallback(int button, int state, float x, float y){
+		return false;
+	};
+	virtual bool	keyboardCallback(int key, int state);
 	virtual void keyboardCallback(unsigned char key, int x, int y);
 	virtual void specialKeyboard(int key, int x, int y);
 	virtual void setViewMode(int viewMode);
@@ -672,24 +676,16 @@ Z axis is horizontal and Z=0 is symmetry plane
 */
 void	CharpyDemo::initPhysics()
 {
+	mode = m_mode;
 	timeStep = setTimeStep;
 	energy = 0;
 	maxEnergy = energy;
 	printf("startAngle=%f timeStep=%f\n",startAngle,timeStep);
 	basePoint = new btVector3(w / 2, 0.2 + w / 2, 0);
-	///collision configuration contains default setup for memory, collision setup
 	m_collisionConfiguration = new btDefaultCollisionConfiguration();
-	//m_collisionConfiguration->setConvexConvexMultipointIterations();
-
-	///use the default collision dispatcher. For parallel processing you can use a diffent dispatcher (see Extras/BulletMultiThreaded)
 	m_dispatcher = new	btCollisionDispatcher(m_collisionConfiguration);
-
 	m_broadphase = new btDbvtBroadphase();
-
 	m_solver = getSolver();
-
-	//m_dynamicsWorld = new btDiscreteDynamicsWorld(m_dispatcher,m_broadphase,m_solver,m_collisionConfiguration);
-
 	btDiscreteDynamicsWorld* btWorld =
 		new btDiscreteDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collisionConfiguration);
 	m_dynamicsWorld = btWorld;
@@ -902,6 +898,7 @@ void	CharpyDemo::initPhysics()
 	updateEnergy();
 	btWorld->stepSimulation(timeStep,0);
 	currentTime=timeStep;
+	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
 //	dw->setDebugDrawer(&gDebugDrawer);
 }
 
@@ -1019,10 +1016,7 @@ void CharpyDemo::renderScene(){
 
 }
 
-void CharpyDemo::clientMoveAndDisplay()
-{
-//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
-	///step the simulation
+void CharpyDemo::stepSimulation(float deltaTime){
 	if (m_dynamicsWorld)	{
 		m_dynamicsWorld->stepSimulation(timeStep, 30, timeStep);
 		checkCollisions();
@@ -1033,11 +1027,8 @@ void CharpyDemo::clientMoveAndDisplay()
 	currentTime += timeStep;
 	writeGraphData();
 	updateView();
-//	renderme();
 	showMessage();
-//	glFlush();
-//	swapBuffers();
-//	Sleep(displayWait);
+	Sleep(displayWait);
 }
 
 int yStart;
@@ -1186,21 +1177,6 @@ void CharpyDemo::updateView(){
 		break;
 	}
 }
-
-void CharpyDemo::displayCallback(void) {
-#if 0
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
-	updateView();
-	renderme();
-	showMessage();
-	if (m_dynamicsWorld)
-		m_dynamicsWorld->debugDrawWorld();
-	glFlush();
-	swapBuffers();
-	Sleep(100); // save energy
-#endif
-}
-
 
 void resetCollisionMargin()
 {
@@ -1374,6 +1350,10 @@ void reinit(){
 	if (openGraphFile){
 		toggleGraphFile();
 	}
+}
+
+bool CharpyDemo::keyboardCallback(int key, int state){
+	return true;
 }
 
 /*
@@ -1673,7 +1653,35 @@ void	CharpyDemo::exitPhysics()
 	delete basePoint;
 	basePoint = 0;
 }
-CommonExampleInterface*    CharpyDemoCreateFunc(CommonExampleOptions& options)
+CommonExampleInterface*    CharpyDemoF1CreateFunc(CommonExampleOptions& options)
 {
-	return new CharpyDemo(options.m_guiHelper);
+	return new CharpyDemo(options.m_guiHelper,1);
+}
+CommonExampleInterface*    CharpyDemoF2CreateFunc(CommonExampleOptions& options)
+{
+	return new CharpyDemo(options.m_guiHelper, 2);
+}
+CommonExampleInterface*    CharpyDemoF3CreateFunc(CommonExampleOptions& options)
+{
+	return new CharpyDemo(options.m_guiHelper, 3);
+}
+CommonExampleInterface*    CharpyDemoF4CreateFunc(CommonExampleOptions& options)
+{
+	return new CharpyDemo(options.m_guiHelper, 4);
+}
+CommonExampleInterface*    CharpyDemoF5CreateFunc(CommonExampleOptions& options)
+{
+	return new CharpyDemo(options.m_guiHelper, 5);
+}
+CommonExampleInterface*    CharpyDemoF6CreateFunc(CommonExampleOptions& options)
+{
+	return new CharpyDemo(options.m_guiHelper, 6);
+}
+CommonExampleInterface*    CharpyDemoF7CreateFunc(CommonExampleOptions& options)
+{
+	return new CharpyDemo(options.m_guiHelper, 7);
+}
+CommonExampleInterface*    CharpyDemoF8CreateFunc(CommonExampleOptions& options)
+{
+	return new CharpyDemo(options.m_guiHelper, 8);
 }
