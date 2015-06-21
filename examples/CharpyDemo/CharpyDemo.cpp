@@ -68,9 +68,8 @@ public:
 	virtual bool	mouseButtonCallback(int button, int state, float x, float y){
 		return false;
 	};
-	virtual bool	keyboardCallback(int key, int state);
-	virtual void keyboardCallback(unsigned char key, int x, int y);
-	virtual void specialKeyboard(int key, int x, int y);
+	virtual bool keyboardCallback(int key, int state);
+	virtual bool ctrlKeyboardCallback(int key);
 	virtual void setViewMode(int viewMode);
 	virtual void updateView();
 	virtual void renderScene();
@@ -680,7 +679,7 @@ void	CharpyDemo::initPhysics()
 	timeStep = setTimeStep;
 	energy = 0;
 	maxEnergy = energy;
-	printf("startAngle=%f timeStep=%f\n",startAngle,timeStep);
+	b3Printf("mode=%d startAngle=%f timeStep=%f", mode, startAngle, timeStep);
 	basePoint = new btVector3(w / 2, 0.2 + w / 2, 0);
 	m_collisionConfiguration = new btDefaultCollisionConfiguration();
 	m_dispatcher = new	btCollisionDispatcher(m_collisionConfiguration);
@@ -1210,98 +1209,6 @@ void setSolverType(int val){
 	solverType = val;
 }
 
-void CharpyDemo::specialKeyboard(int key, int x, int y){
-#if 0
-	updateModifierKeys();
-	bool resetScene = false;
-	switch (key){
-	case GLUT_KEY_F1:
-		if (m_modifierKeys& BT_ACTIVE_CTRL){
-			setSolverType(1);
-			resetScene = true;
-		}else if (m_modifierKeys& BT_ACTIVE_SHIFT){
-			setViewMode(1);
-		}
-		else{
-			mode = 1;
-			resetScene = true;
-		}
-		break;
-	case GLUT_KEY_F2:
-		if (m_modifierKeys& BT_ACTIVE_CTRL){
-			setSolverType(2);
-			resetScene = true;
-		} else if (m_modifierKeys& BT_ACTIVE_SHIFT){
-			setViewMode(2);
-		} else{
-			mode = 2;
-			resetScene = true;
-		}
-		break;
-	case GLUT_KEY_F3:
-		if (m_modifierKeys& BT_ACTIVE_CTRL){
-			setSolverType(3);
-			resetScene = true;
-		} else 	if (m_modifierKeys& BT_ACTIVE_SHIFT){
-			setViewMode(3);
-		} else{
-			mode = 3;
-			resetScene = true;
-		}
-		break;
-	case GLUT_KEY_F4:
-		if (m_modifierKeys& BT_ACTIVE_CTRL){
-		}else if (m_modifierKeys& BT_ACTIVE_SHIFT){
-		}else{
-			mode = 4;
-			resetScene = true;
-		}
-		break;
-	case GLUT_KEY_F5:
-		if (m_modifierKeys& BT_ACTIVE_CTRL){
-		} else if (m_modifierKeys& BT_ACTIVE_SHIFT){
-		} else{
-			mode = 5;
-			resetScene = true;
-		}
-		break;
-	case GLUT_KEY_F6:
-		if (m_modifierKeys& BT_ACTIVE_CTRL){
-		}else if (m_modifierKeys& BT_ACTIVE_SHIFT){
-		}else{
-			mode = 6;
-			resetScene = true;
-		}
-		break;
-	case GLUT_KEY_F7:
-		if (m_modifierKeys& BT_ACTIVE_CTRL){
-		}
-		else if (m_modifierKeys& BT_ACTIVE_SHIFT){
-		}
-		else{
-			mode = 7;
-			resetScene = true;
-		}
-		break;
-	case GLUT_KEY_F8:
-		if (m_modifierKeys& BT_ACTIVE_CTRL){
-		}
-		else if (m_modifierKeys& BT_ACTIVE_SHIFT){
-		}
-		else{
-			mode = 8;
-			resetScene = true;
-		}
-		break;
-	default:
-		PlatformDemoApplication::specialKeyboard(key, x, y);
-		break;
-	}
-	if (resetScene)	{
-		clientResetScene();
-	}
-#endif
-}
 
 void scalePlasticity(btScalar scale){
 	if (mode == 1){
@@ -1352,21 +1259,23 @@ void reinit(){
 	}
 }
 
-bool CharpyDemo::keyboardCallback(int key, int state){
-	return true;
-}
+/*
+CommonWindowInterface* window = m_guiHelper->getAppInterface()->m_window;
+if (window->isModifierKeyPressed(B3G_ALT))
+if (window->isModifierKeyPressed(B3G_SHIFT))
+if (window->isModifierKeyPressed(B3G_CONTROL))
+*/
 
 /*
 handle control keys
 @return true if scene should be reset i.e. simulation should be restarted
 */
-bool ctrlKeyboardCallback(unsigned char key, int x, int y, int modifiers){
+bool CharpyDemo::ctrlKeyboardCallback(int key){
 	bool shiftActive=false;
-#if 0
-	if (modifiers & BT_ACTIVE_SHIFT){
+	CommonWindowInterface* window = m_guiHelper->getAppInterface()->m_window;
+	if(window->isModifierKeyPressed(B3G_SHIFT)){
 		shiftActive = true;
 	}
-#endif
 	switch (key){
 	case 1: // a
 		if (shiftActive){
@@ -1487,17 +1396,18 @@ bool ctrlKeyboardCallback(unsigned char key, int x, int y, int modifiers){
 	return false;
 }
 /**  no free keys without modifiers */
-void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
-{
-#if 0
-	updateModifierKeys();
-	if (m_modifierKeys& BT_ACTIVE_CTRL){
-		if (ctrlKeyboardCallback(key, x, y, m_modifierKeys)){
+bool CharpyDemo::keyboardCallback(int key, int state){
+	if (state != 1){
+		return true;
+	}
+	CommonWindowInterface* window = m_guiHelper->getAppInterface()->m_window;
+	if (window->isModifierKeyPressed(B3G_CONTROL)){
+		if (ctrlKeyboardCallback(key)){
 			clientResetScene();
 		}
-		return;
+		return true;
 	}
-#endif
+	bool resetScene = false;
 	switch (key)
 	{
 	case '+':
@@ -1506,18 +1416,18 @@ void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
 			break;
 	case '-':
 			startAngle-=0.1;
-			clientResetScene();
+			resetScene=true;;
 			break;
 	case '(':
 			if (damping>0.){
 				damping -= 0.1;
-				clientResetScene();
+				resetScene=true;;
 			}
 			break;
 	case ')':
 			if (damping < 1){
 				damping += 0.1;
-				clientResetScene();
+				resetScene=true;;
 			}
 			break;
 	case '<':
@@ -1538,27 +1448,27 @@ void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
 			break;
 	case 'j':
 			floorHE*=0.8;
-			clientResetScene();
+			resetScene=true;;
 			break;
 	case 'J':
 			floorHE/=0.8;
-			clientResetScene();
+			resetScene=true;;
 			break;
 	case 'k':
 			w*=0.8;
-			clientResetScene();
+			resetScene=true;;
 			break;
 	case 'K':
 			w/=0.8;
-			clientResetScene();
+			resetScene=true;;
 			break;
 	case 'v':
 			l*=0.8;
-			clientResetScene();
+			resetScene=true;;
 			break;
 	case 'V':
 			l/=0.8;
-			clientResetScene();
+			resetScene=true;;
 			break;
 	case ':':
 			setTimeStep=btScalar(setTimeStep/0.8);
@@ -1573,27 +1483,110 @@ void CharpyDemo::keyboardCallback(unsigned char key, int x, int y)
 			variableTimeStep = !variableTimeStep;
 			displayWait = setDisplayWait;
 			break;
-	case 'i':
-//		getDeltaTimeMicroseconds(); // get net time
-//		PlatformDemoApplication::keyboardCallback(key, x, y);
+	case B3G_F1:
+		if (window->isModifierKeyPressed(B3G_CONTROL)){
+			setSolverType(1);
+			resetScene = true;
+		}
+		else if (window->isModifierKeyPressed(B3G_SHIFT)){
+			setViewMode(1);
+		}
+		else{
+			mode = 1;
+			resetScene = true;
+		}
 		break;
-	default:
-//		PlatformDemoApplication::keyboardCallback(key,x,y);
+	case B3G_F2:
+		if (window->isModifierKeyPressed(B3G_CONTROL)){
+				setSolverType(2);
+				resetScene = true;
+			}
+		else if (window->isModifierKeyPressed(B3G_SHIFT)){
+			setViewMode(2);
+		}
+		else{
+			mode = 2;
+			resetScene = true;
+		}
+		break;
+	case B3G_F3:
+		if (window->isModifierKeyPressed(B3G_CONTROL)){
+			setSolverType(3);
+			resetScene = true;
+		}
+		else 	if (window->isModifierKeyPressed(B3G_SHIFT)){
+			setViewMode(3);
+		}
+		else{
+			mode = 3;
+			resetScene = true;
+		}
+		break;
+	case B3G_F4:
+		if (window->isModifierKeyPressed(B3G_CONTROL)){
+		}
+		else if (window->isModifierKeyPressed(B3G_SHIFT)){
+		}
+		else{
+			mode = 4;
+			resetScene = true;
+		}
+		break;
+	case B3G_F5:
+		if (window->isModifierKeyPressed(B3G_CONTROL)){
+		}
+		else if (window->isModifierKeyPressed(B3G_SHIFT)){
+		}
+		else{
+			mode = 5;
+			resetScene = true;
+		}
+		break;
+	case B3G_F6:
+		if (window->isModifierKeyPressed(B3G_CONTROL)){
+		}
+		else if (window->isModifierKeyPressed(B3G_SHIFT)){
+		}
+		else{
+			mode = 6;
+			resetScene = true;
+		}
+		break;
+	case B3G_F7:
+		if (window->isModifierKeyPressed(B3G_CONTROL)){
+		}
+		else if (window->isModifierKeyPressed(B3G_SHIFT)){
+		}
+		else{
+			mode = 7;
+			resetScene = true;
+		}
+		break;
+	case B3G_F8:
+		if (window->isModifierKeyPressed(B3G_CONTROL)){
+		}
+		else if (window->isModifierKeyPressed(B3G_SHIFT)){
+		}
+		else{
+			mode = 8;
+			resetScene = true;
+		}
 		break;
 	}
+	if (resetScene)	{
+		clientResetScene();
+	}
+	return true;
 }
 
 
 void	CharpyDemo::exitPhysics()
 {
-	printf("maxCollision was %f m\n",(float)(-1.*minCollisionDistance));
-	printf("maxImpact was %f J\n",maxImpact);
-	printf("maxSpeed was %f m/s\n",sqrtf(maxSpeed2));
-	printf("maximum constraint forces were:");
-	for (int i = 0; i < 6; i++){
-	   printf(" %6.2f", maxForces[i]);
-	}
-	printf("\n");
+	b3Printf("maxCollision was %f m",(float)(-1.*minCollisionDistance));
+	b3Printf("maxImpact was %f J", maxImpact);
+	b3Printf("maxSpeed was %f m/s", sqrtf(maxSpeed2));
+	b3Printf("maximum constraint forces were: %6.2f %6.2f %6.2f %6.2f %6.2f %6.2f",
+		maxForces[0], maxForces[1], maxForces[2], maxForces[3], maxForces[4], maxForces[5]);
 	if (fp){
 		fclose(fp);
 		fp = NULL;
