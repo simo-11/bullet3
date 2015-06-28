@@ -25,12 +25,17 @@ target is to break objects using plasticity.
 #include "btPlasticHingeConstraint.h"
 #include "bt6DofElasticPlasticConstraint.h"
 #include "bt6DofElasticPlastic2Constraint.h"
+#include "../plasticity/PlasticityData.h"
+#include "../plasticity/PlasticityStatistics.h"
+#include "../exampleBrowser/GwenGUISupport/gwenUserInterface.h"
+#include "../ExampleBrowser/GwenGUISupport/gwenInternalData.h"
 
 #include <stdio.h> 
 #include <time.h>
 #ifdef _WIN32
 #include <windows.h>
 #endif
+#define B_LEN 100
 
 class CharpyDemo : public CommonRigidBodyBase
 {
@@ -45,7 +50,7 @@ class CharpyDemo : public CommonRigidBodyBase
 	btConstraintSolver*	m_solver;
 
 	btDefaultCollisionConfiguration* m_collisionConfiguration;
-	int m_viewMode;
+	int m_viewMode=1;
 	int m_mode;
 
 	void showMessage();
@@ -170,7 +175,7 @@ const char * solverTypeNames[] = {
 	"MLCP (Mixed Linear Complementarity Problem)",
 	"NNCG (Nonlinear Nonsmooth Conjugate Gradient)"
 };
-
+list<PlasticityData> pData;
 btConstraintSolver* getSolver(){
 	btConstraintSolver* sol;
 	switch (solverTypes[solverType]){
@@ -924,13 +929,13 @@ void updateMaxForces(int baseIndex, const btVector3 &v){
 }
 
 void addForces(char *buf, const btVector3 &v){
-	sprintf(buf, "Constraint forces:X/Y/Z %9.4f/%9.4f/%9.4f N",
+	sprintf_s(buf,B_LEN, "Constraint forces:X/Y/Z %9.4f/%9.4f/%9.4f N",
 		v.m_floats[0], v.m_floats[1], v.m_floats[2]);
 	updateMaxForces(0,v);
 }
 
 void addMoments(char *buf, const btVector3 &v){
-	sprintf(buf, "Constraint moments:X/Y/Z %9.4f/%9.4f/%9.4f Nm",
+	sprintf_s(buf,B_LEN, "Constraint moments:X/Y/Z %9.4f/%9.4f/%9.4f Nm",
 		v.m_floats[0], v.m_floats[1], v.m_floats[2]);
 	updateMaxForces(3, v);
 }
@@ -1030,136 +1035,128 @@ void CharpyDemo::stepSimulation(float deltaTime){
 	Sleep(displayWait);
 }
 
-int yStart;
-int xStart;
-btVector3 infoColor(1,1,1);
-void infoMsg(const char * buf){
-//  GLDebugDrawStringInternal(xStart, yStart, buf, infoColor);
-	yStart += 20;
+PlasticityData getPlasticityData(char* buf){
+	PlasticityData pd(buf);
+	return pd;
+}
+
+void addPData(char * buf){
+	pData.push_back(getPlasticityData(buf));
+}
+void infoMsg(char * buf){
+	addPData(buf);
 }
 void CharpyDemo::showMessage()
-{
-#if 0
-	if((getDebugMode() & btIDebugDraw::DBG_DrawText))
-	{	
-		setOrthographicProjection();
-		glDisable(GL_LIGHTING);
-		glColor3f(0, 0, 0);
-		char buf[100];
-		int lineWidth = 620;
-		xStart = m_glutScreenWidth - lineWidth;
-		yStart = 20;
-
-		sprintf(buf, "energy:max/current/loss %9.3g/%9.3g/%9.3g J", 
-			maxEnergy,energy,maxEnergy-energy);
-		infoMsg(buf);
-		addForces(buf, specimenJointFeedback.m_appliedForceBodyA);
-		infoMsg(buf);
-		addMoments(buf, specimenJointFeedback.m_appliedTorqueBodyA);
-		infoMsg(buf);
-		sprintf(buf, "minCollisionDistance: simulation/step %1.3f/%1.3f",
-			minCollisionDistance, minCurrentCollisionDistance);
-		infoMsg(buf);
-		sprintf(buf, "{/} to change displayWait, now=%3ld/%3ld ms", setDisplayWait,displayWait);
-		infoMsg(buf);
-		sprintf(buf,"+/- to change start angle, now=%1.1f",startAngle);
-		infoMsg(buf);
-		sprintf(buf, "^b/^B restitution %1.3f",
-			restitution);
-		infoMsg(buf);
-		sprintf(buf, "^c/^C for fu %9.3e Pa, ^e/^E for E %9.3e Pa",
-			fu, E);
-		infoMsg(buf);
-		if (mode == 2 || mode == 4 || mode == 7){
-			if (mode == 7){
-				sprintf(buf, "(/) for damping, now=%1.1f, ^f/^F for frequencyRatio, now=%1.2f",
-					damping, frequencyRatio);
-			}
-			else{
-				sprintf(buf, "(/) for damping, now=%1.1f", damping);
-			}
-			infoMsg(buf);
+{	
+	pData.clear();
+	char buf[B_LEN];
+	sprintf_s(buf, B_LEN, "energy:max/current/loss %9.3g/%9.3g/%9.3g J", 
+		maxEnergy,energy,maxEnergy-energy);
+	infoMsg(buf);
+	addForces(buf, specimenJointFeedback.m_appliedForceBodyA);
+	infoMsg(buf);
+	addMoments(buf, specimenJointFeedback.m_appliedTorqueBodyA);
+	infoMsg(buf);
+	sprintf_s(buf,B_LEN, "minCollisionDistance: simulation/step %1.3f/%1.3f",
+		minCollisionDistance, minCurrentCollisionDistance);
+	infoMsg(buf);
+	sprintf_s(buf,B_LEN, "{/} to change displayWait, now=%3ld/%3ld ms", setDisplayWait,displayWait);
+	infoMsg(buf);
+	sprintf_s(buf,B_LEN,"+/- to change start angle, now=%1.1f",startAngle);
+	infoMsg(buf);
+	sprintf_s(buf,B_LEN, "^b/^B restitution %1.3f",
+		restitution);
+	infoMsg(buf);
+	sprintf_s(buf,B_LEN, "^c/^C for fu %9.3e Pa, ^e/^E for E %9.3e Pa",
+		fu, E);
+	infoMsg(buf);
+	if (mode == 2 || mode == 4 || mode == 7){
+		if (mode == 7){
+			sprintf_s(buf,B_LEN, "(/) for damping, now=%1.1f, ^f/^F for frequencyRatio, now=%1.2f",
+				damping, frequencyRatio);
 		}
-		if (mode == 5){
-			sprintf(buf, "hingeAngle=%1.3f",
-				btFabs(mode5Hinge->getHingeAngle()));
-			infoMsg(buf);
-		}
-		switch (mode){
-		case 1:
-			break;
-		case 6:
-			sprintf(buf, "^a/^A to change mpr, "
-				"mpr=%1.3f, cpr=%1.3f, ha=%1.3f",
-				mode6Hinge->getMaxPlasticRotation(),
-				mode6Hinge->getCurrentPlasticRotation(),
-				btFabs(mode6Hinge->getHingeAngle()));
-			infoMsg(buf);
-			break;
-		case 7:
-			sprintf(buf, "^a/^A for mpr, "
-				"mpr=%1.3f, cpr=%1.3f, mps=%1.3f, cps=%1.3f",
-				mode7c->getMaxPlasticRotation(),
-				mode7c->getCurrentPlasticRotation(),
-				mode7c->getMaxPlasticStrain(),
-				mode7c->getCurrentPlasticStrain()
-				);
-			infoMsg(buf);
-			break;
-		default:
-			sprintf(buf, "^a/^A to change mpr, mpr=%1.3f, bith=%6.3f",
-				maxPlasticRotation,
-				breakingImpulseThreshold);
-			infoMsg(buf);
-			break;
-		}
-		switch (mode){
-		case 1:
-			break;
-		default:
-			sprintf(buf, "%sbroken",
-				(tc->isEnabled()?"un":""));
-			infoMsg(buf);
-			break;
-		}
-		sprintf(buf, "timeStep ./:/,/; now=%2.3f/%2.3f ms, auto(;)=%s",
-		setTimeStep*1000,timeStep*1000,(variableTimeStep?"on":"off"));
-		infoMsg(buf);
-		sprintf(buf, "^n/^N for numIterations, %d", numIterations);
-		infoMsg(buf);
-		sprintf(buf, "k/K v/V to change width/length, now=%1.6f/%1.6f m", w, l);
-		infoMsg(buf);
-		sprintf(buf,"mode(F1-F8)=F%d: %s",mode,modes[mode]);
-		infoMsg(buf);
-		sprintf(buf, "viewMode(<Shift>F1-F3)=F%d: %s", m_viewMode, viewModes[m_viewMode]);
-		infoMsg(buf);
-		sprintf(buf, "solverType(<Ctrl>F1-F3)=F%d: %s", solverType, solverTypeNames[solverType]);
-		infoMsg(buf);
-		if (false){ // these do not currently seem interesting
-			sprintf(buf, "</> to change ccdMotionThreshHold, now=%1.8f m",
-				ccdMotionThreshHold);
-			infoMsg(buf);
-			sprintf(buf, "e/E to change margin, now=%1.8f m",margin);
-			infoMsg(buf);
-			sprintf(buf, "j/J to change floor half extents, now=%1.6f m",
-				floorHE);
-			infoMsg(buf);
-		}
-		if (openGraphFile){
-			sprintf(buf,"Writing data to %s, disable with ^d",gfn);
-		}else{
-			sprintf(buf, "Enable writing data to file with ^d");
+		else{
+			sprintf_s(buf,B_LEN, "(/) for damping, now=%1.1f", damping);
 		}
 		infoMsg(buf);
-		sprintf(buf, "currentTime=%3.4f s, currentAngle=%1.4f",
-			currentTime, getHammerAngle());
-		infoMsg(buf);
-		sprintf(buf, "q=quit, space to restart, ^r to reset, t to toggle this info");
-		infoMsg(buf);
-		resetPerspectiveProjection();
-		glEnable(GL_LIGHTING);
 	}
-#endif
+	if (mode == 5){
+		sprintf_s(buf,B_LEN, "hingeAngle=%1.3f",
+			btFabs(mode5Hinge->getHingeAngle()));
+		infoMsg(buf);
+	}
+	switch (mode){
+	case 1:
+		break;
+	case 6:
+		sprintf_s(buf,B_LEN, "^a/^A to change mpr, "
+			"mpr=%1.3f, cpr=%1.3f, ha=%1.3f",
+			mode6Hinge->getMaxPlasticRotation(),
+			mode6Hinge->getCurrentPlasticRotation(),
+			btFabs(mode6Hinge->getHingeAngle()));
+		infoMsg(buf);
+		break;
+	case 7:
+		sprintf_s(buf,B_LEN, "^a/^A for mpr, "
+			"mpr=%1.3f, cpr=%1.3f, mps=%1.3f, cps=%1.3f",
+			mode7c->getMaxPlasticRotation(),
+			mode7c->getCurrentPlasticRotation(),
+			mode7c->getMaxPlasticStrain(),
+			mode7c->getCurrentPlasticStrain()
+			);
+		infoMsg(buf);
+		break;
+	default:
+		sprintf_s(buf,B_LEN, "^a/^A to change mpr, mpr=%1.3f, bith=%6.3f",
+			maxPlasticRotation,
+			breakingImpulseThreshold);
+		infoMsg(buf);
+		break;
+	}
+	switch (mode){
+	case 1:
+		break;
+	default:
+		sprintf_s(buf,B_LEN, "%sbroken",
+			(tc->isEnabled()?"un":""));
+		infoMsg(buf);
+		break;
+	}
+	sprintf_s(buf,B_LEN, "timeStep ./:/,/; now=%2.3f/%2.3f ms, auto(;)=%s",
+	setTimeStep*1000,timeStep*1000,(variableTimeStep?"on":"off"));
+	infoMsg(buf);
+	sprintf_s(buf,B_LEN, "^n/^N for numIterations, %d", numIterations);
+	infoMsg(buf);
+	sprintf_s(buf,B_LEN, "k/K v/V to change width/length, now=%1.6f/%1.6f m", w, l);
+	infoMsg(buf);
+	sprintf_s(buf,B_LEN,"mode(F1-F8)=F%d: %s",mode,modes[mode]);
+	infoMsg(buf);
+	sprintf_s(buf,B_LEN, "viewMode(<Shift>F1-F3)=F%d: %s", m_viewMode, viewModes[m_viewMode]);
+	infoMsg(buf);
+	sprintf_s(buf,B_LEN, "solverType(<Ctrl>F1-F3)=F%d: %s", solverType, solverTypeNames[solverType]);
+	infoMsg(buf);
+	if (false){ // these do not currently seem interesting
+		sprintf_s(buf,B_LEN, "</> to change ccdMotionThreshHold, now=%1.8f m",
+			ccdMotionThreshHold);
+		infoMsg(buf);
+		sprintf_s(buf,B_LEN, "e/E to change margin, now=%1.8f m",margin);
+		infoMsg(buf);
+		sprintf_s(buf,B_LEN, "j/J to change floor half extents, now=%1.6f m",
+			floorHE);
+		infoMsg(buf);
+	}
+	if (openGraphFile){
+		sprintf_s(buf,B_LEN,"Writing data to %s, disable with ^d",gfn);
+	}else{
+		sprintf_s(buf,B_LEN, "Enable writing data to file with ^d");
+	}
+	infoMsg(buf);
+	sprintf_s(buf,B_LEN, "currentTime=%3.4f s, currentAngle=%1.4f",
+		currentTime, getHammerAngle());
+	infoMsg(buf);
+	sprintf_s(buf,B_LEN, "q=quit, space to restart, ^r to reset, t to toggle this info");
+	infoMsg(buf);
+	PlasticityData::setData(pData);
 }
 
 void CharpyDemo::updateView(){

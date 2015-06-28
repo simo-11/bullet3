@@ -36,6 +36,7 @@
 #include "PlasticityExampleEntries.h"
 #include "../ExampleBrowser/OpenGLGuiHelper.h"
 #include "Bullet3Common/b3FileUtils.h"
+#include "PlasticityStatistics.h"
 
 #include "LinearMath/btIDebugDraw.h"
 
@@ -46,6 +47,7 @@ static CommonParameterInterface*	s_parameterInterface=0;
 static CommonRenderInterface*	s_instancingRenderer=0;
 static OpenGLGuiHelper*	s_guiHelper=0;
 static MyProfileWindow* s_profWindow =0;
+static PlasticityStatistics* s_pStatWindow = 0;
 
 #define DEMO_SELECTION_COMBOBOX 13
 const char* startFileName = "bulletDemo.txt";
@@ -601,34 +603,16 @@ bool PlasticityExampleBrowser::init(int argc, char* argv[])
 	//
 
 	gui->init(width,height,gwenRenderer,s_window->getRetinaScale());
-	
-	
-	
-	
-//	gui->getInternalData()->m_explorerPage
 	Gwen::Controls::TreeControl* tree = gui->getInternalData()->m_explorerTreeCtrl;
-
-	
-	//gui->getInternalData()->pRenderer->setTextureLoader(myTexLoader);
-
-	
 	s_profWindow= setupProfileWindow(gui->getInternalData());
 	profileWindowSetVisible(s_profWindow,false);
+	s_pStatWindow = setupPlasticityWindow(gui->getInternalData());
+	plasticityStatisticsWindowSetVisible(s_pStatWindow, false);
 	gui->setFocus();
 
 	s_parameterInterface  = s_app->m_parameterInterface = new GwenParameterInterface(gui->getInternalData());
 	s_app->m_2dCanvasInterface = new QuickCanvas(myTexLoader);
-
-
-	///add some demos to the gAllExamples
-
-	
-	
-
 	int numDemos = gAllExamples->getNumRegisteredExamples();
-
-	//char nodeText[1024];
-	//int curDemo = 0;
 	int selectedDemo = loadCurrentDemoEntry(startFileName);
 	Gwen::Controls::TreeNode* curNode = tree;
 	MyMenuItemHander* handler2 = new MyMenuItemHander(-1);
@@ -655,18 +639,6 @@ bool PlasticityExampleBrowser::init(int argc, char* argv[])
 			{
 				firstAvailableDemoIndex = d;
 				firstNode = pNode;
-				//pNode->SetSelected(true);
-				//tree->ExpandAll();
-			//	tree->ForceUpdateScrollBars();
-			//tree->OnKeyLeft(true);
-		//	tree->OnKeyRight(true);
-			
-			
-			//tree->ExpandAll();
-
-			//	selectDemo(d);
-
-
 			}
 			
 
@@ -677,11 +649,6 @@ bool PlasticityExampleBrowser::init(int argc, char* argv[])
 			pNode->onSelect.Add(handler, &MyMenuItemHander::onButtonE);
 			pNode->onReturnKeyDown.Add(handler, &MyMenuItemHander::onButtonG);
 			pNode->onSelectChange.Add(handler, &MyMenuItemHander::onButtonF);
-//			pNode->onKeyReturn.Add(handler, &MyMenuItemHander::onButtonD);
-//			pNode->GetButton()->onKeyboardReturn.Add(handler, &MyMenuItemHander::onButtonD);
-	//		pNode->onNamePress.Add(handler, &MyMenuItemHander::onButtonD);
-//			pNode->onKeyboardPressed.Add(handler, &MyMenuItemHander::onButtonD);
-//			pNode->OnKeyPress
 		}
 		 else
 		 {
@@ -816,7 +783,7 @@ void PlasticityExampleBrowser::update(float deltaTime)
 		{
             if (!pauseSimulation)
                 processProfileData(s_profWindow,false);
-
+			processPlasticityData(s_pStatWindow, pauseSimulation);
             if (sUseOpenGL2)
 			{
 					
