@@ -745,6 +745,11 @@ void PlasticityExampleBrowser::update(float deltaTime)
 
 				sCurrentDemo->stepSimulation(deltaTime);//1./60.f);
 			}
+			else{
+#ifdef _WIN32
+				Sleep(50);
+#endif
+			}
 			
 			if (renderVisualGeometry && ((gDebugDrawFlags&btIDebugDraw::DBG_DrawWireframe)==0))
             {

@@ -7,7 +7,8 @@ using namespace std;
 class PlasticityStatistics : public Gwen::Controls::WindowControl
 {
 protected:
-	void onButtonA( Gwen::Controls::Base* pControl )
+	Gwen::Controls::WindowControl *textArea;
+	void onButtonA(Gwen::Controls::Base* pControl)
 	{
         //		OpenTissue::glut::toggleIdle();
 	}
@@ -34,21 +35,23 @@ public:
 		SetTitle( L"Plasticity Statistics" );
 		SetSize( 450, 450 );
 		this->SetPos(10,400);
-		this->GetCanvas()->SetDrawBackground(true);
+		textArea = new Gwen::Controls::WindowControl(this);
+		textArea->SetSize(430,430);
+		textArea->SetPos(20, 20);
 	}
 	void dumpData(PlasticityStatistics* pStat)
 	{  
 		list<PlasticityData>::iterator psIterator;
 		string txt;
 		list<PlasticityData> pData = PlasticityData::getData();
-		int y = 10;
+		int y = 30;
 		for (psIterator = pData.begin(); psIterator != pData.end(); psIterator++)
 		{	
 			txt = psIterator->getValue();
-			Gwen::Controls::Label* label = new Gwen::Controls::Label(pStat);
+			Gwen::Controls::Label* label = new Gwen::Controls::Label(textArea);
 			label->SetText(txt);
 			label->SizeToContents();
-			label->SetPos(1, y);
+			label->SetPos(20, y);
 			y += 20;
 		}
 	}
@@ -58,6 +61,7 @@ public:
 		if (!idle)
 		{
 		}
+		pStat->textArea->RemoveAllChildren();
         dumpData(pStat);
 		pStat->GetCanvas()->RenderCanvas();
 	}
