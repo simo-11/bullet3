@@ -39,6 +39,11 @@ struct SimpleCamera : public CommonCameraInterface
 
 	virtual void	setAspectRatio(float ratio);
 	virtual float	getAspectRatio() const;
+
+	virtual void setFrustumZNear(float near);
+	virtual void setFrustumZFar(float far);
+	virtual float getFrustumZNear();
+	virtual float getFrustumZFar();
 };
 
 #endif //SIMPLE_CAMERA_H

@@ -41,11 +41,22 @@
 #include "LinearMath/btIDebugDraw.h"
 
 static CommonGraphicsApp* s_app=0;
-
+CommonGraphicsApp* PlasticityExampleBrowser::getApp(){
+	return s_app;
+}
 static CommonWindowInterface* s_window = 0;
-static CommonParameterInterface*	s_parameterInterface=0;
+CommonWindowInterface* PlasticityExampleBrowser::getWindow(){
+	return s_window;
+}
+static CommonParameterInterface*	s_parameterInterface = 0;
 static CommonRenderInterface*	s_instancingRenderer=0;
+CommonRenderInterface* PlasticityExampleBrowser::getRenderer(){
+	return s_instancingRenderer;
+}
 static OpenGLGuiHelper*	s_guiHelper=0;
+OpenGLGuiHelper* getGuiHelper(){
+	return s_guiHelper;
+}
 static MyProfileWindow* s_profWindow =0;
 static PlasticityStatistics* s_pStatWindow = 0;
 

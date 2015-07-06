@@ -2,6 +2,9 @@
 #define PLASTICITY_BROWSER_GUI_H
 
 #include "../ExampleBrowser/ExampleBrowserInterface.h"
+#include "../CommonInterfaces/CommonGraphicsAppInterface.h"
+#include "../CommonInterfaces/CommonWindowInterface.h"
+#include "../CommonInterfaces/CommonRenderInterface.h"
 
 class PlasticityExampleBrowser : public ExampleBrowserInterface
 {
@@ -17,7 +20,9 @@ public:
 	virtual void update(float deltaTime);
 
 	virtual bool requestedExit();
-	
+	static CommonGraphicsApp* getApp();
+	static CommonWindowInterface* getWindow();
+	static CommonRenderInterface* getRenderer();
 };
 
 #endif //PLASTICITY_BROWSER_GUI_H

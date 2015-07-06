@@ -12,7 +12,7 @@ struct SimpleCameraInternalData
 		m_cameraUp(b3MakeVector3(0,1,0)),
 		m_cameraUpAxis(1),
 		m_cameraForward(b3MakeVector3(1,0,0)),
-		m_frustumZNear(1),
+		m_frustumZNear(0.1),
 		m_frustumZFar(10000),
 		m_yaw(20),
 		m_pitch(0),
@@ -46,6 +46,20 @@ SimpleCamera::~SimpleCamera()
 	delete m_data;
 }
 
+void SimpleCamera::setFrustumZFar(float far){
+	m_data->m_frustumZFar = far;
+	update();
+}
+void SimpleCamera::setFrustumZNear(float near){
+	m_data->m_frustumZNear = near;
+	update();
+}
+float SimpleCamera::getFrustumZFar(){
+	return m_data->m_frustumZFar;
+}
+float SimpleCamera::getFrustumZNear(){
+	return m_data->m_frustumZNear;
+}
 
 
 

@@ -27,6 +27,7 @@ target is to break objects using plasticity.
 #include "bt6DofElasticPlastic2Constraint.h"
 #include "../plasticity/PlasticityData.h"
 #include "../plasticity/PlasticityStatistics.h"
+#include "../plasticity/PlasticityExampleBrowser.h"
 #include "../exampleBrowser/GwenGUISupport/gwenUserInterface.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenInternalData.h"
 
@@ -68,7 +69,7 @@ public:
 	virtual void	exitPhysics();
 	virtual void	stepSimulation(float deltaTime);
 	virtual void	physicsDebugDraw(int debugFlags){};
-	virtual void	resetCamera(){};
+	virtual void	resetCamera();
 	virtual bool	mouseMoveCallback(float x, float y){ return false; };
 	virtual bool	mouseButtonCallback(int button, int state, float x, float y){
 		return false;
@@ -906,10 +907,14 @@ void	CharpyDemo::initPhysics()
 //	dw->setDebugDrawer(&gDebugDrawer);
 }
 
+void CharpyDemo::resetCamera(){
+	setViewMode(1);
+}
 
 void	CharpyDemo::clientResetScene()
 {
 	exitPhysics();
+	PlasticityExampleBrowser::getRenderer()->removeAllInstances();
 	initPhysics();
 }
 
@@ -1163,18 +1168,20 @@ void CharpyDemo::showMessage()
 }
 
 void CharpyDemo::updateView(){
+	btRigidBody* body;
 	switch (m_viewMode){
 	case 1:
-		break;
+		return;
 	case 2:
-//		m_cameraPosition=hammerBody->getCenterOfMassPosition();
-//		m_cameraTargetPosition = specimenBody->getCenterOfMassPosition();
+		body = specimenBody;
 		break;
 	case 3:
-//		m_cameraPosition = hammerBody->getCenterOfMassPosition();
-//		m_cameraTargetPosition = specimenBody2->getCenterOfMassPosition();
+		body = specimenBody2;
 		break;
 	}
+	btVector3 comp=body->getCenterOfMassPosition();
+	CommonCameraInterface* camera = PlasticityExampleBrowser::getRenderer()->getActiveCamera();
+	camera->setCameraTargetPosition(comp.x(), comp.y(), comp.z());
 }
 
 void resetCollisionMargin()
@@ -1189,19 +1196,20 @@ void resetCollisionMargin()
 	}
 }
 
+
 void CharpyDemo::setViewMode(int viewMode){
 	m_viewMode = viewMode;
-	switch (viewMode){
-	case 1:
-#if 0
-		setCameraDistance(btScalar(0.5));
-		m_cameraPosition.setX(btScalar(0.3));
-		m_cameraTargetPosition = btVector3(0, 0.2, 0);
-		m_cameraUp = y_up;
-		m_frustumZNear = btScalar(0.001);
-		m_frustumZFar = btScalar(10);
-#endif
-		break;
+	CommonCameraInterface* camera = 
+		PlasticityExampleBrowser::getRenderer()->getActiveCamera();
+	camera->setCameraDistance(btScalar(0.5));
+	camera->setCameraUpVector(0,1,0);
+	camera->setFrustumZNear(0.01);
+	camera->setFrustumZFar(10);
+	if (viewMode == 1){
+		camera->setCameraTargetPosition(0, 0.2, 0);
+	}
+	else{
+		updateView();
 	}
 }
 
@@ -1400,6 +1408,13 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 	if (state != 1){
 		return true;
 	}
+	/// no actions for modifiers
+	switch (key){
+	case B3G_SHIFT:
+	case B3G_CONTROL :
+	case B3G_ALT :
+			return true;
+	}
 	CommonWindowInterface* window = m_guiHelper->getAppInterface()->m_window;
 	if (window->isModifierKeyPressed(B3G_CONTROL)){
 		if (ctrlKeyboardCallback(key)){
@@ -1416,73 +1431,76 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 			break;
 	case '-':
 			startAngle-=0.1;
-			resetScene=true;;
+			resetScene=true;
 			break;
 	case '(':
 			if (damping>0.){
 				damping -= 0.1;
-				resetScene=true;;
+				resetScene=true;
 			}
 			break;
 	case ')':
 			if (damping < 1){
 				damping += 0.1;
-				resetScene=true;;
+				resetScene=true;
 			}
 			break;
 	case '<':
-			ccdMotionThreshHold*=0.8;
-			resetCcdMotionThreshHold();
-			break;
+		ccdMotionThreshHold*=0.8;
+		resetCcdMotionThreshHold();
+		break;
 	case '>':
-			ccdMotionThreshHold/=0.8;
-			resetCcdMotionThreshHold();
-			break;
+		ccdMotionThreshHold/=0.8;
+		resetCcdMotionThreshHold();
+		break;
 	case 'e':
-			margin*=0.8;
-			resetCollisionMargin();
-			break;
+		margin*=0.8;
+		resetCollisionMargin();
+		break;
 	case 'E':
-			margin/=0.8;
-			resetCollisionMargin();
-			break;
+		margin/=0.8;
+		resetCollisionMargin();
+		break;
 	case 'j':
-			floorHE*=0.8;
-			resetScene=true;;
-			break;
+		floorHE*=0.8;
+		resetScene=true;
+		break;
 	case 'J':
-			floorHE/=0.8;
-			resetScene=true;;
-			break;
+		floorHE/=0.8;
+		resetScene=true;
+		break;
 	case 'k':
-			w*=0.8;
-			resetScene=true;;
-			break;
+		w*=0.8;
+		resetScene=true;
+		break;
 	case 'K':
-			w/=0.8;
-			resetScene=true;;
-			break;
+		w/=0.8;
+		resetScene=true;;
+		break;
 	case 'v':
-			l*=0.8;
-			resetScene=true;;
-			break;
+		l*=0.8;
+		resetScene=true;
+		break;
 	case 'V':
-			l/=0.8;
-			resetScene=true;;
-			break;
+		l/=0.8;
+		resetScene=true;
+		break;
 	case ':':
-			setTimeStep=btScalar(setTimeStep/0.8);
-			break;
+		setTimeStep=btScalar(setTimeStep/0.8);
+		break;
+	case ' ':
+		resetScene = true;
+		break;
 	case '.':
-			setTimeStep = btScalar(setTimeStep*0.8);
-			break;
+		setTimeStep = btScalar(setTimeStep*0.8);
+		break;
 	case ',':
-			setTimeStep = initialTimeStep;
-			break;
+		setTimeStep = initialTimeStep;
+		break;
 	case ';':
-			variableTimeStep = !variableTimeStep;
-			displayWait = setDisplayWait;
-			break;
+		variableTimeStep = !variableTimeStep;
+		displayWait = setDisplayWait;
+		break;
 	case B3G_F1:
 		if (window->isModifierKeyPressed(B3G_CONTROL)){
 			setSolverType(1);
@@ -1500,7 +1518,7 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 		if (window->isModifierKeyPressed(B3G_CONTROL)){
 				setSolverType(2);
 				resetScene = true;
-			}
+		}
 		else if (window->isModifierKeyPressed(B3G_SHIFT)){
 			setViewMode(2);
 		}
