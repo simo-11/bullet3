@@ -7,7 +7,8 @@ using namespace std;
 class PlasticityStatistics : public Gwen::Controls::WindowControl
 {
 protected:
-	Gwen::Controls::WindowControl *textArea;
+	Gwen::Controls::ResizableControl *textArea;
+
 	void onButtonA(Gwen::Controls::Base* pControl)
 	{
         //		OpenTissue::glut::toggleIdle();
@@ -35,16 +36,16 @@ public:
 		SetTitle( L"Plasticity Statistics" );
 		SetSize( 450, 450 );
 		this->SetPos(10,400);
-		textArea = new Gwen::Controls::WindowControl(this);
-		textArea->SetSize(430,430);
-		textArea->SetPos(20, 20);
+		textArea = new Gwen::Controls::ResizableControl(this);
+		textArea->SetSize(450,450);
+		textArea->SetPos(0, 0);
 	}
 	void dumpData(PlasticityStatistics* pStat)
 	{  
 		list<PlasticityData>::iterator psIterator;
 		string txt;
 		list<PlasticityData> pData = PlasticityData::getData();
-		int y = 30;
+		int y = 10;
 		for (psIterator = pData.begin(); psIterator != pData.end(); psIterator++)
 		{	
 			txt = psIterator->getValue();
@@ -58,6 +59,9 @@ public:
 	
 	void	UpdateText(PlasticityStatistics* pStat, bool idle)
 	{		
+		if (!Visible()){
+			return;
+		}
 		if (!idle)
 		{
 		}
@@ -70,7 +74,12 @@ public:
 	{
 		Gwen::Controls::WindowControl::Render( skin );		
 	}
-	
+	void PlasticityStatistics::SetHidden(bool hidden)
+	{
+		BaseClass::SetHidden(hidden);
+		PlasticityData::setCollect(!hidden);
+	}
+
 	
 };
 
@@ -79,19 +88,19 @@ class MyMenuItems :  public Gwen::Controls::Base
 	
 public:
 	
-	class PlasticityStatistics* m_profWindow;
+	class PlasticityStatistics* m_pWindow;
     MyMenuItems() :Gwen::Controls::Base(0)
     {
     }
    
     void MenuItemSelect(Gwen::Controls::Base* pControl)
     {
-		if (m_profWindow->Hidden())
+		if (m_pWindow->Hidden())
 		{
-			m_profWindow->SetHidden(false);
+			m_pWindow->SetHidden(false);
 		} else
 		{
-			m_profWindow->SetHidden(true);
+			m_pWindow->SetHidden(true);
 		}
 		
     }
@@ -104,7 +113,7 @@ PlasticityStatistics* setupPlasticityWindow(GwenInternalData* data)
 	PlasticityStatistics* psWindow = new PlasticityStatistics(data->pCanvas);
 	data->m_viewMenu->GetMenu()->AddItem( L"Plasticity Statistics", 
 		menuItems,(Gwen::Event::Handler::Function)&MyMenuItems::MenuItemSelect);
-	menuItems->m_profWindow = psWindow;
+	menuItems->m_pWindow = psWindow;
 	return psWindow;
 }
 

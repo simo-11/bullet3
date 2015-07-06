@@ -1,4 +1,11 @@
 #include "PlasticityData.h"
+static bool collect = false;
+bool PlasticityData::getCollect(){
+	return collect;
+}
+void PlasticityData::setCollect(bool v){
+	collect = v;
+}
 static list<PlasticityData> s_pData;
 void PlasticityData::setData(list<PlasticityData> pData){
 	s_pData = pData;

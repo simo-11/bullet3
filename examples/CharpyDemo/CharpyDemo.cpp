@@ -1048,6 +1048,9 @@ void infoMsg(char * buf){
 }
 void CharpyDemo::showMessage()
 {	
+	if (!PlasticityData::getCollect()){
+		return;
+	}
 	pData.clear();
 	char buf[B_LEN];
 	sprintf_s(buf, B_LEN, "energy:max/current/loss %9.3g/%9.3g/%9.3g J", 

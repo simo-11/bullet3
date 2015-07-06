@@ -11,6 +11,8 @@ public:
 	string getValue(){ return value; }
 	static void setData(list<PlasticityData>);
 	static list<PlasticityData> getData();
+	static void setCollect(bool v);
+	static bool getCollect();
 private:
 	string value="";
 };
