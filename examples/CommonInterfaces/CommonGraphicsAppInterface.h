@@ -72,7 +72,7 @@ struct CommonGraphicsApp
 	virtual int	registerCubeShape(float halfExtentsX,float halfExtentsY, float halfExtentsZ)=0;
 	virtual int	registerGraphicsSphereShape(float radius, bool usePointSprites=true, int largeSphereThreshold=100, int mediumSphereThreshold=10)=0;
 	virtual void registerGrid(int xres, int yres, float color0[4], float color1[4])=0;
-
+	float minDistance = 0.1f;
 	void defaultMouseButtonCallback( int button, int state, float x, float y)
 	{
 		if (button==0)
@@ -148,8 +148,8 @@ struct CommonGraphicsApp
 				{
 						cameraDistance -= xDelta*0.01f;
 						cameraDistance -= yDelta*0.01f;
-						if (cameraDistance<1)
-							cameraDistance=1;
+						if (cameraDistance<minDistance)
+							cameraDistance=minDistance;
 						if (cameraDistance>1000)
 							cameraDistance=1000;
 				}
@@ -185,11 +185,11 @@ struct CommonGraphicsApp
 			{
 
 				float cameraDistance = 	camera->getCameraDistance();
-				if (deltay<0 || cameraDistance>1)
+				if (deltay<0 || cameraDistance>minDistance)
 				{
 					cameraDistance -= deltay*0.1f;
-					if (cameraDistance<1)
-						cameraDistance=1;
+					if (cameraDistance<minDistance)
+						cameraDistance=minDistance;
 					camera->setCameraDistance(cameraDistance);
 
 				} else

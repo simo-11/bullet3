@@ -32,60 +32,17 @@ target is to break objects using plasticity.
 #include "../ExampleBrowser/GwenGUISupport/gwenInternalData.h"
 
 #include <stdio.h> 
+#include <string>
 #include <time.h>
 #ifdef _WIN32
 #include <windows.h>
 #endif
+// Buffer length for sprintfs
 #define B_LEN 100
 
-class CharpyDemo : public CommonRigidBodyBase
-{
-
-	//keep the collision shapes, for deletion/cleanup
-	btAlignedObjectArray<btCollisionShape*>	m_collisionShapes;
-
-	btBroadphaseInterface*	m_broadphase;
-
-	btCollisionDispatcher*	m_dispatcher;
-
-	btConstraintSolver*	m_solver;
-
-	btDefaultCollisionConfiguration* m_collisionConfiguration;
-	int m_viewMode=1;
-	int m_mode;
-
-	void showMessage();
-
-public:
-	CharpyDemo(struct GUIHelperInterface* helper, int mode)
-		:CommonRigidBodyBase(helper)
-	{
-		m_mode = mode;
-	}
-	virtual ~CharpyDemo()
-	{
-	}
-	virtual void	initPhysics();
-	virtual void	exitPhysics();
-	virtual void	stepSimulation(float deltaTime);
-	virtual void	physicsDebugDraw(int debugFlags){};
-	virtual void	resetCamera();
-	virtual bool	mouseMoveCallback(float x, float y){ return false; };
-	virtual bool	mouseButtonCallback(int button, int state, float x, float y){
-		return false;
-	};
-	virtual bool keyboardCallback(int key, int state);
-	virtual bool ctrlKeyboardCallback(int key);
-	virtual void setViewMode(int viewMode);
-	virtual void updateView();
-	virtual void renderScene();
-	virtual void clientResetScene();
-	btRigidBody* localCreateRigidBody(btScalar mass, const btTransform& startTransform,
-		btCollisionShape* shape);
-};
 
 int sFrameNumber = 0;
-bool firstRun=true;
+bool firstRun = true;
 bool hammerHitsSpecimen;
 btScalar initialStartAngle(1.8);
 btScalar startAngle(initialStartAngle);
@@ -107,15 +64,15 @@ int initialMode = 6;
 int mode = initialMode;
 const char *modes[] =
 {
-"None",
-"single rigid object",
-"two objects and springConstraints",
-"two objects and constraints with zero limits",
-"two objects and spring2Constraints",
-"two objects and hingeConstraint",
-"two objects and plasticHingeConstraint",
-"two objects and 6DofElasticPlasticConstraint",
-"two objects and 6DofElasticPlastic2Constraint",
+	"None",
+	"single rigid object",
+	"two objects and springConstraints",
+	"two objects and constraints with zero limits",
+	"two objects and spring2Constraints",
+	"two objects and hingeConstraint",
+	"two objects and plasticHingeConstraint",
+	"two objects and 6DofElasticPlasticConstraint",
+	"two objects and 6DofElasticPlastic2Constraint",
 };
 const char *viewModes[] =
 {
@@ -144,7 +101,7 @@ float energy = 0;
 float maxEnergy;
 btDynamicsWorld* dw;
 btVector3 y_up(0.01, 1., 0.01);
-btRigidBody *specimenBody,*hammerBody,*specimenBody2;
+btRigidBody *specimenBody, *hammerBody, *specimenBody2;
 btHingeConstraint *hammerHinge;
 btJointFeedback hammerHingeJointFeedback;
 btJointFeedback specimenJointFeedback;
@@ -156,7 +113,7 @@ btScalar restitution(initialRestitution);
 btScalar initialMaxPlasticRotation(3.);
 btScalar maxPlasticRotation(initialMaxPlasticRotation);
 btTypedConstraint *tc; // points to specimen constraint
-btScalar breakingImpulseThreshold=0;
+btScalar breakingImpulseThreshold = 0;
 btScalar w1;
 float maxForces[6];
 FILE *fp;
@@ -184,18 +141,150 @@ btConstraintSolver* getSolver(){
 		sol = new btSequentialImpulseConstraintSolver;
 		break;
 	case BT_MLCP_SOLVER:
-		{
+	{
 		btDantzigSolver* mlcp = new btDantzigSolver();
 		sol = new btMLCPSolver(mlcp);
-		}
-		break;
+	}
+	break;
 	case BT_NNCG_SOLVER:
-		sol=new btNNCGConstraintSolver();
+		sol = new btNNCGConstraintSolver();
 		break;
 	}
 	return sol;
 }
 
+
+
+static GwenUserInterface* gui;
+int gx = 10;
+int gy;
+int gyInc=25;
+bool resetRequested = false;
+void reinit();
+
+void setScalar(Gwen::Controls::Base* control, btScalar * vp){
+	Gwen::Controls::TextBoxNumeric* box =
+		static_cast<Gwen::Controls::TextBoxNumeric*>(control);
+	if (!box)	{
+		return;
+	}
+	string text = Gwen::Utility::UnicodeToString(box->GetText());
+	if (text.length()==0)	{
+		return;
+	}
+	float fv = std::stof(text);
+	*vp = fv;
+}
+
+class CharpyDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
+{
+
+	//keep the collision shapes, for deletion/cleanup
+	btAlignedObjectArray<btCollisionShape*>	m_collisionShapes;
+
+	btBroadphaseInterface*	m_broadphase;
+
+	btCollisionDispatcher*	m_dispatcher;
+
+	btConstraintSolver*	m_solver;
+
+	btDefaultCollisionConfiguration* m_collisionConfiguration;
+	int m_viewMode=1;
+	int m_mode;
+	void showMessage();
+
+public:
+	CharpyDemo(struct GUIHelperInterface* helper, int mode)
+		:CommonRigidBodyBase(helper), Gwen::Event::Handler()
+	{
+		m_mode = mode;
+		initParameterUi();
+	}
+	virtual ~CharpyDemo()
+	{
+		clearParameterUi();
+	}
+	virtual void	initPhysics();
+	virtual void	exitPhysics();
+	virtual void	stepSimulation(float deltaTime);
+	virtual void	physicsDebugDraw(int debugFlags){};
+	virtual void	resetCamera();
+	virtual bool	mouseMoveCallback(float x, float y){ return false; };
+	virtual bool	mouseButtonCallback(int button, int state, float x, float y){
+		return false;
+	};
+	virtual bool keyboardCallback(int key, int state);
+	virtual bool ctrlKeyboardCallback(int key);
+	virtual void setViewMode(int viewMode);
+	virtual void updateView();
+	virtual void renderScene();
+	virtual void clientResetScene();
+	btRigidBody* localCreateRigidBody(btScalar mass, const btTransform& startTransform,
+		btCollisionShape* shape);
+	/** Gwen controls handling 
+	Just flag changes to avoid need to specify all parent references
+	if calls come from Gwen
+	*/
+	void reset(Gwen::Controls::Base* control){
+		resetRequested = true;
+	}
+	void reinitAndReset(Gwen::Controls::Base* control){
+		reinit();
+		reset(control);
+	}
+	void setStartAngleAndReset(Gwen::Controls::Base* control){
+		setScalar(control, &startAngle);
+	}
+
+	Gwen::Controls::Base* pPage;
+	void addLabel(string txt){
+		Gwen::Controls::Label* gc = new Gwen::Controls::Label(pPage);
+		gc->SetText(txt);
+		gc->SizeToContents();
+		gc->SetPos(gx, gy);
+		gy += gc->Bottom()+1;
+	}
+	void addResetButton(){
+		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
+		gc->SetText(L"Restart");
+		gc->SetPos(gx, gy);
+		gy += gyInc;
+		gc->onPress.Add(pPage, &CharpyDemo::reset);
+	}
+	void addReinitButton(){
+		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
+		gc->SetText(L"Reinit");
+		gc->SetPos(gx, gy);
+		gy += gyInc;
+		gc->onPress.Add(pPage, &CharpyDemo::reinitAndReset);
+	}
+	void addStartAngle(){
+		addLabel("startAngle");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = std::to_string(startAngle);
+		gc->SetText(text);
+		gc->SetPos(gx, gy);
+		gc->SetWidth(100);
+		gy += gyInc;
+		gc->onTextChanged.Add(pPage, &CharpyDemo::setStartAngleAndReset);
+	}
+
+	void initParameterUi(){
+		gui = PlasticityExampleBrowser::getGui();
+		pPage = gui->getInternalData()->m_demoPage->GetPage();
+		gy = 5;
+		addStartAngle();
+		addResetButton();
+		addReinitButton();
+	}
+	void clearParameterUi(){
+		if (pPage){
+			pPage->RemoveAllChildren();
+			pPage = 0;
+		}
+	}
+
+};
 /* 
 Adapted from ForkLiftDemo
 Should not make big difference in this case but may be useful if larger adaptions are used
@@ -913,9 +1002,11 @@ void CharpyDemo::resetCamera(){
 
 void	CharpyDemo::clientResetScene()
 {
-	exitPhysics();
+	CharpyDemo::clearParameterUi();
+	CharpyDemo::exitPhysics();
 	PlasticityExampleBrowser::getRenderer()->removeAllInstances();
-	initPhysics();
+	CharpyDemo::initParameterUi();
+	CharpyDemo::initPhysics();
 }
 
 btScalar minCurrentCollisionDistance(0);
@@ -1026,6 +1117,10 @@ void CharpyDemo::renderScene(){
 }
 
 void CharpyDemo::stepSimulation(float deltaTime){
+	if (resetRequested){
+		clientResetScene();
+		resetRequested = false;
+	}
 	if (m_dynamicsWorld)	{
 		m_dynamicsWorld->stepSimulation(timeStep, 30, timeStep);
 		checkCollisions();
@@ -1201,7 +1296,7 @@ void CharpyDemo::setViewMode(int viewMode){
 	m_viewMode = viewMode;
 	CommonCameraInterface* camera = 
 		PlasticityExampleBrowser::getRenderer()->getActiveCamera();
-	camera->setCameraDistance(btScalar(0.5));
+	camera->setCameraDistance(btScalar(2.5));
 	camera->setCameraUpVector(0,1,0);
 	camera->setFrustumZNear(0.01);
 	camera->setFrustumZFar(10);
@@ -1266,6 +1361,7 @@ void reinit(){
 		toggleGraphFile();
 	}
 }
+
 
 /*
 CommonWindowInterface* window = m_guiHelper->getAppInterface()->m_window;
@@ -1423,6 +1519,7 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 		return true;
 	}
 	bool resetScene = false;
+	Gwen::UnicodeChar chr=0;
 	switch (key)
 	{
 	case '+':
@@ -1590,6 +1687,41 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 			resetScene = true;
 		}
 		break;
+	default:
+		switch (key){
+		case B3G_LEFT_ARROW:
+			chr = Gwen::Key::Left;
+			break;
+		case B3G_RIGHT_ARROW:
+			chr = Gwen::Key::Right;
+			break;
+		case B3G_UP_ARROW:
+			chr = Gwen::Key::Up;
+			break;
+		case B3G_DOWN_ARROW:
+			chr = Gwen::Key::Down;
+			break;
+		case B3G_END:
+			chr = Gwen::Key::End;
+			break;
+		case B3G_HOME:
+			chr = Gwen::Key::Home;
+			break;
+		case B3G_DELETE:
+			chr = Gwen::Key::Delete;
+			break;
+		case B3G_BACKSPACE:
+			chr = Gwen::Key::Backspace;
+			break;
+		case B3G_RETURN:
+			chr = Gwen::Key::Return;
+			break;
+		}
+		if (!chr){
+			chr = (Gwen::UnicodeChar) key;
+		}
+		Gwen::Controls::Canvas* canvas = gui->getInternalData()->pCanvas;
+		return canvas->InputCharacter(chr);
 	}
 	if (resetScene)	{
 		clientResetScene();

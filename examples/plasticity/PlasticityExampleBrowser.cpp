@@ -64,6 +64,9 @@ static PlasticityStatistics* s_pStatWindow = 0;
 const char* startFileName = "bulletDemo.txt";
 
 static GwenUserInterface* gui  = 0;
+GwenUserInterface* PlasticityExampleBrowser::getGui(){
+	return gui;
+}
 static int sCurrentDemoIndex = -1;
 static int sCurrentHightlighted = 0;
 static CommonExampleInterface* sCurrentDemo = 0;

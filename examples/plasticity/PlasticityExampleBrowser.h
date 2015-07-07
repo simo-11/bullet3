@@ -2,6 +2,7 @@
 #define PLASTICITY_BROWSER_GUI_H
 
 #include "../ExampleBrowser/ExampleBrowserInterface.h"
+#include "../ExampleBrowser/GwenGUISupport/gwenUserInterface.h"
 #include "../CommonInterfaces/CommonGraphicsAppInterface.h"
 #include "../CommonInterfaces/CommonWindowInterface.h"
 #include "../CommonInterfaces/CommonRenderInterface.h"
@@ -23,6 +24,8 @@ public:
 	static CommonGraphicsApp* getApp();
 	static CommonWindowInterface* getWindow();
 	static CommonRenderInterface* getRenderer();
+	static GwenUserInterface* getGui();
+
 };
 
 #endif //PLASTICITY_BROWSER_GUI_H
