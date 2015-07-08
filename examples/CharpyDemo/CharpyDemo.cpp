@@ -160,7 +160,7 @@ static Gwen::Controls::Canvas* canvas;
 int gx = 10;
 int gy;
 int gyInc=25;
-bool resetRequested = false;
+bool restartRequested = false;
 void reinit();
 
 void setScalar(Gwen::Controls::Base* control, btScalar * vp){
@@ -193,7 +193,7 @@ class CharpyDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	int m_viewMode=1;
 	int m_mode;
 	void showMessage();
-
+	CommonWindowInterface* window;
 public:
 	CharpyDemo(struct GUIHelperInterface* helper, int mode)
 		:CommonRigidBodyBase(helper), Gwen::Event::Handler()
@@ -208,7 +208,6 @@ public:
 	virtual void	initPhysics();
 	virtual void	exitPhysics();
 	virtual void	stepSimulation(float deltaTime);
-	virtual void	physicsDebugDraw(int debugFlags){};
 	virtual void	resetCamera();
 	virtual bool	mouseMoveCallback(float x, float y){ return false; };
 	virtual bool	mouseButtonCallback(int button, int state, float x, float y){
@@ -219,23 +218,55 @@ public:
 	virtual void setViewMode(int viewMode);
 	virtual void updateView();
 	virtual void renderScene();
-	virtual void clientResetScene();
+	virtual void restart();
 	btRigidBody* localCreateRigidBody(btScalar mass, const btTransform& startTransform,
 		btCollisionShape* shape);
-	/** Gwen controls handling 
+	/** Gwen controls handling.
 	Just flag changes to avoid need to specify all parent references
 	if calls come from Gwen
 	*/
-	void reset(Gwen::Controls::Base* control){
-		resetRequested = true;
+	void restartHandler(Gwen::Controls::Base* control){
+		restartRequested = true;
 	}
-	void reinitAndReset(Gwen::Controls::Base* control){
+	void resetHandler(Gwen::Controls::Base* control){
 		reinit();
-		reset(control);
+		restartHandler(control);
 	}
 	void setStartAngle(Gwen::Controls::Base* control){
 		setScalar(control, &startAngle);
-		reset(control);
+		restartHandler(control);
+	}
+	void setE(Gwen::Controls::Base* control){
+		btScalar tv(E / 1e9);
+		setScalar(control, &tv);
+		E = tv*1e9;
+		restartHandler(control);
+	}
+	void setFu(Gwen::Controls::Base* control){
+		btScalar tv(fu / 1e6);
+		setScalar(control, &tv);
+		fu = tv*1e6;
+		restartHandler(control);
+	}
+	void setL(Gwen::Controls::Base* control){
+		setScalar(control, &l);
+		restartHandler(control);
+	}
+	void setW(Gwen::Controls::Base* control){
+		setScalar(control, &w);
+		restartHandler(control);
+	}
+	void setRestitution(Gwen::Controls::Base* control){
+		setScalar(control, &restitution);
+		restartHandler(control);
+	}
+	void setDamping(Gwen::Controls::Base* control){
+		setScalar(control, &damping);
+		restartHandler(control);
+	}
+	void setFrequencyRatio(Gwen::Controls::Base* control){
+		setScalar(control, &frequencyRatio);
+		restartHandler(control);
 	}
 
 	Gwen::Controls::Base* pPage;
@@ -244,21 +275,21 @@ public:
 		gc->SetText(txt);
 		gc->SizeToContents();
 		gc->SetPos(gx, gy);
-		gy += gc->Bottom()+1;
+		gy = gc->Bottom()+1;
 	}
-	void addResetButton(){
+	void addRestartButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
 		gc->SetText(L"Restart");
 		gc->SetPos(gx, gy);
 		gy += gyInc;
-		gc->onPress.Add(pPage, &CharpyDemo::reset);
+		gc->onPress.Add(pPage, &CharpyDemo::restartHandler);
 	}
-	void addReinitButton(){
+	void addResetButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
-		gc->SetText(L"Reinit");
+		gc->SetText(L"Reset");
 		gc->SetPos(gx, gy);
 		gy += gyInc;
-		gc->onPress.Add(pPage, &CharpyDemo::reinitAndReset);
+		gc->onPress.Add(pPage, &CharpyDemo::resetHandler);
 	}
 	void handlePauseSimulation(Gwen::Controls::Base* control){
 		Gwen::Controls::Button* gc =
@@ -291,23 +322,129 @@ public:
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setStartAngle);
 	}
-
+	void addE(){
+		addLabel("E [GPa]");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = std::to_string(E/1e9);
+		gc->SetText(text);
+		gc->SetToolTip("Young's modulus");
+		gc->SetPos(gx, gy);
+		gc->SetWidth(100);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setE);
+	}
+	void addFu(){
+		addLabel("fu [MPa]");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = std::to_string(fu / 1e6);
+		gc->SetText(text);
+		gc->SetToolTip("Ultimate strength");
+		gc->SetPos(gx, gy);
+		gc->SetWidth(100);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setFu);
+	}
+	void addL(){
+		addLabel("length [m]");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = std::to_string(l);
+		gc->SetText(text);
+		gc->SetToolTip("Length of specimen");
+		gc->SetPos(gx, gy);
+		gc->SetWidth(100);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setL);
+	}
+	void addW(){
+		addLabel("width [m]");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = std::to_string(w);
+		gc->SetText(text);
+		gc->SetToolTip("Width of specimen");
+		gc->SetPos(gx, gy);
+		gc->SetWidth(100);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setW);
+	}
+	void addRestitution(){
+		addLabel("Restitution");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = std::to_string(restitution);
+		gc->SetText(text);
+		gc->SetPos(gx, gy);
+		gc->SetWidth(100);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setRestitution);
+	}
+	void addDamping(){
+		addLabel("Damping");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = std::to_string(restitution);
+		gc->SetToolTip("In spring style constraings");
+		gc->SetText(text);
+		gc->SetPos(gx, gy);
+		gc->SetWidth(100);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setDamping);
+	}
+	void addFrequencyRatio(){
+		addLabel("FrequencyRatio");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = std::to_string(restitution);
+		gc->SetToolTip("how many simulation steps are required for spring");
+		gc->SetText(text);
+		gc->SetPos(gx, gy);
+		gc->SetWidth(100);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setFrequencyRatio);
+	}
+	bool isDampingUsed(){
+		switch (mode){
+		case 2:
+		case 4:
+		case 7:
+		case 8:
+			return true;
+		}
+		return false;
+	}
+	bool isFrequencyRatioUsed(){
+		switch (mode){
+		case 7:
+		case 8:
+			return true;
+		}
+		return false;
+	}
 	void initParameterUi(){
 		gui = PlasticityExampleBrowser::getGui();
+		window = PlasticityExampleBrowser::getWindow();
 		canvas = gui->getInternalData()->pCanvas;
 
 		pPage = gui->getInternalData()->m_demoPage->GetPage();
 		gy = 5;
 		addStartAngle();
+		addE();
+		addFu();
+		addL();
+		addW();
+		addRestitution();
+		if (isDampingUsed()){
+			addDamping();
+		}
+		if (isFrequencyRatioUsed()){
+			addFrequencyRatio();
+		}
 		addPauseSimulationButton();
+		addRestartButton();
 		addResetButton();
-		addReinitButton();
 	}
 	void clearParameterUi(){
 		if (pPage){
 			pPage->RemoveAllChildren();
 			pPage = 0;
 		}
+		Gwen::KeyboardFocus = NULL;
 	}
 
 };
@@ -810,6 +947,7 @@ void	CharpyDemo::initPhysics()
 		new btDiscreteDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collisionConfiguration);
 	m_dynamicsWorld = btWorld;
 	dw=m_dynamicsWorld;
+	m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
 	tuneSolver();
 	// floor
 	{
@@ -1026,7 +1164,7 @@ void CharpyDemo::resetCamera(){
 	setViewMode(1);
 }
 
-void	CharpyDemo::clientResetScene()
+void	CharpyDemo::restart()
 {
 	CharpyDemo::clearParameterUi();
 	CharpyDemo::exitPhysics();
@@ -1143,9 +1281,9 @@ void CharpyDemo::renderScene(){
 }
 
 void CharpyDemo::stepSimulation(float deltaTime){
-	if (resetRequested){
-		clientResetScene();
-		resetRequested = false;
+	if (restartRequested){
+		restart();
+		restartRequested = false;
 	}
 	if (m_dynamicsWorld)	{
 		m_dynamicsWorld->stepSimulation(timeStep, 30, timeStep);
@@ -1191,24 +1329,6 @@ void CharpyDemo::showMessage()
 	infoMsg(buf);
 	sprintf_s(buf,B_LEN, "{/} to change displayWait, now=%3ld/%3ld ms", setDisplayWait,displayWait);
 	infoMsg(buf);
-	sprintf_s(buf,B_LEN,"+/- to change start angle, now=%1.1f",startAngle);
-	infoMsg(buf);
-	sprintf_s(buf,B_LEN, "^b/^B restitution %1.3f",
-		restitution);
-	infoMsg(buf);
-	sprintf_s(buf,B_LEN, "^c/^C for fu %9.3e Pa, ^e/^E for E %9.3e Pa",
-		fu, E);
-	infoMsg(buf);
-	if (mode == 2 || mode == 4 || mode == 7){
-		if (mode == 7){
-			sprintf_s(buf,B_LEN, "(/) for damping, now=%1.1f, ^f/^F for frequencyRatio, now=%1.2f",
-				damping, frequencyRatio);
-		}
-		else{
-			sprintf_s(buf,B_LEN, "(/) for damping, now=%1.1f", damping);
-		}
-		infoMsg(buf);
-	}
 	if (mode == 5){
 		sprintf_s(buf,B_LEN, "hingeAngle=%1.3f",
 			btFabs(mode5Hinge->getHingeAngle()));
@@ -1282,8 +1402,6 @@ void CharpyDemo::showMessage()
 	infoMsg(buf);
 	sprintf_s(buf,B_LEN, "currentTime=%3.4f s, currentAngle=%1.4f",
 		currentTime, getHammerAngle());
-	infoMsg(buf);
-	sprintf_s(buf,B_LEN, "q=quit, space to restart, ^r to reset, t to toggle this info");
 	infoMsg(buf);
 	PlasticityData::setData(pData);
 }
@@ -1539,10 +1657,9 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 	case B3G_ALT :
 			return true;
 	}
-	CommonWindowInterface* window = m_guiHelper->getAppInterface()->m_window;
 	if (window->isModifierKeyPressed(B3G_CONTROL)){
 		if (ctrlKeyboardCallback(key)){
-			clientResetScene();
+			restart();
 		}
 		return true;
 	}
@@ -1552,7 +1669,7 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 	{
 	case '+':
 			startAngle+=0.1;
-			clientResetScene();
+			restart();
 			break;
 	case '-':
 			startAngle-=0.1;
@@ -1579,35 +1696,37 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 		resetCcdMotionThreshHold();
 		break;
 	case 'e':
-		margin*=0.8;
-		resetCollisionMargin();
-		break;
-	case 'E':
-		margin/=0.8;
+		if (window->isModifierKeyPressed(B3G_SHIFT)){
+			margin /= 0.8;
+		}
+		else{
+			margin *= 0.8;
+		}
 		resetCollisionMargin();
 		break;
 	case 'j':
-		floorHE*=0.8;
-		resetScene=true;
-		break;
-	case 'J':
-		floorHE/=0.8;
-		resetScene=true;
-		break;
+		if (window->isModifierKeyPressed(B3G_SHIFT)){
+			floorHE /= 0.8;
+		}
+		else{
+			floorHE *= 0.8;
+		}
 	case 'k':
-		w*=0.8;
+		if (window->isModifierKeyPressed(B3G_SHIFT)){
+			w /= 0.8;
+		}
+		else{
+			w *= 0.8;
+		}
 		resetScene=true;
-		break;
-	case 'K':
-		w/=0.8;
-		resetScene=true;;
 		break;
 	case 'v':
-		l*=0.8;
-		resetScene=true;
-		break;
-	case 'V':
-		l/=0.8;
+		if (window->isModifierKeyPressed(B3G_SHIFT)){
+			l /= 0.8;
+		}
+		else{
+			l *= 0.8;
+		}
 		resetScene=true;
 		break;
 	case ':':
@@ -1719,7 +1838,7 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 		handled = false;
 	}
 	if (resetScene)	{
-		clientResetScene();
+		restart();
 	}
 	return handled;
 }

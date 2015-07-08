@@ -142,9 +142,8 @@ void MyKeyboardCallback(int key, int state)
 	
 	
 
-	//checkout: is it desired to ignore keys, if the demo already handles them?
-	//if (handled)
-	//	return;
+	if (handled)
+		return;
 
 	if (key=='a' && state)
 	{
