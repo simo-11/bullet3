@@ -25,7 +25,8 @@ public:
 	static CommonWindowInterface* getWindow();
 	static CommonRenderInterface* getRenderer();
 	static GwenUserInterface* getGui();
-
+	static bool getPauseSimulation();
+	static void setPauseSimulation(bool pause);
 };
 
 #endif //PLASTICITY_BROWSER_GUI_H

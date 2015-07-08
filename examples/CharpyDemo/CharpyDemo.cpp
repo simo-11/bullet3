@@ -28,6 +28,7 @@ target is to break objects using plasticity.
 #include "../plasticity/PlasticityData.h"
 #include "../plasticity/PlasticityStatistics.h"
 #include "../plasticity/PlasticityExampleBrowser.h"
+#include "../plasticity/BulletKeyToGwen.h"
 #include "../exampleBrowser/GwenGUISupport/gwenUserInterface.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenInternalData.h"
 
@@ -39,7 +40,6 @@ target is to break objects using plasticity.
 #endif
 // Buffer length for sprintfs
 #define B_LEN 100
-
 
 int sFrameNumber = 0;
 bool firstRun = true;
@@ -156,6 +156,7 @@ btConstraintSolver* getSolver(){
 
 
 static GwenUserInterface* gui;
+static Gwen::Controls::Canvas* canvas;
 int gx = 10;
 int gy;
 int gyInc=25;
@@ -232,8 +233,9 @@ public:
 		reinit();
 		reset(control);
 	}
-	void setStartAngleAndReset(Gwen::Controls::Base* control){
+	void setStartAngle(Gwen::Controls::Base* control){
 		setScalar(control, &startAngle);
+		reset(control);
 	}
 
 	Gwen::Controls::Base* pPage;
@@ -258,22 +260,46 @@ public:
 		gy += gyInc;
 		gc->onPress.Add(pPage, &CharpyDemo::reinitAndReset);
 	}
+	void handlePauseSimulation(Gwen::Controls::Base* control){
+		Gwen::Controls::Button* gc =
+			static_cast<Gwen::Controls::Button*>(control);
+		bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
+		pauseSimulation=!pauseSimulation;
+		PlasticityExampleBrowser::setPauseSimulation(pauseSimulation);
+		if (pauseSimulation){
+			gc->SetText(L"Continue");
+		}
+		else{
+			gc->SetText(L"Pause");
+		}
+	}
+
+	void addPauseSimulationButton(){
+		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
+		gc->SetText(L"Pause");
+		gc->SetPos(gx, gy);
+		gy += gyInc;
+		gc->onPress.Add(pPage, &CharpyDemo::handlePauseSimulation);
+	}
 	void addStartAngle(){
-		addLabel("startAngle");
+		addLabel("startAngle +/-");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
 		string text = std::to_string(startAngle);
 		gc->SetText(text);
 		gc->SetPos(gx, gy);
 		gc->SetWidth(100);
 		gy += gyInc;
-		gc->onTextChanged.Add(pPage, &CharpyDemo::setStartAngleAndReset);
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setStartAngle);
 	}
 
 	void initParameterUi(){
 		gui = PlasticityExampleBrowser::getGui();
+		canvas = gui->getInternalData()->pCanvas;
+
 		pPage = gui->getInternalData()->m_demoPage->GetPage();
 		gy = 5;
 		addStartAngle();
+		addPauseSimulationButton();
 		addResetButton();
 		addReinitButton();
 	}
@@ -1501,7 +1527,9 @@ bool CharpyDemo::ctrlKeyboardCallback(int key){
 }
 /**  no free keys without modifiers */
 bool CharpyDemo::keyboardCallback(int key, int state){
-	if (state != 1){
+	bool bDown = state;
+	bool handled = BulletKeyToGwen::keyboardCallback(canvas, key, bDown);
+	if (handled){
 		return true;
 	}
 	/// no actions for modifiers
@@ -1519,7 +1547,7 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 		return true;
 	}
 	bool resetScene = false;
-	Gwen::UnicodeChar chr=0;
+	handled = true;
 	switch (key)
 	{
 	case '+':
@@ -1688,45 +1716,12 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 		}
 		break;
 	default:
-		switch (key){
-		case B3G_LEFT_ARROW:
-			chr = Gwen::Key::Left;
-			break;
-		case B3G_RIGHT_ARROW:
-			chr = Gwen::Key::Right;
-			break;
-		case B3G_UP_ARROW:
-			chr = Gwen::Key::Up;
-			break;
-		case B3G_DOWN_ARROW:
-			chr = Gwen::Key::Down;
-			break;
-		case B3G_END:
-			chr = Gwen::Key::End;
-			break;
-		case B3G_HOME:
-			chr = Gwen::Key::Home;
-			break;
-		case B3G_DELETE:
-			chr = Gwen::Key::Delete;
-			break;
-		case B3G_BACKSPACE:
-			chr = Gwen::Key::Backspace;
-			break;
-		case B3G_RETURN:
-			chr = Gwen::Key::Return;
-			break;
-		}
-		if (!chr){
-			chr = (Gwen::UnicodeChar) key;
-		}
-		Gwen::Controls::Canvas* canvas = gui->getInternalData()->pCanvas;
-		return canvas->InputCharacter(chr);
+		handled = false;
 	}
 	if (resetScene)	{
 		clientResetScene();
 	}
-	return true;
+	return handled;
 }
 
 

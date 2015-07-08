@@ -84,6 +84,12 @@ static bool renderVisualGeometry=true;
 static bool renderGrid = true;
 int gDebugDrawFlags = 0;
 static bool pauseSimulation=false;
+bool PlasticityExampleBrowser::getPauseSimulation(){
+	return pauseSimulation;
+}
+void PlasticityExampleBrowser::setPauseSimulation(bool pause){
+	pauseSimulation=pause;
+}
 int midiBaseIndex = 176;
 extern bool gDisableDeactivation;
 
