@@ -37,7 +37,7 @@
 #include "../ExampleBrowser/OpenGLGuiHelper.h"
 #include "Bullet3Common/b3FileUtils.h"
 #include "PlasticityStatistics.h"
-
+#include <time.h>
 #include "LinearMath/btIDebugDraw.h"
 
 static CommonGraphicsApp* s_app=0;
@@ -286,8 +286,9 @@ void selectDemo(int demoIndex)
 
 static void saveCurrentDemoEntry(int currentEntry,const char* startFileName)
 {
-	FILE* f = fopen(startFileName,"w");
-	if (f)
+	FILE* f = NULL;
+	errno_t err=fopen_s(&f,startFileName, "w");
+	if (f && !err)
 	{
 		fprintf(f,"%d\n",currentEntry);
 		fclose(f);
@@ -297,11 +298,12 @@ static void saveCurrentDemoEntry(int currentEntry,const char* startFileName)
 static int loadCurrentDemoEntry(const char* startFileName)
 {
 	int currentEntry= 0;
-	FILE* f = fopen(startFileName,"r");
-	if (f)
+	FILE* f=NULL;
+	errno_t err=fopen_s(&f, startFileName, "r");
+	if (f && !err)
 	{
 		int result;
-		result = fscanf(f,"%d",&currentEntry);
+		result = fscanf_s(f,"%d",&currentEntry);
 		if (result)
 		{
 			return currentEntry;
@@ -561,6 +563,19 @@ bool PlasticityExampleBrowser::init(int argc, char* argv[])
     SimpleOpenGL3App* simpleApp=0;
 	sUseOpenGL2 =args.CheckCmdLineFlag("opengl2");
 	const char* appTitle = "Bullet PlasticityExampleBrowser";
+	time_t t = time(NULL);
+	struct tm tm;
+	errno_t err=localtime_s(&tm,&t);
+#ifdef BT_USE_DOUBLE_PRECISION
+	char * btScalarType = "double precision";
+#else
+	char * btScalarType = "single precision";
+#endif
+#define BLEN 256
+	char buf[BLEN];
+	sprintf_s(buf, BLEN, "0.6.0-alpha - %d-%02d-%02d - %s",
+		tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+		btScalarType);
 #if defined (_DEBUG) || defined (DEBUG)
 	const char* optMode = "Debug build (slow)";
 #else
@@ -569,8 +584,8 @@ bool PlasticityExampleBrowser::init(int argc, char* argv[])
 
 #ifndef NO_OPENGL3
     {
-		char title[1024];
-		sprintf(title,"%s using OpenGL3+. %s", appTitle,optMode);
+		char title[BLEN];
+		sprintf_s(title,BLEN, "%s using OpenGL3+. %s %s", appTitle,optMode,buf);
         simpleApp = new SimpleOpenGL3App(title,width,height);
         s_app = simpleApp;
     }
@@ -749,8 +764,8 @@ void PlasticityExampleBrowser::update(float deltaTime)
 		if (0)
 		{
             BT_PROFILE("Draw frame counter");
-            char bla[1024];
-            sprintf(bla,"Frame %d", frameCount);
+            char bla[BLEN];
+            sprintf_s(bla,BLEN,"Frame %d", frameCount);
             s_app->drawText(bla,10,10);
 		}
 
@@ -790,13 +805,14 @@ void PlasticityExampleBrowser::update(float deltaTime)
 			
 			if (s_guiHelper && s_guiHelper->getRenderInterface() && s_guiHelper->getRenderInterface()->getActiveCamera())
 			{
-				char msg[1024];
+				char msg[BLEN];
 				float camDist = s_guiHelper->getRenderInterface()->getActiveCamera()->getCameraDistance();
 				float pitch = s_guiHelper->getRenderInterface()->getActiveCamera()->getCameraPitch();
 				float yaw = s_guiHelper->getRenderInterface()->getActiveCamera()->getCameraYaw();
 				float camTarget[3];
 				s_guiHelper->getRenderInterface()->getActiveCamera()->getCameraTargetPosition(camTarget);
-				sprintf(msg,"dist=%f, pitch=%f, yaw=%f,target=%f,%f,%f", camDist,pitch,yaw,camTarget[0],camTarget[1],camTarget[2]);
+				sprintf_s(msg,BLEN,
+					"dist=%f, pitch=%f, yaw=%f,target=%f,%f,%f", camDist,pitch,yaw,camTarget[0],camTarget[1],camTarget[2]);
 				gui->setStatusBarMessage(msg, true);	
 			}
 			
