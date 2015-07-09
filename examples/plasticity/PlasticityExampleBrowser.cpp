@@ -802,26 +802,27 @@ void PlasticityExampleBrowser::update(float deltaTime)
 			
 		}
 
-		static int toggle = 1;
-		if (1)
-		{
-            if (!pauseSimulation)
-                processProfileData(s_profWindow,false);
-			processPlasticityData(s_pStatWindow, pauseSimulation);
-            if (sUseOpenGL2)
-			{
-					
-				saveOpenGLState(s_instancingRenderer->getScreenWidth(),s_instancingRenderer->getScreenHeight());
-			}
-            BT_PROFILE("Draw Gwen GUI");
-            gui->draw(s_instancingRenderer->getScreenWidth(),s_instancingRenderer->getScreenHeight());
-            if (sUseOpenGL2)
-            {
-                restoreOpenGLState();
-            }
-
+		if (isProfileWindowVisible(s_profWindow)){
+			BT_PROFILE("processProfileData");
+			processProfileData(s_profWindow, false);
 		}
-		toggle=1-toggle;
+		{
+			BT_PROFILE("processPlasticityData");
+			processPlasticityData(s_pStatWindow, pauseSimulation);
+		}
+        if (sUseOpenGL2)
+		{
+					
+			saveOpenGLState(s_instancingRenderer->getScreenWidth(),s_instancingRenderer->getScreenHeight());
+		}
+		{
+			BT_PROFILE("Draw Gwen GUI");
+			gui->draw(s_instancingRenderer->getScreenWidth(),s_instancingRenderer->getScreenHeight());
+		}
+        if (sUseOpenGL2)
+        {
+            restoreOpenGLState();
+        }
         {
             BT_PROFILE("Sync Parameters");
             s_parameterInterface->syncParameters();

@@ -17,6 +17,7 @@ target is to break objects using plasticity.
 */
 #include "CharpyDemo.h"
 #include "btBulletDynamicsCommon.h"
+#include "LinearMath/btQuickprof.h"
 #include "BulletDynamics/ConstraintSolver/btGeneric6DofSpring2Constraint.h"
 #include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
 #include "BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h"
@@ -161,19 +162,33 @@ int gx = 10;
 int gy;
 int gyInc=25;
 bool restartRequested = false;
+bool dropFocus = false;
 void reinit();
 
-void setScalar(Gwen::Controls::Base* control, btScalar * vp){
+/** Gets text value from TextBoxNumeric */
+string getText(Gwen::Controls::Base* control){
 	Gwen::Controls::TextBoxNumeric* box =
 		static_cast<Gwen::Controls::TextBoxNumeric*>(control);
 	if (!box)	{
-		return;
+		return "";
 	}
-	string text = Gwen::Utility::UnicodeToString(box->GetText());
+	return Gwen::Utility::UnicodeToString(box->GetText());
+}
+
+void setScalar(Gwen::Controls::Base* control, btScalar * vp){
+	string text = getText(control); 
 	if (text.length()==0)	{
 		return;
 	}
 	float fv = std::stof(text);
+	*vp = fv;
+}
+void setLong(Gwen::Controls::Base* control, long * vp){
+	string text = getText(control);
+	if (text.length() == 0)	{
+		return;
+	}
+	long fv = std::stol(text);
 	*vp = fv;
 }
 
@@ -201,9 +216,21 @@ public:
 		m_mode = mode;
 		initParameterUi();
 	}
-	virtual ~CharpyDemo()
+	~CharpyDemo()
 	{
 		clearParameterUi();
+	}
+	/** new and delete redefined due to 
+	warning C4316: ... : object allocated on the heap may not be aligned 16
+	should be available at least in gcc
+	*/
+	void* operator new(size_t i)
+	{
+		return _mm_malloc(i, 16);
+	}
+	void operator delete(void* p)
+	{
+		_mm_free(p);
 	}
 	virtual void	initPhysics();
 	virtual void	exitPhysics();
@@ -268,6 +295,16 @@ public:
 		setScalar(control, &frequencyRatio);
 		restartHandler(control);
 	}
+	void setUiTimeStep(Gwen::Controls::Base* control){
+		btScalar tv(setTimeStep*1e3);
+		setScalar(control, &tv);
+		setTimeStep = tv/1e3;
+		dropFocus = true;
+	}
+	void setUiDisplayWait(Gwen::Controls::Base* control){
+		setLong(control, &setDisplayWait);
+		dropFocus = true;
+	}
 
 	Gwen::Controls::Base* pPage;
 	void addLabel(string txt){
@@ -317,6 +354,7 @@ public:
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
 		string text = std::to_string(startAngle);
 		gc->SetText(text);
+		gc->SetToolTip("In radians");
 		gc->SetPos(gx, gy);
 		gc->SetWidth(100);
 		gy += gyInc;
@@ -379,8 +417,8 @@ public:
 	void addDamping(){
 		addLabel("Damping");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = std::to_string(restitution);
-		gc->SetToolTip("In spring style constraings");
+		string text = std::to_string(damping);
+		gc->SetToolTip("Damping in spring constraints");
 		gc->SetText(text);
 		gc->SetPos(gx, gy);
 		gc->SetWidth(100);
@@ -390,16 +428,36 @@ public:
 	void addFrequencyRatio(){
 		addLabel("FrequencyRatio");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = std::to_string(restitution);
-		gc->SetToolTip("how many simulation steps are required for spring");
+		string text = std::to_string(frequencyRatio);
+		gc->SetToolTip("How many simulation steps are required for spring period");
 		gc->SetText(text);
 		gc->SetPos(gx, gy);
 		gc->SetWidth(100);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setFrequencyRatio);
 	}
+	void addTimeStep(){
+		addLabel("TimeStep [ms]");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = std::to_string(setTimeStep*1000);
+		gc->SetText(text);
+		gc->SetPos(gx, gy);
+		gc->SetWidth(100);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setUiTimeStep);
+	}
+	void addDisplayWait(){
+		addLabel("DisplayWait");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = std::to_string(displayWait);
+		gc->SetText(text);
+		gc->SetPos(gx, gy);
+		gc->SetWidth(100);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setUiDisplayWait);
+	}
 	bool isDampingUsed(){
-		switch (mode){
+		switch (m_mode){
 		case 2:
 		case 4:
 		case 7:
@@ -409,7 +467,7 @@ public:
 		return false;
 	}
 	bool isFrequencyRatioUsed(){
-		switch (mode){
+		switch (m_mode){
 		case 7:
 		case 8:
 			return true;
@@ -435,6 +493,8 @@ public:
 		if (isFrequencyRatioUsed()){
 			addFrequencyRatio();
 		}
+		addTimeStep();
+		addDisplayWait();
 		addPauseSimulationButton();
 		addRestartButton();
 		addResetButton();
@@ -1272,10 +1332,19 @@ void checkCollisions(){
 }
 
 void CharpyDemo::renderScene(){
-	m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
-	m_guiHelper->render(m_dynamicsWorld);
+	{
+		BT_PROFILE("CharpyDemo::syncPhysicsToGraphics");
+		m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
+	}
+	{
+		BT_PROFILE("CharpyDemo::render");
+		m_guiHelper->render(m_dynamicsWorld);
+	}
 #ifdef _WIN32
-	Sleep(displayWait);
+	{
+		BT_PROFILE("CharpyDemo::Sleep");
+		Sleep(displayWait);
+	}
 #endif
 
 }
@@ -1324,13 +1393,13 @@ void CharpyDemo::showMessage()
 	infoMsg(buf);
 	addMoments(buf, specimenJointFeedback.m_appliedTorqueBodyA);
 	infoMsg(buf);
-	sprintf_s(buf,B_LEN, "minCollisionDistance: simulation/step %1.3f/%1.3f",
+	sprintf_s(buf,B_LEN, "minCollisionDistance: simulation/step % 1.3f/% 1.3f",
 		minCollisionDistance, minCurrentCollisionDistance);
 	infoMsg(buf);
 	sprintf_s(buf,B_LEN, "{/} to change displayWait, now=%3ld/%3ld ms", setDisplayWait,displayWait);
 	infoMsg(buf);
 	if (mode == 5){
-		sprintf_s(buf,B_LEN, "hingeAngle=%1.3f",
+		sprintf_s(buf,B_LEN, "hingeAngle=% 2.3f",
 			btFabs(mode5Hinge->getHingeAngle()));
 		infoMsg(buf);
 	}
@@ -1409,14 +1478,14 @@ void CharpyDemo::showMessage()
 void CharpyDemo::updateView(){
 	btRigidBody* body;
 	switch (m_viewMode){
-	case 1:
-		return;
 	case 2:
 		body = specimenBody;
 		break;
 	case 3:
 		body = specimenBody2;
 		break;
+	default:
+		return;
 	}
 	btVector3 comp=body->getCenterOfMassPosition();
 	CommonCameraInterface* camera = PlasticityExampleBrowser::getRenderer()->getActiveCamera();
@@ -1643,9 +1712,20 @@ bool CharpyDemo::ctrlKeyboardCallback(int key){
 	}
 	return false;
 }
-/**  no free keys without modifiers */
+/** 
+Handles keyboard activity.
+<ul>
+<li> drops keyboard focus if needed
+<li> offers to gwen
+<li> handles own keys
+</ul>
+*/
 bool CharpyDemo::keyboardCallback(int key, int state){
-	bool bDown = state;
+	if (dropFocus){
+		Gwen::KeyboardFocus = NULL;
+		dropFocus = false;
+	}
+	bool bDown = (state==1?true:false);
 	bool handled = BulletKeyToGwen::keyboardCallback(canvas, key, bDown);
 	if (handled){
 		return true;

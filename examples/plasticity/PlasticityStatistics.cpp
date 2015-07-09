@@ -120,6 +120,7 @@ PlasticityStatistics* setupPlasticityWindow(GwenInternalData* data)
 
 void	processPlasticityData(PlasticityStatistics* pStat, bool idle)
 {
+	BT_PROFILE("processPlasticityData");
 	if (pStat)
 	{	
 		pStat->UpdateText(pStat, idle);

@@ -290,3 +290,7 @@ void destroyProfileWindow(MyProfileWindow* window)
 {
 	delete window;
 }
+bool isProfileWindowVisible(MyProfileWindow* window){
+	return window->Visible();
+}
+
