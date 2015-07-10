@@ -47,7 +47,7 @@ bool firstRun = true;
 bool hammerHitsSpecimen;
 btScalar initialStartAngle(1.8);
 btScalar startAngle(initialStartAngle);
-long  initialDisplayWait = 20;
+long  initialDisplayWait = 50;
 long displayWait = initialDisplayWait;
 long setDisplayWait = displayWait;
 btScalar ccdMotionThreshHold(0.001);
@@ -119,7 +119,7 @@ btScalar w1;
 float maxForces[6];
 FILE *fp;
 bool openGraphFile = false;
-char gfn[100];
+char gfn[B_LEN];
 int initialSolverType = 1;
 int solverType = initialSolverType;
 btConstraintSolverType solverTypes[] = {
@@ -571,10 +571,10 @@ void toggleGraphFile(){
 		fclose(fp);
 		fp = NULL;
 	}else{
-		sprintf(gfn, "d:/wrk/cgd.m");
-		fp = fopen(gfn, "w");
-		if (!fp){
-			strcpy(gfn, "");
+		sprintf_s(gfn,B_LEN, "d:/wrk/cgd.m");
+		errno_t err = fopen_s(&fp,gfn, "w");
+		if (!fp || err){
+			strcpy_s(gfn, "");
 			openGraphFile = false;
 			return;
 		}
@@ -1331,6 +1331,7 @@ void checkCollisions(){
 	}
 }
 
+const char * PROFILE_SLEEP = "CharpyDemo::Sleep";
 void CharpyDemo::renderScene(){
 	{
 		BT_PROFILE("CharpyDemo::syncPhysicsToGraphics");
@@ -1341,8 +1342,8 @@ void CharpyDemo::renderScene(){
 		m_guiHelper->render(m_dynamicsWorld);
 	}
 #ifdef _WIN32
-	{
-		BT_PROFILE("CharpyDemo::Sleep");
+	if (displayWait>0){
+		BT_PROFILE(PROFILE_SLEEP);
 		Sleep(displayWait);
 	}
 #endif
@@ -1356,16 +1357,17 @@ void CharpyDemo::stepSimulation(float deltaTime){
 	}
 	if (m_dynamicsWorld)	{
 		m_dynamicsWorld->stepSimulation(timeStep, 30, timeStep);
-		checkCollisions();
-		updateEnergy();
-		checkConstraints();
-		m_dynamicsWorld->debugDrawWorld();
+		{
+			BT_PROFILE("CharpyDemo::stepStimulationExtras");
+			checkCollisions();
+			updateEnergy();
+			checkConstraints();
+			currentTime += timeStep;
+			writeGraphData();
+			updateView();
+			showMessage();
+		}
 	}
-	currentTime += timeStep;
-	writeGraphData();
-	updateView();
-	showMessage();
-	Sleep(displayWait);
 }
 
 PlasticityData getPlasticityData(char* buf){

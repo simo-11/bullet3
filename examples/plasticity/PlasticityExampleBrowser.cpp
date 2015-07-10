@@ -774,9 +774,6 @@ void PlasticityExampleBrowser::update(float deltaTime)
 		{
 			if (!pauseSimulation)
 			{
-				//printf("---------------------------------------------------\n");
-				//printf("Framecount = %d\n",frameCount);
-
 				sCurrentDemo->stepSimulation(deltaTime);//1./60.f);
 			}
 			else{
