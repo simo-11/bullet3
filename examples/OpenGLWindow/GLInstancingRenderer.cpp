@@ -19,7 +19,7 @@ subject to the following restrictions:
 bool useShadowMap=true;//false;//true;
 int shadowMapWidth=4096; // was 8192
 int shadowMapHeight=4096; // was 8192
-float shadowMapWorldSize=100;
+float shadowMapWorldSize=5; // was 100
 
 #define MAX_POINTS_IN_BATCH 1024
 #define MAX_LINES_IN_BATCH 1024
