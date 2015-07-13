@@ -14,17 +14,37 @@ subject to the following restrictions:
 */
 
 /*
-April 2015 based on bt6DofElasticPlastic2Constraint
+2014 May: bt6DofElasticPlastic2Constraint is created from the original (2.82.2712) btGeneric6DofConstraint by Gabor Puhr and Tamas Umenhoffer
+Pros:
+- Much more accurate and stable in a lot of situation. (Especially when a sleeping chain of RBs connected with 6dof2 is pulled)
+- Stable and accurate spring with minimal energy loss that works with all of the solvers. (latter is not true for the original 6dof spring)
+- Servo motor functionality
+- Much more accurate bouncing. 0 really means zero bouncing (not true for the original 6odf) and there is only a minimal energy loss when the value is 1 (because of the solvers' precision)
+- Rotation order for the Euler system can be set. (One axis' freedom is still limited to pi/2)
+
+Cons:
+- It is slower than the original 6dof. There is no exact ratio, but half speed is a good estimation.
+- At bouncing the correct velocity is calculated, but not the correct position. (it is because of the solver can correct position or velocity, but not both.)
 */
 
-#ifndef BT_6DOF_ELASTIC_PLASTIC_CONSTRAINT2_H
-#define BT_6DOF_ELASTIC_PLASTIC_CONSTRAINT2_H
+/// 2009 March: btGeneric6DofConstraint refactored by Roman Ponomarev
+/// Added support for generic constraint solver through getInfo1/getInfo2 methods
+
+/*
+2007-09-09
+btGeneric6DofConstraint Refactored by Francisco Le?n
+email: projectileman@yahoo.com
+http://gimpact.sf.net
+*/
+
+
+#ifndef BT_ELASTIC_PLASTIC_CONSTRAINT2_H
+#define BT_ELASTIC_PLASTIC_CONSTRAINT2_H
 
 #include "LinearMath/btVector3.h"
 #include "BulletDynamics/ConstraintSolver/btJacobianEntry.h"
 #include "BulletDynamics/ConstraintSolver/btTypedConstraint.h"
 #include "BulletDynamics/ConstraintSolver/btGeneric6DofSpring2Constraint.h"
-
 class btRigidBody;
 
 
@@ -35,7 +55,6 @@ class btRigidBody;
 #define bt6DofElasticPlastic2ConstraintData2		bt6DofElasticPlastic2ConstraintData
 #define bt6DofElasticPlastic2ConstraintDataName	"bt6DofElasticPlastic2ConstraintData"
 #endif //BT_USE_DOUBLE_PRECISION
-
 
 ATTRIBUTE_ALIGNED16(class) bt6DofElasticPlastic2Constraint : public btTypedConstraint
 {
@@ -242,8 +261,8 @@ public:
 	void setMaxMotorForce(int index, btScalar force);
 
 	void enableSpring(int index, bool onOff);
-	void setStiffness(int index, btScalar stiffness);
-	void setDamping(int index, btScalar damping);
+	void setStiffness(int index, btScalar stiffness, bool limitIfNeeded = true); // if limitIfNeeded is true the system will automatically limit the stiffness in necessary situations where otherwise the spring would move unrealistically too widely
+	void setDamping(int index, btScalar damping, bool limitIfNeeded = true); // if limitIfNeeded is true the system will automatically limit the damping in necessary situations where otherwise the spring would blow up
 	void setEquilibriumPoint(); // set the current constraint position/orientation as an equilibrium point for all DOF
 	void setEquilibriumPoint(int index);  // set the current constraint position/orientation as an equilibrium point for given DOF
 	void setEquilibriumPoint(int index, btScalar val);
@@ -277,6 +296,8 @@ struct bt6DofElasticPlastic2ConstraintData
 	char               m_linearEnableMotor[4];
 	char               m_linearServoMotor[4];
 	char               m_linearEnableSpring[4];
+	char               m_linearSpringStiffnessLimited[4];
+	char               m_linearSpringDampingLimited[4];
 	char               m_padding1[4];
 
 	btVector3FloatData m_angularUpperLimit;
@@ -295,10 +316,10 @@ struct bt6DofElasticPlastic2ConstraintData
 	char               m_angularEnableMotor[4];
 	char               m_angularServoMotor[4];
 	char               m_angularEnableSpring[4];
-	char               m_padding2[4];
+	char               m_angularSpringStiffnessLimited[4];
+	char               m_angularSpringDampingLimited[4];
 
 	int                m_rotateOrder;
-	char               m_padding3[4];
 };
 
 struct bt6DofElasticPlastic2ConstraintDoubleData2
@@ -323,6 +344,8 @@ struct bt6DofElasticPlastic2ConstraintDoubleData2
 	char                m_linearEnableMotor[4];
 	char                m_linearServoMotor[4];
 	char                m_linearEnableSpring[4];
+	char                m_linearSpringStiffnessLimited[4];
+	char                m_linearSpringDampingLimited[4];
 	char                m_padding1[4];
 
 	btVector3DoubleData m_angularUpperLimit;
@@ -341,10 +364,10 @@ struct bt6DofElasticPlastic2ConstraintDoubleData2
 	char                m_angularEnableMotor[4];
 	char                m_angularServoMotor[4];
 	char                m_angularEnableSpring[4];
-	char                m_padding2[4];
+	char                m_angularSpringStiffnessLimited[4];
+	char                m_angularSpringDampingLimited[4];
 
 	int                 m_rotateOrder;
-	char                m_padding3[4];
 };
 
 SIMD_FORCE_INLINE int bt6DofElasticPlastic2Constraint::calculateSerializeBufferSize() const
@@ -392,9 +415,11 @@ SIMD_FORCE_INLINE const char* bt6DofElasticPlastic2Constraint::serialize(void* d
 	dof->m_angularEquilibriumPoint.m_floats[3] = 0;
 	for (i=0;i<4;i++)
 	{
-		dof->m_angularEnableMotor[i]  = i < 3 ? ( m_angularLimits[i].m_enableMotor ? 1 : 0 ) : 0;
-		dof->m_angularServoMotor[i]   = i < 3 ? ( m_angularLimits[i].m_servoMotor ? 1 : 0 ) : 0;
-		dof->m_angularEnableSpring[i] = i < 3 ? ( m_angularLimits[i].m_enableSpring ? 1 : 0 ) : 0;
+		dof->m_angularEnableMotor[i]            = i < 3 ? ( m_angularLimits[i].m_enableMotor ? 1 : 0 ) : 0;
+		dof->m_angularServoMotor[i]             = i < 3 ? ( m_angularLimits[i].m_servoMotor ? 1 : 0 ) : 0;
+		dof->m_angularEnableSpring[i]           = i < 3 ? ( m_angularLimits[i].m_enableSpring ? 1 : 0 ) : 0;
+		dof->m_angularSpringStiffnessLimited[i] = i < 3 ? ( m_angularLimits[i].m_springStiffnessLimited ? 1 : 0 ) : 0;
+		dof->m_angularSpringDampingLimited[i]   = i < 3 ? ( m_angularLimits[i].m_springDampingLimited ? 1 : 0 ) : 0;
 	}
 
 	m_linearLimits.m_lowerLimit.serialize( dof->m_linearLowerLimit );
@@ -412,9 +437,11 @@ SIMD_FORCE_INLINE const char* bt6DofElasticPlastic2Constraint::serialize(void* d
 	m_linearLimits.m_equilibriumPoint.serialize( dof->m_linearEquilibriumPoint );
 	for (i=0;i<4;i++)
 	{
-		dof->m_linearEnableMotor[i]  = i < 3 ? ( m_linearLimits.m_enableMotor[i] ? 1 : 0 ) : 0;
-		dof->m_linearServoMotor[i]   = i < 3 ? ( m_linearLimits.m_servoMotor[i] ? 1 : 0 ) : 0;
-		dof->m_linearEnableSpring[i] = i < 3 ? ( m_linearLimits.m_enableSpring[i] ? 1 : 0 ) : 0;
+		dof->m_linearEnableMotor[i]            = i < 3 ? ( m_linearLimits.m_enableMotor[i] ? 1 : 0 ) : 0;
+		dof->m_linearServoMotor[i]             = i < 3 ? ( m_linearLimits.m_servoMotor[i] ? 1 : 0 ) : 0;
+		dof->m_linearEnableSpring[i]           = i < 3 ? ( m_linearLimits.m_enableSpring[i] ? 1 : 0 ) : 0;
+		dof->m_linearSpringStiffnessLimited[i] = i < 3 ? ( m_linearLimits.m_springStiffnessLimited[i] ? 1 : 0 ) : 0;
+		dof->m_linearSpringDampingLimited[i]   = i < 3 ? ( m_linearLimits.m_springDampingLimited[i] ? 1 : 0 ) : 0;
 	}
 
 	dof->m_rotateOrder = m_rotateOrder;
@@ -426,4 +453,4 @@ SIMD_FORCE_INLINE const char* bt6DofElasticPlastic2Constraint::serialize(void* d
 
 
 
-#endif //BT_6DOF_ELASTIC_PLASTIC_CONSTRAINT_H
+#endif //BT_ELASTIC_PLASTIC_CONSTRAINT_H
