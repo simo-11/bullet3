@@ -1078,6 +1078,77 @@ void bt6DofElasticPlastic2Constraint::setEquilibriumPoint(int index, btScalar va
 		m_angularLimits[index - 3] .m_equilibriumPoint = val;
 }
 
+/*
+// bcc starts
+*/
+void bt6DofElasticPlastic2Constraint::setMaxPlasticStrain(btScalar value){
+	m_maxPlasticStrain = value;
+}
+btScalar bt6DofElasticPlastic2Constraint::getMaxPlasticStrain(){
+	return m_maxPlasticStrain;
+}
+btScalar bt6DofElasticPlastic2Constraint::getCurrentPlasticStrain(){
+	return m_currentPlasticStrain;
+}
+void bt6DofElasticPlastic2Constraint::setMaxPlasticRotation(btScalar value){
+	m_maxPlasticRotation = value;
+}
+btScalar bt6DofElasticPlastic2Constraint::getMaxPlasticRotation(){
+	return m_maxPlasticRotation;
+}
+btScalar bt6DofElasticPlastic2Constraint::getCurrentPlasticRotation(){
+	return m_currentPlasticRotation;
+}
+void bt6DofElasticPlastic2Constraint::scalePlasticity(btScalar scale){
+	m_maxPlasticStrain *= scale;
+	m_maxPlasticRotation *= scale;
+}
+void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
+	int i;
+	for (i = 0; i < 3; i++)
+	{
+		if (m_linearLimits.m_enableSpring[i])
+		{
+			btScalar currPos = m_calculatedLinearDiff[i];
+			btScalar delta = currPos - m_linearLimits.m_equilibriumPoint[i];
+			btScalar force = forces.m_appliedForceBodyA[i];
+			if (btFabs(force)>m_maxForce[i]){
+				btScalar elasticPart = m_maxForce[i] / m_linearLimits.m_springStiffness[i];
+				btScalar newVal = currPos;
+				if (btFabs(elasticPart)<btFabs(currPos)){
+					currPos += (currPos > 0 ? -elasticPart : elasticPart);
+				}
+				setEquilibriumPoint(i, newVal);
+				m_currentPlasticStrain += btFabs(delta);
+			}
+		}
+	}
+	if (m_currentPlasticStrain > m_maxPlasticStrain){
+		setEnabled(false);
+		return;
+	}
+	for (i = 0; i < 3; i++)
+	{
+		if (m_angularLimits[i].m_enableSpring)
+		{
+			btScalar currPos = m_calculatedAxisAngleDiff[i];
+			btScalar delta = currPos - m_angularLimits[i].m_equilibriumPoint;
+			btScalar force = forces.m_appliedTorqueBodyA[i];
+			if (btFabs(force)>m_maxForce[i + 3]){
+				btScalar elasticPart = m_maxForce[i + 3] / m_angularLimits[i].m_springStiffness;
+				btScalar newVal = currPos;
+				if (btFabs(elasticPart)<btFabs(currPos)){
+					currPos += (currPos > 0 ? -elasticPart : elasticPart);
+				}
+				setEquilibriumPoint(i + 3, newVal);
+				m_currentPlasticRotation += btFabs(delta);
+			}
+		}
+	}
+	if (m_currentPlasticRotation > m_maxPlasticRotation){
+		setEnabled(false);
+	}
+}
 
 
 

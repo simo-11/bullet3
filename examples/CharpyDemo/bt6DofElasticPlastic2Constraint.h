@@ -271,6 +271,23 @@ public:
 	//If no axis is provided, it uses the default axis for this constraint.
 	virtual void setParam(int num, btScalar value, int axis = -1);
 	virtual btScalar getParam(int num, int axis = -1) const;
+	// bcc
+	btScalar	m_maxForce[6];
+	btScalar	m_fpsLimit[6];
+	btScalar    m_currentPlasticStrain;
+	btScalar    m_maxPlasticStrain;
+	btScalar    m_maxPlasticRotation = 3;
+	btScalar    m_currentPlasticRotation = 0;
+	void setMaxForce(int index, btScalar value);
+	void setMaxPlasticStrain(btScalar value);
+	void setMaxPlasticRotation(btScalar value);
+	void scalePlasticity(btScalar scale);
+	btScalar getMaxPlasticStrain();
+	btScalar getMaxPlasticRotation();
+	btScalar getCurrentPlasticStrain();
+	btScalar getCurrentPlasticRotation();
+	void updatePlasticity(btJointFeedback& forces);
+	// bcc
 };
 
 
@@ -320,6 +337,7 @@ struct bt6DofElasticPlastic2ConstraintData
 	char               m_angularSpringDampingLimited[4];
 
 	int                m_rotateOrder;
+
 };
 
 struct bt6DofElasticPlastic2ConstraintDoubleData2

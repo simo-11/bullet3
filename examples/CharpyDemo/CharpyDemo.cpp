@@ -107,6 +107,7 @@ btJointFeedback specimenJointFeedback;
 btHingeConstraint *mode5Hinge;
 btPlasticHingeConstraint *mode6Hinge;
 bt6DofElasticPlasticConstraint *mode7c;
+bt6DofElasticPlastic2Constraint *mode8c;
 btScalar initialRestitution(0.);
 btScalar restitution(initialRestitution);
 btScalar initialMaxPlasticRotation(3.);
@@ -667,6 +668,7 @@ public:
 			mode7c->scalePlasticity(scale);
 			break;
 		case 8:
+			mode8c->scalePlasticity(scale);
 			break;
 		}
 	}
@@ -809,7 +811,7 @@ public:
 		tc = sc;
 		mode7c = sc;
 		mode7c->setMaxPlasticRotation(maxPlasticRotation);
-		mode7c->setMaxPlasticStrain(maxPlasticRotation / 3 * w);
+		mode7c->setMaxPlasticStrain(w);
 		sc->setJointFeedback(&specimenJointFeedback);
 		btScalar b(w);
 		btScalar h(w - 0.002); // notch is 2 mm
@@ -855,23 +857,33 @@ public:
 			new bt6DofElasticPlastic2Constraint(*ha[0], *ha[1],
 			ta[0], ta[1]);
 		tc = sc;
-		sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
+		tc = sc;
+		mode8c = sc;
+		mode8c->setMaxPlasticRotation(maxPlasticRotation);
+		mode8c->setMaxPlasticStrain(w);
 		sc->setJointFeedback(&specimenJointFeedback);
 		btScalar b(w);
 		btScalar h(w - 0.002); // notch is 2 mm
 		btScalar I1(b*h*h*h / 12);
 		btScalar I2(h*b*b*b / 12);
+		btScalar It(0.14*b*h*h*h);
 		btScalar k0(E*b*h / l / 2);
 		btScalar k1(48 * E*I1 / l / l / l);
 		btScalar k2(48 * E*I1 / l / l / l);
 		w1 = fu*b*h*h / 4;
 		btScalar w2(fu*b*b*h / 4);
 		sc->setStiffness(0, k0);
+		sc->setMaxForce(0, fu*b*h);
 		sc->setStiffness(1, k1);
+		sc->setMaxForce(1, fu*b*h / 2);
 		sc->setStiffness(2, k2);
-		sc->setStiffness(3, w1); // not very exact
-		sc->setStiffness(4, w2);
-		sc->setStiffness(5, w1);
+		sc->setMaxForce(2, fu*b*h / 2);
+		sc->setStiffness(3, G*It / l); // not very exact
+		sc->setMaxForce(3, fu / 2 * It / (h / 2)); // not very exact
+		sc->setStiffness(4, 3 * E*I1 / l); // not very exact
+		sc->setMaxForce(4, w2);
+		sc->setStiffness(5, 3 * E*I2 / l); // not very exact
+		sc->setMaxForce(5, w1);
 		dw->addConstraint(sc, true);
 		for (int i = 0; i<6; i++)
 		{
@@ -1054,6 +1066,12 @@ void mode7callback(btDynamicsWorld *world, btScalar timeStep) {
 	}
 	mode7c->updatePlasticity(specimenJointFeedback);
 }
+void mode8callback(btDynamicsWorld *world, btScalar timeStep) {
+	if (!mode8c->isEnabled()){
+		return;
+	}
+	mode8c->updatePlasticity(specimenJointFeedback);
+}
 
 btRigidBody* CharpyDemo::localCreateRigidBody(btScalar mass, const btTransform& startTransform, 
 	btCollisionShape* shape)
@@ -1213,6 +1231,7 @@ void	CharpyDemo::initPhysics()
 			break;
 		case 8:
 			addElasticPlastic2Constraint(ha,ta);
+			dw->setInternalTickCallback(mode8callback);
 			break;
 		}
 	}
@@ -1437,6 +1456,16 @@ void CharpyDemo::showMessage()
 			mode7c->getCurrentPlasticRotation(),
 			mode7c->getMaxPlasticStrain(),
 			mode7c->getCurrentPlasticStrain()
+			);
+		infoMsg(buf);
+		break;
+	case 8:
+		sprintf_s(buf, B_LEN, "^a/^A for mpr, "
+			"mpr=%1.3f, cpr=%1.3f, mps=%1.3f, cps=%1.3f",
+			mode8c->getMaxPlasticRotation(),
+			mode8c->getCurrentPlasticRotation(),
+			mode8c->getMaxPlasticStrain(),
+			mode8c->getCurrentPlasticStrain()
 			);
 		infoMsg(buf);
 		break;
