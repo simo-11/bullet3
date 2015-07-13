@@ -17,9 +17,9 @@ subject to the following restrictions:
 
 ///todo: make this configurable in the gui
 bool useShadowMap=true;//false;//true;
-int shadowMapWidth=4096; // was 8192
-int shadowMapHeight=4096; // was 8192
-float shadowMapWorldSize=5; // was 100
+int shadowMapWidth=8192;
+int shadowMapHeight=8192;
+float shadowMapWorldSize=2; // was 100
 
 #define MAX_POINTS_IN_BATCH 1024
 #define MAX_LINES_IN_BATCH 1024
