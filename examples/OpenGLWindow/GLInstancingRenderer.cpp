@@ -1329,10 +1329,11 @@ void GLInstancingRenderer::renderSceneInternal(int renderMode)
 			err = glGetError();
 			//glTexImage2D(GL_TEXTURE_2D,0,GL_DEPTH_COMPONENT16,m_screenWidth,m_screenHeight,0,GL_DEPTH_COMPONENT,GL_FLOAT,0);
 			//glTexImage2D(GL_TEXTURE_2D,0,GL_DEPTH_COMPONENT32,m_screenWidth,m_screenHeight,0,GL_DEPTH_COMPONENT,GL_FLOAT,0);
-			/*
-			Reduce size of shadowMap if glTexImage2D call fails as may happen in some cases
-			https://github.com/bulletphysics/bullet3/issues/40
-			*/
+#ifdef OLD_SHADOWMAP_INIT
+			glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT16, shadowMapWidth, shadowMapHeight, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+#else//OLD_SHADOWMAP_INIT
+			//Reduce size of shadowMap if glTexImage2D call fails as may happen in some cases
+			//https://github.com/bulletphysics/bullet3/issues/40
 			int size;
 			glGetIntegerv(GL_MAX_TEXTURE_SIZE, &size);
 			if (size < shadowMapWidth){
@@ -1341,6 +1342,7 @@ void GLInstancingRenderer::renderSceneInternal(int renderMode)
 			if (size < shadowMapHeight){
 				shadowMapHeight = size;
 			}
+			GLuint err;
 			do {
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, 
 					shadowMapWidth, shadowMapHeight, 
@@ -1351,7 +1353,7 @@ void GLInstancingRenderer::renderSceneInternal(int renderMode)
 					shadowMapWidth >>= 1;
 				}
 			} while (err != GL_NO_ERROR && shadowMapWidth > 0);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+#endif//OLD_SHADOWMAP_INIT
 			err = glGetError();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			err = glGetError();
