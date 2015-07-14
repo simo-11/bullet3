@@ -54,6 +54,7 @@ bt6DofElasticPlastic2Constraint::bt6DofElasticPlastic2Constraint(btRigidBody& rb
 	, m_flags(0)
 {
 	calculateTransforms();
+	initPlasticity();
 }
 
 
@@ -66,6 +67,20 @@ bt6DofElasticPlastic2Constraint::bt6DofElasticPlastic2Constraint(btRigidBody& rb
 	///not providing rigidbody A means implicitly using worldspace for body A
 	m_frameInA = rbB.getCenterOfMassTransform() * m_frameInB;
 	calculateTransforms();
+	initPlasticity();
+}
+
+// bcc
+void bt6DofElasticPlastic2Constraint::initPlasticity()
+{
+	for (int i = 0; i < 6; i++)
+	{
+		m_maxForce[i] = btScalar(SIMD_INFINITY);
+		m_maxPlasticStrain = btScalar(0.f);
+		m_currentPlasticStrain = btScalar(0.f);
+		m_maxPlasticRotation = btScalar(0.f);
+		m_currentPlasticRotation = btScalar(0.f);
+	}
 }
 
 
@@ -537,7 +552,7 @@ int bt6DofElasticPlastic2Constraint::setLinearLimits(btConstraintInfo2* info, in
 			{
 				rotAllowed = 0;
 			}
-			row += get_limit_motor_info2(&limot, transA,transB,linVelA,linVelB,angVelA,angVelB, info, row, axis, 0, rotAllowed);
+			row += get_limit_motor_info2(&limot, transA,transB,linVelA,linVelB,angVelA,angVelB, info, row, axis, 0, rotAllowed, m_maxForce[i]);
 
 		}
 	}
@@ -586,7 +601,8 @@ int bt6DofElasticPlastic2Constraint::setAngularLimits(btConstraintInfo2 *info, i
 			{
 				m_angularLimits[i].m_motorERP = info->erp;
 			}
-			row += get_limit_motor_info2(&m_angularLimits[i],transA,transB,linVelA,linVelB,angVelA,angVelB, info,row,axis,1);
+			row += get_limit_motor_info2(&m_angularLimits[i],transA,transB,linVelA,linVelB,angVelA,angVelB, 
+				info,row,axis,1, 0, m_maxForce[ii+3]);
 		}
 	}
 
@@ -647,11 +663,11 @@ void bt6DofElasticPlastic2Constraint::calculateJacobi(btRotationalLimitMotor2 * 
 	}
 }
 
-
+// bcc maxForce added (SIMD_INFINITY replaced)
 int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 	btRotationalLimitMotor2 * limot,
 	const btTransform& transA,const btTransform& transB,const btVector3& linVelA,const btVector3& linVelB,const btVector3& angVelA,const btVector3& angVelB,
-	btConstraintInfo2 *info, int row, btVector3& ax1, int rotational,int rotAllowed)
+	btConstraintInfo2 *info, int row, btVector3& ax1, int rotational,int rotAllowed, btScalar maxForce)
 {
 	int count = 0;
 	int srow = row * info->rowskip;
@@ -673,8 +689,8 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 				if (bounceerror < info->m_constraintError[srow]) info->m_constraintError[srow] = bounceerror;
 			}
 		}
-		info->m_lowerLimit[srow] = rotational ? 0 : -SIMD_INFINITY;
-		info->m_upperLimit[srow] = rotational ? SIMD_INFINITY : 0;
+		info->m_lowerLimit[srow] = rotational ? 0 : -maxForce;
+		info->m_upperLimit[srow] = rotational ? maxForce : 0;
 		info->cfm[srow] = limot->m_stopCFM;
 		srow += info->rowskip;
 		++count;
@@ -692,8 +708,8 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 				if (bounceerror > info->m_constraintError[srow]) info->m_constraintError[srow] = bounceerror;
 			}
 		}
-		info->m_lowerLimit[srow] = rotational ? -SIMD_INFINITY : 0;
-		info->m_upperLimit[srow] = rotational ? 0 : SIMD_INFINITY;
+		info->m_lowerLimit[srow] = rotational ? -maxForce : 0;
+		info->m_upperLimit[srow] = rotational ? 0 : maxForce;
 		info->cfm[srow] = limot->m_stopCFM;
 		srow += info->rowskip;
 		++count;
@@ -702,8 +718,8 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 	{
 		calculateJacobi(limot,transA,transB,info,srow,ax1,rotational,rotAllowed);
 		info->m_constraintError[srow] = info->fps * limot->m_stopERP * limot->m_currentLimitError * (rotational ? -1 : 1);
-		info->m_lowerLimit[srow] = -SIMD_INFINITY;
-		info->m_upperLimit[srow] = SIMD_INFINITY;
+		info->m_lowerLimit[srow] = -maxForce;
+		info->m_upperLimit[srow] = maxForce;
 		info->cfm[srow] = limot->m_stopCFM;
 		srow += info->rowskip;
 		++count;
@@ -739,8 +755,8 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			btScalar hiLimit;
 			if(limot->m_loLimit > limot->m_hiLimit)
 			{
-				lowLimit = error > 0 ? limot->m_servoTarget : -SIMD_INFINITY;
-				hiLimit  = error < 0 ? limot->m_servoTarget :  SIMD_INFINITY;
+				lowLimit = error > 0 ? limot->m_servoTarget : -maxForce;
+				hiLimit = error < 0 ? limot->m_servoTarget : maxForce;
 			}
 			else
 			{
@@ -784,26 +800,47 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 		btScalar mB = BT_ONE / m_rbB.getInvMass();
 		btScalar m = mA > mB ? mB : mA;
 		btScalar angularfreq = sqrt(ks / m);
-
-
+		// bcc
+		bool usePlasticity=false;
 		//limit stiffness (the spring should not be sampled faster that the quarter of its angular frequency)
 		if(limot->m_springStiffnessLimited && 0.25 < angularfreq * dt)
 		{
-			ks = BT_ONE / dt / dt / btScalar(16.0) * m;
+			// bcc
+			if (maxForce < SIMD_INFINITY){
+				usePlasticity=true;
+			} else{
+				ks = BT_ONE / dt / dt / btScalar(16.0) * m;
+			}
 		}
-		//avoid damping that would blow up the spring
-		if(limot->m_springDampingLimited && kd * dt > m)
-		{
-			kd = m / dt;
+		// bcc
+		btScalar minf;
+		btScalar maxf;
+		if (!usePlasticity){
+			//avoid damping that would blow up the spring
+			if (limot->m_springDampingLimited && kd * dt > m)
+			{
+				kd = m / dt;
+			}
+			btScalar fs = ks * error * dt;
+			btScalar fd = -kd * (vel)* (rotational ? -1 : 1) * dt;
+			btScalar f = (fs + fd);
+			if (f > maxForce){
+				usePlasticity = true;
+			}
+			else{
+				info->m_constraintError[srow] = (vel + f * (rotational ? -1 : 1));
+				minf = f < fd ? f : fd;
+				maxf = f < fd ? fd : f;
+			}
 		}
-		btScalar fs = ks * error * dt;
-		btScalar fd = -kd * (vel) * (rotational ? -1 : 1) * dt;
-		btScalar f = (fs+fd);
-
-		info->m_constraintError[srow] = (vel + f * (rotational ? -1 : 1)) ;
-
-		btScalar minf = f < fd ? f : fd;
-		btScalar maxf = f < fd ? fd : f;
+		/*
+		TODO: If plasticity is used, what would be suitable error indicator. 
+		*/
+		if (usePlasticity){
+			minf = -maxForce;
+			maxf = maxForce;
+			info->m_constraintError[srow] = 0;
+		}
 		if(!rotational)
 		{
 			info->m_lowerLimit[srow] = minf > 0 ? 0 : minf;
@@ -1081,6 +1118,11 @@ void bt6DofElasticPlastic2Constraint::setEquilibriumPoint(int index, btScalar va
 /*
 // bcc starts
 */
+void bt6DofElasticPlastic2Constraint::setMaxForce(int index, btScalar maxForce)
+{
+	btAssert((index >= 0) && (index < 6));
+	m_maxForce[index] = maxForce;
+}
 void bt6DofElasticPlastic2Constraint::setMaxPlasticStrain(btScalar value){
 	m_maxPlasticStrain = value;
 }

@@ -57,7 +57,7 @@ btScalar defaultTimeStep(0.005);
 btScalar timeStep(defaultTimeStep);
 btScalar initialTimeStep = 1e-4;
 btScalar setTimeStep = initialTimeStep;
-int initialNumIterations = 70;
+int initialNumIterations = 10;
 int numIterations = initialNumIterations;
 bool variableTimeStep = true;
 btScalar currentTime;

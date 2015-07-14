@@ -42,7 +42,7 @@ void bt6DofElasticPlasticConstraint::init()
 		m_equilibriumPoint[i] = btScalar(0.f);
 		m_springStiffness[i] = btScalar(0.f);
 		m_springDamping[i] = btScalar(1.f);
-		m_maxForce[i] = btScalar(1.f);
+		m_maxForce[i] = btScalar(SIMD_INFINITY);
 		m_maxPlasticStrain = btScalar(0.f);
 		m_currentPlasticStrain = btScalar(0.f);
 		m_maxPlasticRotation = btScalar(0.f);
@@ -99,11 +99,6 @@ void bt6DofElasticPlasticConstraint::setDamping(int index, btScalar damping)
 	m_springDamping[index] = damping;
 }
 
-void bt6DofElasticPlasticConstraint::setMaxForce(int index, btScalar maxForce)
-{
-	btAssert((index >= 0) && (index < 6));
-	m_maxForce[index] = maxForce;
-}
 
 
 void bt6DofElasticPlasticConstraint::setEquilibriumPoint()
@@ -120,8 +115,6 @@ void bt6DofElasticPlasticConstraint::setEquilibriumPoint()
 		m_equilibriumPoint[i + 3] = m_calculatedAxisAngleDiff[i];
 	}
 }
-
-
 
 void bt6DofElasticPlasticConstraint::setEquilibriumPoint(int index)
 {
@@ -241,6 +234,13 @@ void bt6DofElasticPlasticConstraint::setAxis(const btVector3& axis1,const btVect
 /*
 // bcc starts
 */
+
+void bt6DofElasticPlasticConstraint::setMaxForce(int index, btScalar maxForce)
+{
+	btAssert((index >= 0) && (index < 6));
+	m_maxForce[index] = maxForce;
+}
+
 void bt6DofElasticPlasticConstraint::setMaxPlasticStrain(btScalar value){
 	m_maxPlasticStrain = value;
 }
