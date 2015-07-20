@@ -641,7 +641,7 @@ bool PlasticityExampleBrowser::init(int argc, char* argv[])
 	s_profWindow= setupProfileWindow(gui->getInternalData());
 	profileWindowSetVisible(s_profWindow,false);
 	s_pStatWindow = setupPlasticityWindow(gui->getInternalData());
-	plasticityStatisticsWindowSetVisible(s_pStatWindow, false);
+	plasticityStatisticsWindowSetVisible(s_pStatWindow, true);
 	gui->setFocus();
 
 	s_parameterInterface  = s_app->m_parameterInterface = new GwenParameterInterface(gui->getInternalData());

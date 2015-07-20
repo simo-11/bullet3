@@ -33,11 +33,13 @@ public:
 	PlasticityStatistics (	Gwen::Controls::Base* pParent)
     : Gwen::Controls::WindowControl( pParent )
 	{
+		int w = 550;
+		int h = 450;
 		SetTitle( L"Plasticity Statistics" );
-		SetSize( 450, 450 );
+		SetSize( w, h );
 		this->SetPos(10,400);
 		textArea = new Gwen::Controls::ResizableControl(this);
-		textArea->SetSize(450,450);
+		textArea->SetSize(w,h);
 		textArea->SetPos(0, 0);
 	}
 	void dumpData(PlasticityStatistics* pStat)

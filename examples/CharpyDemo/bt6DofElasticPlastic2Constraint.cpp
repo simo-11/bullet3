@@ -781,20 +781,9 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 	{
 		btScalar error = limot->m_currentPosition - limot->m_equilibriumPoint;
 		calculateJacobi(limot,transA,transB,info,srow,ax1,rotational,rotAllowed);
-
-		//btScalar cfm = 1.0 / ((1.0/info->fps)*limot->m_springStiffness+ limot->m_springDamping);
-		//if(cfm > 0.99999)
-		//	cfm = 0.99999;
-		//btScalar erp = (1.0/info->fps)*limot->m_springStiffness / ((1.0/info->fps)*limot->m_springStiffness + limot->m_springDamping);
-		//info->m_constraintError[srow] = info->fps * erp * error * (rotational ? -1.0 : 1.0);
-		//info->m_lowerLimit[srow] = -SIMD_INFINITY;
-		//info->m_upperLimit[srow] = SIMD_INFINITY;
-
 		btScalar dt = BT_ONE / info->fps;
 		btScalar kd = limot->m_springDamping;
 		btScalar ks = limot->m_springStiffness;
-		btScalar vel = rotational ? angVelA.dot(ax1) - angVelB.dot(ax1) : linVelA.dot(ax1) - linVelB.dot(ax1);
-//		btScalar erp = 0.1;
 		btScalar cfm = BT_ZERO;
 		btScalar mA = BT_ONE / m_rbA.getInvMass();
 		btScalar mB = BT_ONE / m_rbB.getInvMass();
@@ -821,6 +810,7 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			{
 				kd = m / dt;
 			}
+			btScalar vel = rotational ? angVelA.dot(ax1) - angVelB.dot(ax1) : linVelA.dot(ax1) - linVelB.dot(ax1);
 			btScalar fs = ks * error * dt;
 			btScalar fd = -kd * (vel)* (rotational ? -1 : 1) * dt;
 			btScalar f = (fs + fd);
@@ -834,12 +824,15 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			}
 		}
 		/*
-		TODO: If plasticity is used, what would be suitable error indicator. 
+		If plasticity is used, what would be suitable error indicator.
+		Currently same as above for constraint case is used
+		limot->m_currentLimit==3
 		*/
 		if (usePlasticity){
 			minf = -maxForce;
 			maxf = maxForce;
-			info->m_constraintError[srow] = 0;
+			btScalar f = info->fps*limot->m_stopERP*error;
+			info->m_constraintError[srow] = f*(rotational ? -1 : 1);
 		}
 		if(!rotational)
 		{

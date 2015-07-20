@@ -1620,6 +1620,15 @@ bool CharpyDemo::ctrlKeyboardCallback(int key){
 		shiftActive = true;
 	}
 	switch (key){
+	case B3G_F1:
+		setSolverType(1);
+		return true;
+	case B3G_F2:
+		setSolverType(2);
+		return true;
+	case B3G_F3:
+		setSolverType(3);
+		return true;
 	case 1: // a
 		if (shiftActive){
 			scalePlasticity(1.2);
@@ -1852,11 +1861,7 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 		displayWait = setDisplayWait;
 		break;
 	case B3G_F1:
-		if (window->isModifierKeyPressed(B3G_CONTROL)){
-			setSolverType(1);
-			resetScene = true;
-		}
-		else if (window->isModifierKeyPressed(B3G_SHIFT)){
+		if (window->isModifierKeyPressed(B3G_SHIFT)){
 			setViewMode(1);
 		}
 		else{
@@ -1865,11 +1870,7 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 		}
 		break;
 	case B3G_F2:
-		if (window->isModifierKeyPressed(B3G_CONTROL)){
-				setSolverType(2);
-				resetScene = true;
-		}
-		else if (window->isModifierKeyPressed(B3G_SHIFT)){
+		if (window->isModifierKeyPressed(B3G_SHIFT)){
 			setViewMode(2);
 		}
 		else{
@@ -1878,11 +1879,7 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 		}
 		break;
 	case B3G_F3:
-		if (window->isModifierKeyPressed(B3G_CONTROL)){
-			setSolverType(3);
-			resetScene = true;
-		}
-		else 	if (window->isModifierKeyPressed(B3G_SHIFT)){
+	 	if (window->isModifierKeyPressed(B3G_SHIFT)){
 			setViewMode(3);
 		}
 		else{
