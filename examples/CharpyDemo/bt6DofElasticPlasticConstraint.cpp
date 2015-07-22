@@ -162,7 +162,7 @@ void bt6DofElasticPlasticConstraint::internalUpdateSprings(btConstraintInfo2* in
 				force = (delta > 0 ? m_maxForce[i] : -m_maxForce[i]);
 			}
 			btScalar ratio(info->fps/m_fpsLimit[i]);
-			if (ratio<m_frequencyRatio){
+			if (ratio>m_frequencyRatio){
 				btScalar velFactor = info->fps * m_springDamping[i] /
 					btScalar(info->m_numIterations);
 				m_linearLimits.m_targetVelocity[i] = velFactor * force;
