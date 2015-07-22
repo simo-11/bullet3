@@ -83,7 +83,7 @@ public:
                                int parent,
                                const btQuaternion &rotParentToThis,
                                const btVector3 &jointAxis,
-                               const btVector3 &parentComToThisComOffset,
+                               const btVector3 &parentComToThisPivotOffset,
 							   const btVector3 &thisPivotToThisComOffset,
 							   bool disableParentCollision);
 
@@ -599,6 +599,8 @@ void addJointTorque(int i, btScalar Q);
 		return m_internalNeedsJointFeedback;
 	}
 	void	forwardKinematics(btAlignedObjectArray<btQuaternion>& scratch_q,btAlignedObjectArray<btVector3>& scratch_m);
+
+	void	updateCollisionObjectWorldTransforms(btAlignedObjectArray<btQuaternion>& scratch_q,btAlignedObjectArray<btVector3>& scratch_m);
 	
 	virtual	int	calculateSerializeBufferSize()	const;
 

@@ -50,6 +50,9 @@
 		files {
 		"**.cpp",
 		"**.h",
+		"../SharedMemory/PhysicsServerExample.cpp",
+		"../SharedMemory/PhysicsClientExample.cpp",
+		"../SharedMemory/RobotControlExample.cpp",
 		"../SharedMemory/PhysicsServer.cpp",
 		"../SharedMemory/PhysicsClient.cpp",
 		"../SharedMemory/PosixSharedMemory.cpp",
@@ -74,6 +77,7 @@
 		"../MultiBody/MultiDofDemo.cpp",
 		"../MultiBody/TestJointTorqueSetup.cpp",
 		"../MultiBody/MultiBodyConstraintFeedback.cpp",
+		"../MultiBody/InvertedPendulumPDControl.cpp",
 		"../ThirdPartyLibs/stb_image/*",
 		"../ThirdPartyLibs/Wavefront/tiny_obj_loader.*",
 		"../ThirdPartyLibs/tinyxml/*",

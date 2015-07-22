@@ -16,12 +16,14 @@
 #include "../Importers/ImportColladaDemo/ImportColladaSetup.h"
 #include "../Importers/ImportSTLDemo/ImportSTLSetup.h"
 #include "../Importers/ImportURDFDemo/ImportURDFSetup.h"
+
 #include "../GyroscopicDemo/GyroscopicSetup.h"
 #include "../Constraints/Dof6Spring2Setup.h"
 #include "../Constraints/ConstraintPhysicsSetup.h"
 #include "../MultiBody/TestJointTorqueSetup.h"
 #include "../MultiBody/MultiBodyConstraintFeedback.h"
 #include "../MultiBody/MultiDofDemo.h"
+#include "../MultiBody/InvertedPendulumPDControl.h"
 #include "../VoronoiFracture/VoronoiFractureDemo.h"
 #include "../SoftDemo/SoftDemo.h"
 #include "../Constraints/ConstraintDemo.h"
@@ -31,9 +33,11 @@
 #include "../FractureDemo/FractureDemo.h"
 #include "../DynamicControlDemo/MotorDemo.h"
 #include "../RollingFrictionDemo/RollingFrictionDemo.h"
-#include "../SharedMemory/PhysicsServer.h"
-#include "../SharedMemory/PhysicsClient.h"
+#include "../SharedMemory/PhysicsServerExample.h"
+#include "../SharedMemory/RobotControlExample.h"
+#include "../SharedMemory/PhysicsClientExample.h"
 #include "../Constraints/TestHingeTorque.h"
+#include "../RenderingExamples/TimeSeriesExample.h"
 
 
 #ifdef ENABLE_LUA
@@ -94,14 +98,14 @@ static ExampleEntry gDefaultExamples[]=
 	ExampleEntry(1,"Gyroscopic", "Show the Dzhanibekov effect using various settings of the gyroscopic term. You can select the gyroscopic term computation using btRigidBody::setFlags, with arguments BT_ENABLE_GYROSCOPIC_FORCE_EXPLICIT (using explicit integration, which adds energy and can lead to explosions), BT_ENABLE_GYROSCOPIC_FORCE_IMPLICIT_WORLD, BT_ENABLE_GYROSCOPIC_FORCE_IMPLICIT_BODY. If you don't set any of these flags, there is no gyroscopic term used.", GyroscopicCreateFunc),
 
 
-
+	
 
 	ExampleEntry(0,"MultiBody"),
 	ExampleEntry(1,"MultiDofCreateFunc","Create a basic btMultiBody with 3-DOF spherical joints (mobilizers). The demo uses a fixed base or a floating base at restart.", MultiDofCreateFunc),
 	ExampleEntry(1,"TestJointTorque","Apply a torque to a btMultiBody with 1-DOF joints (mobilizers). This setup is similar to API/TestHingeTorque.", TestJointTorqueCreateFunc),
  ExampleEntry(1,"Constraint Feedback", "The example shows how to receive joint reaction forces in a btMultiBody. Also the applied impulse is available for a btMultiBodyJointMotor", MultiBodyConstraintFeedbackCreateFunc),
-	
-	
+	ExampleEntry(1,"Inverted Pendulum PD","Keep an inverted pendulum up using open loop PD control", InvertedPendulumPDControlCreateFunc),
+
 #ifdef INCLUDE_CLOTH_DEMOS
 	ExampleEntry(0,"Soft Body"),
 	ExampleEntry(1,"Cloth","Simulate a patch of cloth.", SoftDemoCreateFunc,0),
@@ -185,6 +189,10 @@ static ExampleEntry gDefaultExamples[]=
 	
 
 	ExampleEntry(0,"Experiments"),
+	
+	ExampleEntry(1,"Robot Control", "Perform some robot control tasks, using physics server and client that communicate over shared memory",
+			RobotControlExampleCreateFunc),
+	
 	ExampleEntry(1,"Physics Server", "Create a physics server that communicates with a physics client over shared memory",
 			PhysicsServerCreateFunc),
 	ExampleEntry(1, "Physics Client", "Create a physics client that can communicate with a physics server over shared memory", PhysicsClientCreateFunc),
@@ -204,6 +212,7 @@ static ExampleEntry gDefaultExamples[]=
 	ExampleEntry(0,"Rendering"),
 	ExampleEntry(1,"Instanced Rendering", "Simple example of fast instanced rendering, only active when using OpenGL3+.",RenderInstancingCreateFunc),
 	ExampleEntry(1,"CoordinateSystemDemo","Show the axis and positive rotation direction around the axis.", CoordinateSystemCreateFunc),
+	ExampleEntry(1,"Time Series", "Render some value(s) in a 2D graph window, shifting to the left", TimeSeriesCreateFunc)
 	
 };
 

@@ -16,9 +16,12 @@ SET(App_ExampleBrowser_SRCS
 	ExampleEntries.cpp
 	ExampleEntries.h
 	../SharedMemory/PhysicsServer.cpp
-        ../SharedMemory/PhysicsClient.cpp
-        ../SharedMemory/PosixSharedMemory.cpp
-        ../SharedMemory/Win32SharedMemory.cpp
+	../SharedMemory/PhysicsClient.cpp
+	../SharedMemory/PhysicsServerExample.cpp
+	../SharedMemory/PhysicsClientExample.cpp
+	../SharedMemory/RobotControlExample.cpp
+	../SharedMemory/PosixSharedMemory.cpp
+	../SharedMemory/Win32SharedMemory.cpp
 	../BasicDemo/BasicExample.cpp
 	../BasicDemo/BasicExample.h
 	../ForkLift/ForkLiftDemo.cpp
@@ -43,6 +46,7 @@ SET(App_ExampleBrowser_SRCS
 	../RenderingExamples/RaytracerSetup.h
 	../RenderingExamples/RenderInstancingDemo.cpp
 	../RenderingExamples/RenderInstancingDemo.h
+	../RenderingExamples/TimeSeriesExample.cpp
 	../Benchmarks/BenchmarkDemo.cpp
 	../Benchmarks/BenchmarkDemo.h
 	../Benchmarks/landscapeData.h
@@ -98,6 +102,8 @@ SET(App_ExampleBrowser_SRCS
   ../Vehicles/Hinge2Vehicle.h
   ../MultiBody/TestJointTorqueSetup.cpp
   ../MultiBody/TestJointTorqueSetup.h
+  ../MultiBody/InvertedPendulumPDControl.cpp
+  ../MultiBody/InvertedPendulumPDControl.h
  ../MultiBody/MultiBodyConstraintFeedback.cpp
   ../MultiBody/MultiDofDemo.cpp
   ../MultiBody/MultiDofDemo.h
