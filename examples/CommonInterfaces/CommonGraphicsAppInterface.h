@@ -190,7 +190,7 @@ struct CommonGraphicsApp
 				float cameraDistance = 	camera->getCameraDistance();
 				if (deltay<0 || cameraDistance>minDistance)
 				{
-					cameraDistance -= deltay*0.1f;
+					cameraDistance -= deltay*0.01f;
 					if (cameraDistance<minDistance)
 						cameraDistance=minDistance;
 					camera->setCameraDistance(cameraDistance);
