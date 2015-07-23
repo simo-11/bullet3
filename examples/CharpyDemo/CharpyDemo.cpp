@@ -45,7 +45,7 @@ target is to break objects using plasticity.
 int sFrameNumber = 0;
 bool firstRun = true;
 bool hammerHitsSpecimen;
-btScalar initialStartAngle(1.8);
+btScalar initialStartAngle(-1.8);
 btScalar startAngle(initialStartAngle);
 long  initialDisplayWait = 50;
 long displayWait = initialDisplayWait;
@@ -672,6 +672,9 @@ public:
 			break;
 		}
 	}
+	/**
+	mode 2
+	*/
 	void addSpringConstraint(btAlignedObjectArray<btRigidBody*> ha,
 		btAlignedObjectArray<btTransform> ta){
 		btGeneric6DofSpringConstraint *sc =
@@ -682,19 +685,19 @@ public:
 		sc->setJointFeedback(&specimenJointFeedback);
 		btScalar b(w);
 		btScalar h(w - 0.002); // notch is 2 mm
-		btScalar I1(b*h*h*h / 12);
-		btScalar I2(h*b*b*b / 12);
-		btScalar k0(E*b*h / l / 2);
+		btScalar I1(b*h*h*h / 12); // weaker
+		btScalar I2(h*b*b*b / 12); // stronger
+		btScalar k0(E*b*h / l / 2); // axial
 		btScalar k1(48 * E*I1 / l / l / l);
-		btScalar k2(48 * E*I1 / l / l / l);
+		btScalar k2(48 * E*I2 / l / l / l);
 		w1 = fu*b*h*h / 4;
 		btScalar w2(fu*b*b*h / 4);
-		sc->setStiffness(0, k0);
-		sc->setStiffness(1, k1);
-		sc->setStiffness(2, k2);
-		sc->setStiffness(3, w1); // not very exact
-		sc->setStiffness(4, w2);
-		sc->setStiffness(5, w1);
+		sc->setStiffness(0, k1);
+		sc->setStiffness(1, k2);
+		sc->setStiffness(2, k0);
+		sc->setStiffness(3, w2); 
+		sc->setStiffness(4, w1);
+		sc->setStiffness(5, (w1+w2)/2);
 		dw->addConstraint(sc, true);
 		for (int i = 0; i<6; i++)
 		{
@@ -706,7 +709,9 @@ public:
 		}
 		sc->setEquilibriumPoint();
 	}
-
+	/**
+	mode 4
+	*/
 	void addSpring2Constraint(btAlignedObjectArray<btRigidBody*> ha,
 		btAlignedObjectArray<btTransform> ta){
 		btGeneric6DofSpring2Constraint *sc =
@@ -724,12 +729,12 @@ public:
 		btScalar k2(48 * E*I1 / l / l / l);
 		w1 = fu*b*h*h / 4;
 		btScalar w2(fu*b*b*h / 4);
-		sc->setStiffness(0, k0);
-		sc->setStiffness(1, k1);
-		sc->setStiffness(2, k2);
-		sc->setStiffness(3, w1); // not very exact
-		sc->setStiffness(4, w2);
-		sc->setStiffness(5, w1);
+		sc->setStiffness(0, k1);
+		sc->setStiffness(1, k2);
+		sc->setStiffness(2, k0);
+		sc->setStiffness(3, w2);
+		sc->setStiffness(4, w1);
+		sc->setStiffness(5, (w1 + w2) / 2);
 		dw->addConstraint(sc, true);
 		for (int i = 0; i<6; i++)
 		{
@@ -742,7 +747,9 @@ public:
 		sc->setEquilibriumPoint();
 	}
 
-
+	/**
+	mode 3
+	*/
 	void addFixedConstraint(btAlignedObjectArray<btRigidBody*> ha,
 		btAlignedObjectArray<btTransform> ta){
 		btGeneric6DofConstraint *sc =
@@ -756,7 +763,9 @@ public:
 			sc->setLimit(i, 0, 0); // make fixed
 		}
 	}
-
+	/**
+	mode 5
+	*/
 	void addHingeConstraint(btAlignedObjectArray<btRigidBody*> ha){
 		btVector3 pivotAxis(btZero, btScalar(1), btZero);
 		btVector3 pivotInA(btZero, btZero, l / 4);
@@ -820,21 +829,21 @@ public:
 		btScalar It(0.14*b*h*h*h);
 		btScalar k0(E*b*h / l / 2);
 		btScalar k1(48 * E*I1 / l / l / l);
-		btScalar k2(48 * E*I1 / l / l / l);
+		btScalar k2(48 * E*I2 / l / l / l);
 		w1 = fu*b*h*h / 4;
 		btScalar w2(fu*b*b*h / 4);
-		sc->setStiffness(0, k0);
-		sc->setMaxForce(0, fu*b*h);
-		sc->setStiffness(1, k1);
+		sc->setStiffness(2, k0);
+		sc->setMaxForce(2, fu*b*h);
+		sc->setStiffness(0, k1);
+		sc->setMaxForce(0, fu*b*h / 2);
+		sc->setStiffness(1, k2);
 		sc->setMaxForce(1, fu*b*h / 2);
-		sc->setStiffness(2, k2);
-		sc->setMaxForce(2, fu*b*h / 2);
-		sc->setStiffness(3, G*It / l); // not very exact
-		sc->setMaxForce(3, fu / 2 * It / (h / 2)); // not very exact
+		sc->setStiffness(5, G*It / l); // not very exact
+		sc->setMaxForce(5, fu / 2 * It / (h / 2)); // not very exact
 		sc->setStiffness(4, 3 * E*I1 / l); // not very exact
 		sc->setMaxForce(4, w2);
-		sc->setStiffness(5, 3 * E*I2 / l); // not very exact
-		sc->setMaxForce(5, w1);
+		sc->setStiffness(3, 3 * E*I2 / l); // not very exact
+		sc->setMaxForce(3, w1);
 		dw->addConstraint(sc, true);
 		for (int i = 0; i<6; i++)
 		{
@@ -869,21 +878,35 @@ public:
 		btScalar It(0.14*b*h*h*h);
 		btScalar k0(E*b*h / l / 2);
 		btScalar k1(48 * E*I1 / l / l / l);
-		btScalar k2(48 * E*I1 / l / l / l);
+		btScalar k2(48 * E*I2 / l / l / l);
 		w1 = fu*b*h*h / 4;
 		btScalar w2(fu*b*b*h / 4);
-		sc->setStiffness(0, k0);
-		sc->setMaxForce(0, fu*b*h);
-		sc->setStiffness(1, k1);
+		sc->setStiffness(2, k0);
+		sc->setMaxForce(2, fu*b*h);
+		sc->setStiffness(0, k1);
+		sc->setMaxForce(0, fu*b*h / 2);
+		sc->setStiffness(1, k2);
 		sc->setMaxForce(1, fu*b*h / 2);
-		sc->setStiffness(2, k2);
-		sc->setMaxForce(2, fu*b*h / 2);
-		sc->setStiffness(3, G*It / l); // not very exact
-		sc->setMaxForce(3, fu / 2 * It / (h / 2)); // not very exact
+		sc->setStiffness(5, G*It / l); // not very exact
+		sc->setMaxForce(5, fu / 2 * It / (h / 2)); // not very exact
 		sc->setStiffness(4, 3 * E*I1 / l); // not very exact
 		sc->setMaxForce(4, w2);
-		sc->setStiffness(5, 3 * E*I2 / l); // not very exact
-		sc->setMaxForce(5, w1);
+		sc->setStiffness(3, 3 * E*I2 / l); // not very exact
+		sc->setMaxForce(3, w1);
+#define DEBUG_TOO_SOFT 1
+#if DEBUG_TOO_SOFT
+		sc->setStiffness(0, k1);
+		sc->setStiffness(1, k2);
+		sc->setStiffness(2, k0);
+		sc->setStiffness(3, w2);
+		sc->setStiffness(4, w1);
+		sc->setStiffness(5, (w1 + w2) / 2);
+		for (int i = 0; i < 6; i++)
+		{
+			sc->setMaxForce(i,SIMD_INFINITY);
+		}
+#endif
+		// end of debug extra softness
 		dw->addConstraint(sc, true);
 		for (int i = 0; i<6; i++)
 		{

@@ -602,7 +602,7 @@ int bt6DofElasticPlastic2Constraint::setAngularLimits(btConstraintInfo2 *info, i
 				m_angularLimits[i].m_motorERP = info->erp;
 			}
 			row += get_limit_motor_info2(&m_angularLimits[i],transA,transB,linVelA,linVelB,angVelA,angVelB, 
-				info,row,axis,1, 0, m_maxForce[ii+3]);
+				info,row,axis,1, false, m_maxForce[ii+3]);
 		}
 	}
 
@@ -779,75 +779,126 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 
 	if (limot->m_enableSpring)
 	{
-		btScalar error = limot->m_currentPosition - limot->m_equilibriumPoint;
-		calculateJacobi(limot,transA,transB,info,srow,ax1,rotational,rotAllowed);
-		btScalar dt = BT_ONE / info->fps;
-		btScalar kd = limot->m_springDamping;
-		btScalar ks = limot->m_springStiffness;
-		btScalar cfm = BT_ZERO;
-		btScalar mA = BT_ONE / m_rbA.getInvMass();
-		btScalar mB = BT_ONE / m_rbB.getInvMass();
-		btScalar m = mA > mB ? mB : mA;
-		btScalar angularfreq = sqrt(ks / m);
-		// bcc
-		bool usePlasticity=false;
-		//limit stiffness (the spring should not be sampled faster that the quarter of its angular frequency)
-		if(limot->m_springStiffnessLimited && 0.25 < angularfreq * dt)
-		{
-			// bcc
-			if (maxForce < SIMD_INFINITY){
-				usePlasticity=true;
-			} else{
+		bool useBcc = false;
+		if (!useBcc){
+			btScalar error = limot->m_currentPosition - limot->m_equilibriumPoint;
+			calculateJacobi(limot, transA, transB, info, srow, ax1, rotational, rotAllowed);
+			btScalar dt = BT_ONE / info->fps;
+			btScalar kd = limot->m_springDamping;
+			btScalar ks = limot->m_springStiffness;
+			btScalar vel = rotational ? angVelA.dot(ax1) - angVelB.dot(ax1) : linVelA.dot(ax1) - linVelB.dot(ax1);
+			//		btScalar erp = 0.1;
+			btScalar cfm = BT_ZERO;
+			btScalar mA = BT_ONE / m_rbA.getInvMass();
+			btScalar mB = BT_ONE / m_rbB.getInvMass();
+			btScalar m = mA > mB ? mB : mA;
+			btScalar angularfreq = sqrt(ks / m);
+
+
+			//limit stiffness (the spring should not be sampled faster that the quarter of its angular frequency)
+			if (limot->m_springStiffnessLimited && 0.25 < angularfreq * dt)
+			{
 				ks = BT_ONE / dt / dt / btScalar(16.0) * m;
 			}
-		}
-		// bcc
-		btScalar minf;
-		btScalar maxf;
-		if (!usePlasticity){
 			//avoid damping that would blow up the spring
 			if (limot->m_springDampingLimited && kd * dt > m)
 			{
 				kd = m / dt;
 			}
-			btScalar vel = rotational ? angVelA.dot(ax1) - angVelB.dot(ax1) : linVelA.dot(ax1) - linVelB.dot(ax1);
 			btScalar fs = ks * error * dt;
 			btScalar fd = -kd * (vel)* (rotational ? -1 : 1) * dt;
 			btScalar f = (fs + fd);
-			if (f > maxForce){
-				usePlasticity = true;
-			}
-			else{
-				info->m_constraintError[srow] = (vel + f * (rotational ? -1 : 1));
-				minf = f < fd ? f : fd;
-				maxf = f < fd ? fd : f;
-			}
-		}
-		/*
-		If plasticity is used, what would be suitable error indicator.
-		Currently same as above for constraint case is used
-		limot->m_currentLimit==3
-		*/
-		if (usePlasticity){
-			minf = -maxForce;
-			maxf = maxForce;
-			btScalar f = info->fps*limot->m_stopERP*error;
-			info->m_constraintError[srow] = f*(rotational ? -1 : 1);
-		}
-		if(!rotational)
-		{
-			info->m_lowerLimit[srow] = minf > 0 ? 0 : minf;
-			info->m_upperLimit[srow] = maxf < 0 ? 0 : maxf;
-		}
-		else
-		{
-			info->m_lowerLimit[srow] = -maxf > 0 ? 0 : -maxf;
-			info->m_upperLimit[srow] = -minf < 0 ? 0 : -minf;
-		}
 
-		info->cfm[srow] = cfm;
-		srow += info->rowskip;
-		++count;
+			info->m_constraintError[srow] = (vel + f * (rotational ? -1 : 1));
+
+			btScalar minf = f < fd ? f : fd;
+			btScalar maxf = f < fd ? fd : f;
+			if (!rotational)
+			{
+				info->m_lowerLimit[srow] = minf > 0 ? 0 : minf;
+				info->m_upperLimit[srow] = maxf < 0 ? 0 : maxf;
+			}
+			else
+			{
+				info->m_lowerLimit[srow] = -maxf > 0 ? 0 : -maxf;
+				info->m_upperLimit[srow] = -minf < 0 ? 0 : -minf;
+			}
+
+			info->cfm[srow] = cfm;
+			srow += info->rowskip;
+			++count;
+		} else{ // useBcc
+			btScalar error = limot->m_currentPosition - limot->m_equilibriumPoint;
+			calculateJacobi(limot,transA,transB,info,srow,ax1,rotational,rotAllowed);
+			btScalar dt = BT_ONE / info->fps;
+			btScalar kd = limot->m_springDamping;
+			btScalar ks = limot->m_springStiffness;
+			btScalar cfm = BT_ZERO;
+			btScalar mA = BT_ONE / m_rbA.getInvMass();
+			btScalar mB = BT_ONE / m_rbB.getInvMass();
+			btScalar m = mA > mB ? mB : mA;
+			btScalar angularfreq = sqrt(ks / m);
+			// bcc
+			
+			bool usePlasticity=false;
+			//limit stiffness (the spring should not be sampled faster that the quarter of its angular frequency)
+			if(limot->m_springStiffnessLimited && 0.25 < angularfreq * dt)
+			{
+				// bcc
+				if (maxForce < SIMD_INFINITY && useBcc){
+					usePlasticity=true;
+				} else{
+					ks = BT_ONE / dt / dt / btScalar(16.0) * m;
+				}
+			}
+			// bcc
+			btScalar minf;
+			btScalar maxf;
+			if (!usePlasticity){
+				//avoid damping that would blow up the spring
+				if (limot->m_springDampingLimited && kd * dt > m)
+				{
+					kd = m / dt;
+				}
+				btScalar vel = rotational ? angVelA.dot(ax1) - angVelB.dot(ax1) : linVelA.dot(ax1) - linVelB.dot(ax1);
+				btScalar fs = ks * error * dt;
+				btScalar fd = -kd * (vel)* (rotational ? -1 : 1) * dt;
+				btScalar f = (fs + fd);
+				if (btFabs(f) > maxForce && useBcc){
+					usePlasticity = true;
+				}
+				else{
+					info->m_constraintError[srow] = (vel + f * (rotational ? -1 : 1));
+					minf = f < fd ? f : fd;
+					maxf = f < fd ? fd : f;
+				}
+			}
+			/*
+			If plasticity is used, what would be suitable error indicator.
+			Currently same as above for constraint case is used
+			limot->m_currentLimit==3
+			*/
+			if (usePlasticity){
+				minf = -maxForce;
+				maxf = maxForce;
+				btScalar f = info->fps*limot->m_stopERP*error;
+				info->m_constraintError[srow] = f*(rotational ? -1 : 1);
+			}
+			if(!rotational)
+			{
+				info->m_lowerLimit[srow] = minf > 0 ? 0 : minf;
+				info->m_upperLimit[srow] = maxf < 0 ? 0 : maxf;
+			}
+			else
+			{
+				info->m_lowerLimit[srow] = -maxf > 0 ? 0 : -maxf;
+				info->m_upperLimit[srow] = -minf < 0 ? 0 : -minf;
+			}
+
+			info->cfm[srow] = cfm;
+			srow += info->rowskip;
+			++count;
+		}
 	}
 
 	return count;
