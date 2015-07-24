@@ -119,6 +119,9 @@ float maxForces[6];
 FILE *fp;
 bool openGraphFile = false;
 char gfn[B_LEN];
+FILE *rbd; // rigid body data
+bool openRigidBodyDataFile = false;
+char rbdfn[B_LEN];
 int initialSolverType = 1;
 int solverType = initialSolverType;
 btConstraintSolverType solverTypes[] = {
@@ -165,6 +168,22 @@ Writes sgraph value using default format
 */
 void wgv(float f){
 	wgfv("%6.2f,", f);
+}
+
+/*
+Writes rigid body data value using given format
+*/
+void wrfv(char*format, float f){
+	fprintf(rbd, format, f);
+}
+/*
+Writes rigid body data value using default format
+*/
+void wrv(const btVector3* v){
+	fprintf(rbd, " % 6.4f,% 6.4f,% 6.4f, ", v->x(),v->y(),v->z());
+}
+void wrv(const btQuaternion* v){
+	fprintf(rbd, " % 6.4f,% 6.4f,% 6.4f,% 6.4f, ", v->x(), v->y(), v->z(),v->w());
 }
 
 
@@ -222,11 +241,11 @@ class CharpyDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 
 	btDefaultCollisionConfiguration* m_collisionConfiguration;
 	int m_viewMode=1;
-	int m_mode;
 	void showMessage();
 
 	CommonWindowInterface* window;
 public:
+	int m_mode;
 	CharpyDemo(struct GUIHelperInterface* helper, int mode)
 		:CommonRigidBodyBase(helper), Gwen::Event::Handler()
 	{
@@ -556,6 +575,35 @@ public:
 			}
 		}
 		fprintf(fp, ";\n");
+	}
+	/**
+	Writes rigid body data file
+	*/
+	void writeRigidBodyData(){
+		if (!openRigidBodyDataFile || !rbd){
+			return;
+		}
+		const btCollisionObjectArray objects = dw->getCollisionObjectArray();
+		for (int i = 0; i<objects.capacity(); i++)
+		{
+			const btCollisionObject* o = objects[i];
+			const btRigidBody* ro = btRigidBody::upcast(o);
+			btScalar iM = ro->getInvMass();
+			if (iM == 0){
+				continue;
+			}
+			const btVector3 v = ro->getLinearVelocity();
+			btScalar m = 1 / iM;
+			const btVector3 com = ro->getCenterOfMassPosition();
+			const btQuaternion rot = ro->getCenterOfMassTransform().getRotation();
+			const btVector3 rv = ro->getAngularVelocity();
+			fprintf(rbd,"%3d, %8.4f, %8.4f, %8.4f, ", i, currentTime,m,iM);
+			wrv(&com);
+			wrv(&rot);
+			wrv(&v);
+			wrv(&rv);
+			fprintf(rbd, ";\n");
+		}
 	}
 	btScalar getBodySpeed2(const btCollisionObject* o){
 		return o->getInterpolationLinearVelocity().length2();
@@ -964,6 +1012,26 @@ void toggleGraphFile(){
 	}
 }
 
+CharpyDemo *charpyDemo = 0;
+void toggleRigidBodyDataFile(){
+	openRigidBodyDataFile = !openRigidBodyDataFile;
+	if (rbd){
+		fprintf(rbd, "];\n");
+		fclose(rbd);
+		rbd = NULL;
+	}
+	else{
+		sprintf_s(rbdfn, B_LEN, "d:/wrk/rbd-%d.m",charpyDemo->m_mode);
+		errno_t err = fopen_s(&rbd, rbdfn, "w");
+		if (!rbd || err){
+			strcpy_s(rbdfn, "");
+			openRigidBodyDataFile = false;
+			return;
+		}
+		fprintf(rbd, "rbd%d=[\n", charpyDemo->m_mode);
+	}
+}
+
 
 
 /**
@@ -1342,10 +1410,8 @@ void	CharpyDemo::initPhysics()
 	}
 	resetCcdMotionThreshHold();
 	updateEnergy();
-	btWorld->stepSimulation(timeStep,0);
-	currentTime=timeStep;
+	currentTime=0;
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
-//	dw->setDebugDrawer(&gDebugDrawer);
 }
 
 void CharpyDemo::resetCamera(){
@@ -1394,6 +1460,10 @@ void CharpyDemo::renderScene(){
 		m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
 	}
 	{
+		BT_PROFILE("CharpyDemo::showMessage");
+		showMessage();
+	}
+	{
 		BT_PROFILE("CharpyDemo::render");
 		m_guiHelper->render(m_dynamicsWorld);
 	}
@@ -1420,8 +1490,8 @@ void CharpyDemo::stepSimulation(float deltaTime){
 			checkConstraints();
 			currentTime += timeStep;
 			writeGraphData();
+			writeRigidBodyData();
 			updateView();
-			showMessage();
 		}
 	}
 }
@@ -1532,9 +1602,16 @@ void CharpyDemo::showMessage()
 		infoMsg(buf);
 	}
 	if (openGraphFile){
-		sprintf_s(buf,B_LEN,"Writing data to %s, disable with ^d",gfn);
+		sprintf_s(buf,B_LEN,"Writing force data to %s, disable with ^d",gfn);
 	}else{
-		sprintf_s(buf,B_LEN, "Enable writing data to file with ^d");
+		sprintf_s(buf,B_LEN, "Enable writing force data to file with ^d");
+	}
+	infoMsg(buf);
+	if (openRigidBodyDataFile){
+		sprintf_s(buf, B_LEN, "Writing rigid body data to %s, disable with ^g", rbdfn);
+	}
+	else{
+		sprintf_s(buf, B_LEN, "Enable writing rigid body data to file with ^g");
 	}
 	infoMsg(buf);
 	sprintf_s(buf,B_LEN, "currentTime=%3.4f s, currentAngle=%1.4f",
@@ -1622,6 +1699,9 @@ void reinit(){
 	if (openGraphFile){
 		toggleGraphFile();
 	}
+	if (openRigidBodyDataFile){
+		toggleRigidBodyDataFile();
+	}
 }
 
 
@@ -1700,6 +1780,7 @@ bool CharpyDemo::ctrlKeyboardCallback(int key){
 		}
 		return true;
 	case 7: //g
+		toggleRigidBodyDataFile();
 		return false;
 	case 8: //h
 		return false;
@@ -2038,33 +2119,41 @@ void	CharpyDemo::exitPhysics()
 }
 CommonExampleInterface*    CharpyDemoF1CreateFunc(CommonExampleOptions& options)
 {
-	return new CharpyDemo(options.m_guiHelper,1);
+	charpyDemo=new CharpyDemo(options.m_guiHelper,1);
+	return charpyDemo;
 }
 CommonExampleInterface*    CharpyDemoF2CreateFunc(CommonExampleOptions& options)
 {
-	return new CharpyDemo(options.m_guiHelper, 2);
+	charpyDemo = new CharpyDemo(options.m_guiHelper, 2);
+	return charpyDemo;
 }
 CommonExampleInterface*    CharpyDemoF3CreateFunc(CommonExampleOptions& options)
 {
-	return new CharpyDemo(options.m_guiHelper, 3);
+	charpyDemo = new CharpyDemo(options.m_guiHelper, 3);
+	return charpyDemo;
 }
 CommonExampleInterface*    CharpyDemoF4CreateFunc(CommonExampleOptions& options)
 {
-	return new CharpyDemo(options.m_guiHelper, 4);
+	charpyDemo = new CharpyDemo(options.m_guiHelper, 4);
+	return charpyDemo;
 }
 CommonExampleInterface*    CharpyDemoF5CreateFunc(CommonExampleOptions& options)
 {
-	return new CharpyDemo(options.m_guiHelper, 5);
+	charpyDemo = new CharpyDemo(options.m_guiHelper, 5);
+	return charpyDemo;
 }
 CommonExampleInterface*    CharpyDemoF6CreateFunc(CommonExampleOptions& options)
 {
-	return new CharpyDemo(options.m_guiHelper, 6);
+	charpyDemo = new CharpyDemo(options.m_guiHelper, 6);
+	return charpyDemo;
 }
 CommonExampleInterface*    CharpyDemoF7CreateFunc(CommonExampleOptions& options)
 {
-	return new CharpyDemo(options.m_guiHelper, 7);
+	charpyDemo = new CharpyDemo(options.m_guiHelper, 7);
+	return charpyDemo;
 }
 CommonExampleInterface*    CharpyDemoF8CreateFunc(CommonExampleOptions& options)
 {
-	return new CharpyDemo(options.m_guiHelper, 8);
+	charpyDemo = new CharpyDemo(options.m_guiHelper, 8);
+	return charpyDemo;
 }
