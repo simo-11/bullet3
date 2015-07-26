@@ -1012,6 +1012,10 @@ void toggleGraphFile(){
 	}
 }
 
+void toggleLogPlasticityData(){
+	bool currentValue = PlasticityData::getLogData();
+	PlasticityData::setLogData(!currentValue);
+}
 CharpyDemo *charpyDemo = 0;
 void toggleRigidBodyDataFile(){
 	openRigidBodyDataFile = !openRigidBodyDataFile;
@@ -1482,6 +1486,7 @@ void CharpyDemo::stepSimulation(float deltaTime){
 		restartRequested = false;
 	}
 	if (m_dynamicsWorld)	{
+		PlasticityData::setTime(currentTime);
 		m_dynamicsWorld->stepSimulation(timeStep, 30, timeStep);
 		{
 			BT_PROFILE("CharpyDemo::stepStimulationExtras");
@@ -1614,7 +1619,15 @@ void CharpyDemo::showMessage()
 		sprintf_s(buf, B_LEN, "Enable writing rigid body data to file with ^g");
 	}
 	infoMsg(buf);
-	sprintf_s(buf,B_LEN, "currentTime=%3.4f s, currentAngle=%1.4f",
+	if (PlasticityData::getLogData()){
+		sprintf_s(buf, B_LEN, "Writing plasticity log data to %s, disable with ^p", 
+			PlasticityData::getLogDataFilename());
+	}
+	else{
+		sprintf_s(buf, B_LEN, "Enable writing plasticity log data to file with ^p");
+	}
+	infoMsg(buf);
+	sprintf_s(buf, B_LEN, "currentTime=%3.4f s, currentAngle=%1.4f",
 		currentTime, getHammerAngle());
 	infoMsg(buf);
 	PlasticityData::setData(pData);
@@ -1808,6 +1821,7 @@ bool CharpyDemo::ctrlKeyboardCallback(int key){
 	case 15: //o
 		return false;
 	case 16: //p
+		toggleLogPlasticityData();
 		return false;
 	case 17: //q
 		return false;

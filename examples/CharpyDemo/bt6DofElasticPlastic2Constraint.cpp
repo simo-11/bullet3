@@ -43,6 +43,7 @@ http://gimpact.sf.net
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 #include "LinearMath/btTransformUtil.h"
 #include <new>
+#include "../plasticity/PlasticityData.h"
 
 
 
@@ -499,6 +500,7 @@ void bt6DofElasticPlastic2Constraint::getInfo2 (btConstraintInfo2* info)
 	// for stability better to solve angular limits first
 	int row = setAngularLimits(info, 0,transA,transB,linVelA,linVelB,angVelA,angVelB);
 	setLinearLimits(info, row, transA,transB,linVelA,linVelB,angVelA,angVelB);
+	PlasticityData::log(info,8);
 }
 
 

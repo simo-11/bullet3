@@ -1,4 +1,8 @@
 #include "PlasticityData.h"
+#include <stdio.h> 
+#include <string.h> 
+#include <stdlib.h> 
+
 static bool collect = false;
 bool PlasticityData::getCollect(){
 	return collect;
@@ -16,4 +20,89 @@ list<PlasticityData> PlasticityData::getData(){
 
 PlasticityData::PlasticityData(char * buf){
 	value = buf;
+}
+#define B_LEN 256
+static bool m_logData = false;
+static FILE *fp=NULL;
+char fn[B_LEN];
+static int m_mode;
+bool PlasticityData::getLogData(){
+	return m_logData;
+}
+char * PlasticityData::getLogDataFilename(){
+	return fn;
+}
+void closeLogFile(){
+	if (fp){
+		fclose(fp);
+		fprintf(fp, "];\n");
+		fp = NULL;
+	}
+}
+
+void PlasticityData::setLogData(bool v){
+	m_logData = v;
+	if (m_logData){
+		strcpy_s(fn, "waiting data");
+	}
+	else{
+		closeLogFile();
+		strcpy_s(fn, "");
+	}
+}
+
+static btScalar m_time;
+void PlasticityData::setTime(btScalar time){
+	m_time = time;
+}
+
+bool handleOpen(int mode){
+	if (m_mode != mode){
+		closeLogFile();
+	}
+	if (NULL == fp){
+		m_mode = mode;
+		sprintf_s(fn, B_LEN, "d:/wrk/plog-%d.m", m_mode);
+		errno_t err = fopen_s(&fp, fn, "w");
+		if (!fp || err){
+			if (err){
+				char buffer[B_LEN];
+				strerror_s(buffer,B_LEN);
+				sprintf_s(fn, B_LEN, "open d:/wrk/plog-%d.m failed: %s", m_mode, buffer);
+			}
+			return false;
+		}
+		fprintf(fp, "plog%d=[\n", m_mode);
+	}
+	return true;
+}
+int itemsInRow = 3;
+void wr(btScalar * f, int size, char * comment=NULL){
+	for (int i = 0; i < size; i++){
+		if (i>0 && i%itemsInRow == 0){
+			fprintf(fp, "%% - %d\n", i-1);
+		}
+		fprintf(fp, "%8.4f,", f[i]);
+	}
+	if (comment != NULL){
+		fprintf(fp, "%% %s", comment);
+	}
+	fprintf(fp, "\n");
+}
+int jSize = 0x123;
+void PlasticityData::log(btTypedConstraint::btConstraintInfo2 * info, int mode){
+	if (!m_logData){
+		return;
+	}
+	if (!handleOpen(mode)){
+		return;
+	}
+	wr(&m_time, 1,"time");
+	wr(info->m_constraintError, 1,"ce");
+	wr(info->m_J1angularAxis,jSize,"J1a");
+	wr(info->m_J1linearAxis, jSize, "J1l");
+	wr(info->m_J2angularAxis, jSize, "J2a");
+	wr(info->m_J2linearAxis, jSize, "J2l");
+	fprintf(fp, ";\n");
+	fflush(fp);
 }
