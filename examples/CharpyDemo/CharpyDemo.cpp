@@ -505,7 +505,6 @@ public:
 	bool isFrequencyRatioUsed(){
 		switch (m_mode){
 		case 7:
-		case 8:
 			return true;
 		}
 		return false;
@@ -778,11 +777,16 @@ public:
 		w1 = fu*b*h*h / 4;
 		btScalar w2(fu*b*b*h / 4);
 		sc->setStiffness(0, k1);
+		sc->setLimit(0, 0, 0);
 		sc->setStiffness(1, k2);
+		sc->setLimit(1, 0, 0);
 		sc->setStiffness(2, k0);
+		sc->setLimit(2, 0, 0);
 		sc->setStiffness(3, w2);
+		sc->setLimit(3, 0, 0);
 		sc->setStiffness(4, w1);
 		sc->setStiffness(5, (w1 + w2) / 2);
+		sc->setLimit(5, 0, 0);
 		dw->addConstraint(sc, true);
 		for (int i = 0; i<6; i++)
 		{
@@ -1312,6 +1316,7 @@ void	CharpyDemo::initPhysics()
 			break;
 		case 4:
 			addSpring2Constraint(ha, ta);
+			break;
 		case 5:
 			addHingeConstraint(ha);
 			dw->setInternalTickCallback(mode5callback);

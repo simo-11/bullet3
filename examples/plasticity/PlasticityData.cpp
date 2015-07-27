@@ -82,7 +82,7 @@ void wr(btScalar * f, int size, char * comment=NULL){
 		if (i>0 && i%itemsInRow == 0){
 			fprintf(fp, "%% - %d\n", i-1);
 		}
-		fprintf(fp, "%8.4f,", f[i]);
+		fprintf(fp, "% 10.4e,", f[i]);
 	}
 	if (comment != NULL){
 		fprintf(fp, "%% %s", comment);
@@ -98,7 +98,7 @@ void PlasticityData::log(btTypedConstraint::btConstraintInfo2 * info, int mode){
 		return;
 	}
 	wr(&m_time, 1,"time");
-	wr(info->m_constraintError, 1,"ce");
+	wr(info->m_constraintError, jSize,"ce");
 	wr(info->m_J1angularAxis,jSize,"J1a");
 	wr(info->m_J1linearAxis, jSize, "J1l");
 	wr(info->m_J2angularAxis, jSize, "J2a");

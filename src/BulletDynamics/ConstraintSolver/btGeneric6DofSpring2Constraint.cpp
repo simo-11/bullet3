@@ -471,7 +471,14 @@ void btGeneric6DofSpring2Constraint::getInfo1 (btConstraintInfo1* info)
 	}
 }
 
-
+#define BCC_DEBUG
+#ifdef BCC_DEBUG
+class PlasticityData
+{
+public:
+	static void log(btTypedConstraint::btConstraintInfo2 * data, int mode);
+};
+#endif
 void btGeneric6DofSpring2Constraint::getInfo2 (btConstraintInfo2* info)
 {
 	const btTransform& transA = m_rbA.getCenterOfMassTransform();
@@ -484,6 +491,9 @@ void btGeneric6DofSpring2Constraint::getInfo2 (btConstraintInfo2* info)
 	// for stability better to solve angular limits first
 	int row = setAngularLimits(info, 0,transA,transB,linVelA,linVelB,angVelA,angVelB);
 	setLinearLimits(info, row, transA,transB,linVelA,linVelB,angVelA,angVelB);
+#ifdef BCC_DEBUG
+	PlasticityData::log(info, 4);
+#endif
 }
 
 
