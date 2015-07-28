@@ -399,7 +399,7 @@ void btPlasticHingeConstraint::getInfo1NonVirtual(btConstraintInfo1* info)
 		info->nub = 0; 
 	}
 }
-
+#include "../plasticity/PlasticityData.h"
 void btPlasticHingeConstraint::getInfo2 (btConstraintInfo2* info)
 {
 	if(m_useOffsetForConstraintFrame)
@@ -410,6 +410,7 @@ void btPlasticHingeConstraint::getInfo2 (btConstraintInfo2* info)
 	{
 		getInfo2Internal(info, m_rbA.getCenterOfMassTransform(),m_rbB.getCenterOfMassTransform(),m_rbA.getAngularVelocity(),m_rbB.getAngularVelocity());
 	}
+	PlasticityData::log(info, 6);
 }
 
 

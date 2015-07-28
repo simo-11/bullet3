@@ -781,7 +781,7 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 
 	if (limot->m_enableSpring)
 	{
-		bool useBcc = false;
+		bool useBcc = true;
 		if (!useBcc){
 			btScalar error = limot->m_currentPosition - limot->m_equilibriumPoint;
 			calculateJacobi(limot, transA, transB, info, srow, ax1, rotational, rotAllowed);
@@ -847,7 +847,7 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			if(limot->m_springStiffnessLimited && 0.25 < angularfreq * dt)
 			{
 				// bcc
-				if (maxForce < SIMD_INFINITY && useBcc){
+				if (maxForce < SIMD_INFINITY){
 					usePlasticity=true;
 				} else{
 					ks = BT_ONE / dt / dt / btScalar(16.0) * m;
@@ -866,7 +866,7 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 				btScalar fs = ks * error * dt;
 				btScalar fd = -kd * (vel)* (rotational ? -1 : 1) * dt;
 				btScalar f = (fs + fd);
-				if (btFabs(f) > maxForce && useBcc){
+				if (btFabs(f) > maxForce){
 					usePlasticity = true;
 				}
 				else{
@@ -877,7 +877,7 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			}
 			/*
 			If plasticity is used, what would be suitable error indicator.
-			Currently same as above for constraint case is used
+			Currently same as above for constraint case (upper==lower) is used
 			limot->m_currentLimit==3
 			*/
 			if (usePlasticity){

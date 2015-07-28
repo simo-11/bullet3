@@ -201,7 +201,7 @@ void bt6DofElasticPlasticConstraint::internalUpdateSprings(btConstraintInfo2* in
 	}
 }
 
-
+#include "../plasticity/PlasticityData.h"
 void bt6DofElasticPlasticConstraint::getInfo2(btConstraintInfo2* info)
 {
 	// this will be called by constraint solver at the constraint setup stage
@@ -209,6 +209,7 @@ void bt6DofElasticPlasticConstraint::getInfo2(btConstraintInfo2* info)
 	internalUpdateSprings(info);
 	// do the rest of job for constraint setup
 	btGeneric6DofConstraint::getInfo2(info);
+	PlasticityData::log(info, 7);
 }
 
 

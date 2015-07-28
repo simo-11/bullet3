@@ -45,7 +45,7 @@ target is to break objects using plasticity.
 int sFrameNumber = 0;
 bool firstRun = true;
 bool hammerHitsSpecimen;
-btScalar initialStartAngle(-1.8);
+btScalar initialStartAngle(1.8);
 btScalar startAngle(initialStartAngle);
 long  initialDisplayWait = 50;
 long displayWait = initialDisplayWait;
@@ -893,9 +893,9 @@ public:
 		sc->setStiffness(5, G*It / l); // not very exact
 		sc->setMaxForce(5, fu / 2 * It / (h / 2)); // not very exact
 		sc->setStiffness(4, 3 * E*I1 / l); // not very exact
-		sc->setMaxForce(4, w2);
+		sc->setMaxForce(4, w1);
 		sc->setStiffness(3, 3 * E*I2 / l); // not very exact
-		sc->setMaxForce(3, w1);
+		sc->setMaxForce(3, w2);
 		dw->addConstraint(sc, true);
 		for (int i = 0; i<6; i++)
 		{
@@ -917,7 +917,6 @@ public:
 		bt6DofElasticPlastic2Constraint *sc =
 			new bt6DofElasticPlastic2Constraint(*ha[0], *ha[1],
 			ta[0], ta[1]);
-		tc = sc;
 		tc = sc;
 		mode8c = sc;
 		mode8c->setMaxPlasticRotation(maxPlasticRotation);
@@ -942,10 +941,10 @@ public:
 		sc->setStiffness(5, G*It / l); // not very exact
 		sc->setMaxForce(5, fu / 2 * It / (h / 2)); // not very exact
 		sc->setStiffness(4, 3 * E*I1 / l); // not very exact
-		sc->setMaxForce(4, w2);
+		sc->setMaxForce(4, w1);
 		sc->setStiffness(3, 3 * E*I2 / l); // not very exact
-		sc->setMaxForce(3, w1);
-#define DEBUG_TOO_SOFT 1
+		sc->setMaxForce(3, w2);
+// #define DEBUG_TOO_SOFT 1
 #if DEBUG_TOO_SOFT
 		sc->setStiffness(0, k1);
 		sc->setStiffness(1, k2);
@@ -1635,7 +1634,7 @@ void CharpyDemo::showMessage()
 	sprintf_s(buf, B_LEN, "currentTime=%3.4f s, currentAngle=%1.4f",
 		currentTime, getHammerAngle());
 	infoMsg(buf);
-	PlasticityData::setData(pData);
+	PlasticityData::setData(&pData);
 }
 
 void CharpyDemo::updateView(){

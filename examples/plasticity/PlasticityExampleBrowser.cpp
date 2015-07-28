@@ -558,6 +558,7 @@ PlasticityExampleBrowser::~PlasticityExampleBrowser()
 {
     deleteDemo();
 	gAllExamples = 0;
+	destroyPlasticityWindow(s_pStatWindow);
 }
 
 bool PlasticityExampleBrowser::init(int argc, char* argv[])

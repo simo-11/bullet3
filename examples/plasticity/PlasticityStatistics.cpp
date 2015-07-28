@@ -42,13 +42,17 @@ public:
 		textArea->SetSize(w,h);
 		textArea->SetPos(0, 0);
 	}
+	PlasticityStatistics::~PlasticityStatistics()
+	{
+		delete textArea;
+	}
 	void dumpData(PlasticityStatistics* pStat)
 	{  
 		list<PlasticityData>::iterator psIterator;
 		string txt;
-		list<PlasticityData> pData = PlasticityData::getData();
+		list<PlasticityData> *pData = PlasticityData::getData();
 		int y = 10;
-		for (psIterator = pData.begin(); psIterator != pData.end(); psIterator++)
+		for (psIterator = pData->begin(); psIterator != pData->end(); psIterator++)
 		{	
 			txt = psIterator->getValue();
 			Gwen::Controls::Label* label = new Gwen::Controls::Label(textArea);

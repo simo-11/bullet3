@@ -10,11 +10,11 @@ bool PlasticityData::getCollect(){
 void PlasticityData::setCollect(bool v){
 	collect = v;
 }
-static list<PlasticityData> s_pData;
-void PlasticityData::setData(list<PlasticityData> pData){
+static list<PlasticityData> *s_pData=NULL;
+void PlasticityData::setData(list<PlasticityData> *pData){
 	s_pData = pData;
 }
-list<PlasticityData> PlasticityData::getData(){
+list<PlasticityData>* PlasticityData::getData(){
 	return s_pData;
 }
 
@@ -77,10 +77,10 @@ bool handleOpen(int mode){
 	return true;
 }
 int itemsInRow = 3;
-void wr(btScalar * f, int size, char * comment=NULL){
-	for (int i = 0; i < size; i++){
-		if (i>0 && i%itemsInRow == 0){
-			fprintf(fp, "%% - %d\n", i-1);
+void wr(btScalar * f, int size, char * comment=NULL, int rowskip=1){
+	for (int i = 0; i < size; i+=rowskip){
+		if (i>0 && (i/rowskip)%itemsInRow == 0){
+			fprintf(fp, "%% %d - %d\n", i-(itemsInRow)*rowskip, i-rowskip);
 		}
 		fprintf(fp, "% 10.4e,", f[i]);
 	}
@@ -90,6 +90,7 @@ void wr(btScalar * f, int size, char * comment=NULL){
 	fprintf(fp, "\n");
 }
 int jSize = 0x123;
+bool logJacobian=false;
 void PlasticityData::log(btTypedConstraint::btConstraintInfo2 * info, int mode){
 	if (!m_logData){
 		return;
@@ -98,11 +99,13 @@ void PlasticityData::log(btTypedConstraint::btConstraintInfo2 * info, int mode){
 		return;
 	}
 	wr(&m_time, 1,"time");
-	wr(info->m_constraintError, jSize,"ce");
-	wr(info->m_J1angularAxis,jSize,"J1a");
-	wr(info->m_J1linearAxis, jSize, "J1l");
-	wr(info->m_J2angularAxis, jSize, "J2a");
-	wr(info->m_J2linearAxis, jSize, "J2l");
+	wr(info->m_constraintError, jSize,"ce",info->rowskip);
+	if (logJacobian){
+		wr(info->m_J1angularAxis, jSize, "J1a");
+		wr(info->m_J1linearAxis, jSize, "J1l");
+		wr(info->m_J2angularAxis, jSize, "J2a");
+		wr(info->m_J2linearAxis, jSize, "J2l");
+	}
 	fprintf(fp, ";\n");
 	fflush(fp);
 }
