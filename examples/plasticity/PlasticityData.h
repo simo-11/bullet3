@@ -3,17 +3,13 @@
 #include <list>
 #include <string>
 #include "BulletDynamics/ConstraintSolver/btTypedConstraint.h"
-#ifdef _WIN32
-#define _CRTDBG_MAP_ALLOC
-#include <stdlib.h>
-#include <crtdbg.h>
-#endif // _WIN32
 
 using namespace std;
 class PlasticityData
 {
 public:
 	PlasticityData(char * value);
+	~PlasticityData();
 	string getValue(){ return value; }
 	static void setData(list<PlasticityData>* l);
 	static list<PlasticityData>* getData();

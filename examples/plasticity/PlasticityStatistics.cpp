@@ -8,7 +8,7 @@ class PlasticityStatistics : public Gwen::Controls::WindowControl
 {
 protected:
 	Gwen::Controls::ResizableControl *textArea;
-
+	vector<Gwen::Controls::Label*> labels;
 	void onButtonA(Gwen::Controls::Base* pControl)
 	{
         //		OpenTissue::glut::toggleIdle();
@@ -52,10 +52,15 @@ public:
 		string txt;
 		list<PlasticityData> *pData = PlasticityData::getData();
 		int y = 10;
-		for (psIterator = pData->begin(); psIterator != pData->end(); psIterator++)
+		unsigned labelIndex = 0;
+		for (psIterator = pData->begin(); psIterator != pData->end(); psIterator++, labelIndex++)
 		{	
 			txt = psIterator->getValue();
-			Gwen::Controls::Label* label = new Gwen::Controls::Label(textArea);
+			Gwen::Controls::Label* label;
+			if (labels.size() <= labelIndex){
+				labels.push_back(new Gwen::Controls::Label(textArea));
+			}
+			label = labels[labelIndex];
 			label->SetText(txt);
 			label->SizeToContents();
 			label->SetPos(20, y);
@@ -64,14 +69,16 @@ public:
 	}
 	
 	void	UpdateText(PlasticityStatistics* pStat, bool idle)
-	{		
+	{
 		if (!Visible()){
 			return;
 		}
 		if (!idle)
 		{
 		}
-		pStat->textArea->RemoveAllChildren();
+		for (unsigned i=0; i<labels.size(); i++){
+			labels[i]->SetText("");
+	    }
         dumpData(pStat);
 		pStat->GetCanvas()->RenderCanvas();
 	}

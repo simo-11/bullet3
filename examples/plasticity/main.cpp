@@ -1,11 +1,6 @@
 /*
 Simo Nikula 2015- based on bullet3 examples
 */
-#ifdef _WIN32
-#define _CRTDBG_MAP_ALLOC
-#include <stdlib.h>
-#include <crtdbg.h>
-#endif
 #include "Bullet3Common/b3CommandLineArgs.h"
 #include "../Utils/b3Clock.h"
 
@@ -35,9 +30,6 @@ int main(int argc, char* argv[])
 		} while (!exampleBrowser->requestedExit());
 	}
 	delete exampleBrowser;
-#ifdef _WIN32
-	_CrtDumpMemoryLeaks();
-#endif
 	return 0;
 }
 

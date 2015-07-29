@@ -21,6 +21,8 @@ list<PlasticityData>* PlasticityData::getData(){
 PlasticityData::PlasticityData(char * buf){
 	value = buf;
 }
+PlasticityData::~PlasticityData(){
+}
 #define B_LEN 256
 static bool m_logData = false;
 static FILE *fp=NULL;
