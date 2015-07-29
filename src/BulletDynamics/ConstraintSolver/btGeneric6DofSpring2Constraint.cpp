@@ -471,7 +471,7 @@ void btGeneric6DofSpring2Constraint::getInfo1 (btConstraintInfo1* info)
 	}
 }
 
-#define BCC_DEBUG
+//#define BCC_DEBUG
 #ifdef BCC_DEBUG
 class PlasticityData
 {

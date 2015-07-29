@@ -673,6 +673,8 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 {
 	int count = 0;
 	int srow = row * info->rowskip;
+	btScalar dt = BT_ONE / info->fps;
+	btScalar maxImpulse = maxForce*dt;
 
 	if (limot->m_currentLimit==4) 
 	{
@@ -691,8 +693,8 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 				if (bounceerror < info->m_constraintError[srow]) info->m_constraintError[srow] = bounceerror;
 			}
 		}
-		info->m_lowerLimit[srow] = rotational ? 0 : -maxForce;
-		info->m_upperLimit[srow] = rotational ? maxForce : 0;
+		info->m_lowerLimit[srow] = rotational ? 0 : -maxImpulse;
+		info->m_upperLimit[srow] = rotational ? maxImpulse : 0;
 		info->cfm[srow] = limot->m_stopCFM;
 		srow += info->rowskip;
 		++count;
@@ -710,8 +712,8 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 				if (bounceerror > info->m_constraintError[srow]) info->m_constraintError[srow] = bounceerror;
 			}
 		}
-		info->m_lowerLimit[srow] = rotational ? -maxForce : 0;
-		info->m_upperLimit[srow] = rotational ? 0 : maxForce;
+		info->m_lowerLimit[srow] = rotational ? -maxImpulse : 0;
+		info->m_upperLimit[srow] = rotational ? 0 : maxImpulse;
 		info->cfm[srow] = limot->m_stopCFM;
 		srow += info->rowskip;
 		++count;
@@ -720,8 +722,8 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 	{
 		calculateJacobi(limot,transA,transB,info,srow,ax1,rotational,rotAllowed);
 		info->m_constraintError[srow] = info->fps * limot->m_stopERP * limot->m_currentLimitError * (rotational ? -1 : 1);
-		info->m_lowerLimit[srow] = -maxForce;
-		info->m_upperLimit[srow] = maxForce;
+		info->m_lowerLimit[srow] = -maxImpulse;
+		info->m_upperLimit[srow] = maxImpulse;
 		info->cfm[srow] = limot->m_stopCFM;
 		srow += info->rowskip;
 		++count;
@@ -757,8 +759,8 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			btScalar hiLimit;
 			if(limot->m_loLimit > limot->m_hiLimit)
 			{
-				lowLimit = error > 0 ? limot->m_servoTarget : -maxForce;
-				hiLimit = error < 0 ? limot->m_servoTarget : maxForce;
+				lowLimit = error > 0 ? limot->m_servoTarget : -maxImpulse;
+				hiLimit = error < 0 ? limot->m_servoTarget : maxImpulse;
 			}
 			else
 			{
@@ -785,7 +787,6 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 		if (!useBcc){
 			btScalar error = limot->m_currentPosition - limot->m_equilibriumPoint;
 			calculateJacobi(limot, transA, transB, info, srow, ax1, rotational, rotAllowed);
-			btScalar dt = BT_ONE / info->fps;
 			btScalar kd = limot->m_springDamping;
 			btScalar ks = limot->m_springStiffness;
 			btScalar vel = rotational ? angVelA.dot(ax1) - angVelB.dot(ax1) : linVelA.dot(ax1) - linVelB.dot(ax1);
@@ -832,7 +833,6 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 		} else{ // useBcc
 			btScalar error = limot->m_currentPosition - limot->m_equilibriumPoint;
 			calculateJacobi(limot,transA,transB,info,srow,ax1,rotational,rotAllowed);
-			btScalar dt = BT_ONE / info->fps;
 			btScalar kd = limot->m_springDamping;
 			btScalar ks = limot->m_springStiffness;
 			btScalar cfm = BT_ZERO;
@@ -856,17 +856,21 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			// bcc
 			btScalar minf;
 			btScalar maxf;
+			btScalar vel;
+			btScalar fs;
+			btScalar fd;
+			btScalar f;
 			if (!usePlasticity){
 				//avoid damping that would blow up the spring
 				if (limot->m_springDampingLimited && kd * dt > m)
 				{
 					kd = m / dt;
 				}
-				btScalar vel = rotational ? angVelA.dot(ax1) - angVelB.dot(ax1) : linVelA.dot(ax1) - linVelB.dot(ax1);
-				btScalar fs = ks * error * dt;
-				btScalar fd = -kd * (vel)* (rotational ? -1 : 1) * dt;
-				btScalar f = (fs + fd);
-				if (btFabs(f) > maxForce){
+				vel = rotational ? angVelA.dot(ax1) - angVelB.dot(ax1) : linVelA.dot(ax1) - linVelB.dot(ax1);
+				fs = ks * error * dt;
+				fd = -kd * (vel)* (rotational ? -1 : 1) * dt;
+				f = (fs + fd);
+				if (btFabs(f) > maxImpulse){
 					usePlasticity = true;
 				}
 				else{
@@ -881,9 +885,9 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			limot->m_currentLimit==3
 			*/
 			if (usePlasticity){
-				minf = -maxForce;
-				maxf = maxForce;
-				btScalar f = info->fps*limot->m_stopERP*error;
+				minf = -maxImpulse;
+				maxf = maxImpulse;
+				f = info->fps*limot->m_stopERP*error;
 				info->m_constraintError[srow] = f*(rotational ? -1 : 1);
 			}
 			if(!rotational)
