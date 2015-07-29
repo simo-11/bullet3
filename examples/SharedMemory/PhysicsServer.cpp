@@ -17,6 +17,7 @@
 #include "LinearMath/btSerializer.h"
 #include "Bullet3Common/b3Logging.h"
 #include "../CommonInterfaces/CommonGUIHelperInterface.h"
+#include "SharedMemoryBlock.h"
 
 struct UrdfLinkNameMapUtil
 {
@@ -31,7 +32,7 @@ struct UrdfLinkNameMapUtil
 struct PhysicsServerInternalData
 {
 	SharedMemoryInterface* m_sharedMemory;
-    SharedMemoryExampleData* m_testBlock1;
+    SharedMemoryBlock* m_testBlock1;
 	bool m_isConnected;
 	btScalar m_physicsDeltaTime;
 	//btAlignedObjectArray<btJointFeedback*> m_jointFeedbacks;
@@ -84,14 +85,14 @@ bool PhysicsServerSharedMemory::connectSharedMemory(bool allowSharedMemoryInitia
 	
 	bool allowCreation = true;
 
-	m_data->m_testBlock1 = (SharedMemoryExampleData*)m_data->m_sharedMemory->allocateSharedMemory(SHARED_MEMORY_KEY, SHARED_MEMORY_SIZE,allowCreation);
+	m_data->m_testBlock1 = (SharedMemoryBlock*)m_data->m_sharedMemory->allocateSharedMemory(SHARED_MEMORY_KEY, SHARED_MEMORY_SIZE,allowCreation);
     if (m_data->m_testBlock1)
     {
         if (m_data->m_testBlock1->m_magicId !=SHARED_MEMORY_MAGIC_NUMBER)
         {
 			if (allowSharedMemoryInitialization)
 			{
-				InitSharedMemoryExampleData(m_data->m_testBlock1);
+				InitSharedMemoryBlock(m_data->m_testBlock1);
 				b3Printf("Created and initialized shared memory block");
 				m_data->m_isConnected = true;
 			} else
@@ -212,7 +213,7 @@ bool PhysicsServerSharedMemory::loadUrdf(const char* fileName, const btVector3& 
         tr.setIdentity();
         tr.setOrigin(pos);
         tr.setRotation(orn);
-        int rootLinkIndex = u2b.getRootLinkIndex();
+        //int rootLinkIndex = u2b.getRootLinkIndex();
         //                      printf("urdf root link index = %d\n",rootLinkIndex);
 		MyMultiBodyCreator creation(m_data->m_guiHelper);
         
@@ -316,7 +317,7 @@ void PhysicsServerSharedMemory::processClientCommands()
 					m_data->m_worldImporters.push_back(worldImporter);
 					bool completedOk = worldImporter->loadFileFromMemory(m_data->m_testBlock1->m_bulletStreamDataClientToServer,clientCmd.m_dataStreamArguments.m_streamChunkLength);
 					
-					SharedMemoryCommand& serverCmd =m_data->m_testBlock1->m_serverCommands[0];
+					SharedMemoryStatus& serverCmd =m_data->m_testBlock1->m_serverCommands[0];
  
                     if (completedOk)
                     {
@@ -345,7 +346,7 @@ void PhysicsServerSharedMemory::processClientCommands()
                                                              urdfArgs.m_initialOrientation[2],
                                                              urdfArgs.m_initialOrientation[3]),
                                                 urdfArgs.m_useMultiBody, urdfArgs.m_useFixedBase);
-                    SharedMemoryCommand& serverCmd =m_data->m_testBlock1->m_serverCommands[0];
+                    SharedMemoryStatus& serverCmd =m_data->m_testBlock1->m_serverCommands[0];
  
                     if (completedOk)
                     {
@@ -450,7 +451,7 @@ void PhysicsServerSharedMemory::processClientCommands()
                             
                             
                             
-                            SharedMemoryCommand& serverCmd = m_data->m_testBlock1->m_serverCommands[0];
+                            SharedMemoryStatus& serverCmd = m_data->m_testBlock1->m_serverCommands[0];
 							serverCmd.m_type = CMD_DESIRED_STATE_RECEIVED_COMPLETED;
 							m_data->m_testBlock1->m_numServerCommands++;
                         break;
@@ -461,7 +462,7 @@ void PhysicsServerSharedMemory::processClientCommands()
 						if (m_data->m_dynamicsWorld->getNumMultibodies()>0)
 						{
 							btMultiBody* mb = m_data->m_dynamicsWorld->getMultiBody(0);
-							SharedMemoryCommand& serverCmd = m_data->m_testBlock1->m_serverCommands[0];
+							SharedMemoryStatus& serverCmd = m_data->m_testBlock1->m_serverCommands[0];
 							serverCmd.m_type = CMD_ACTUAL_STATE_UPDATE_COMPLETED;
 
 							serverCmd.m_sendActualStateArgs.m_bodyUniqueId = 0;
@@ -553,13 +554,49 @@ void PhysicsServerSharedMemory::processClientCommands()
                     b3Printf("Step simulation request");
                     m_data->m_dynamicsWorld->stepSimulation(m_data->m_physicsDeltaTime);
                     
-                    SharedMemoryCommand& serverCmd =m_data->m_testBlock1->m_serverCommands[0];
+                    SharedMemoryStatus& serverCmd =m_data->m_testBlock1->m_serverCommands[0];
                     
                     serverCmd.m_type =CMD_STEP_FORWARD_SIMULATION_COMPLETED;
                     m_data->m_testBlock1->m_numServerCommands++;
 
                     break;
                 }
+					
+				case CMD_SEND_PHYSICS_SIMULATION_PARAMETERS:
+				{
+					if (clientCmd.m_updateFlags&SIM_PARAM_UPDATE_GRAVITY)
+					{
+						btVector3 grav(clientCmd.m_physSimParamArgs.m_gravityAcceleration[0],
+									   clientCmd.m_physSimParamArgs.m_gravityAcceleration[1],
+									   clientCmd.m_physSimParamArgs.m_gravityAcceleration[2]);
+						this->m_data->m_dynamicsWorld->setGravity(grav);
+						b3Printf("Updated Gravity: %f,%f,%f",grav[0],grav[1],grav[2]);
+
+					}
+					
+					
+					SharedMemoryStatus& serverCmd =m_data->m_testBlock1->m_serverCommands[0];
+					serverCmd.m_type =CMD_STEP_FORWARD_SIMULATION_COMPLETED;
+					m_data->m_testBlock1->m_numServerCommands++;
+
+					
+					break;
+					
+				};
+				case CMD_INIT_POSE:
+				{
+					b3Printf("Server Init Pose not implemented yet");
+					///@todo: implement this
+					m_data->m_dynamicsWorld->setGravity(btVector3(0,0,0));
+					
+					SharedMemoryStatus& serverCmd =m_data->m_testBlock1->m_serverCommands[0];
+					serverCmd.m_type =CMD_STEP_FORWARD_SIMULATION_COMPLETED;
+					m_data->m_testBlock1->m_numServerCommands++;
+					break;
+				}
+					
+
+					
                 case CMD_SHUTDOWN:
                 {
 					btAssert(0);
@@ -581,7 +618,7 @@ void PhysicsServerSharedMemory::processClientCommands()
 						bool isDynamic = (mass>0);
 						worldImporter->createRigidBody(isDynamic,mass,startTrans,shape,0);
 						m_data->m_guiHelper->autogenerateGraphicsObjects(this->m_data->m_dynamicsWorld);
-						SharedMemoryCommand& serverCmd =m_data->m_testBlock1->m_serverCommands[0];
+						SharedMemoryStatus& serverCmd =m_data->m_testBlock1->m_serverCommands[0];
 						serverCmd.m_type =CMD_STEP_FORWARD_SIMULATION_COMPLETED;
 						m_data->m_testBlock1->m_numServerCommands++;
 						break;

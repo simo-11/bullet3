@@ -10,6 +10,7 @@
 #include "PhysicsClient.h"
 #include "SharedMemoryCommon.h"
 #include "../Utils/b3Clock.h"
+#include "PhysicsClientC_API.h"
 
 //const char* blaatnaam = "basename";
 
@@ -97,6 +98,36 @@ void MyCallback2(int buttonId, bool buttonState, void* userPtr)
 			cl->enqueueCommand(command);
 			break;
 		}
+
+		case CMD_SEND_PHYSICS_SIMULATION_PARAMETERS:
+		{
+		    //#ifdef USE_C_API
+		    b3InitPhysicsParamCommand(&command);
+            b3PhysicsParamSetGravity(&command, 0,0,-10);
+            
+
+//		    #else
+//		    
+//			command.m_type = CMD_SEND_PHYSICS_SIMULATION_PARAMETERS;
+//			command.m_physSimParamArgs.m_gravityAcceleration[0] = 0;
+//			command.m_physSimParamArgs.m_gravityAcceleration[1] = 0;
+//			command.m_physSimParamArgs.m_gravityAcceleration[2] = -10;
+//			command.m_physSimParamArgs.m_updateFlags = SIM_PARAM_UPDATE_GRAVITY;
+//			#endif // USE_C_API
+			
+			cl->enqueueCommand(command);
+			break;
+
+		};
+		case CMD_INIT_POSE:
+		{
+			///@todo: implement this
+			command.m_type = CMD_INIT_POSE;
+			cl->enqueueCommand(command);
+			break;
+		}
+
+			
 	case CMD_CREATE_BOX_COLLISION_SHAPE:
 		{
 			command.m_type =CMD_CREATE_BOX_COLLISION_SHAPE;
@@ -225,7 +256,8 @@ void	RobotControlExample::initPhysics()
 		createButton("Get State",CMD_REQUEST_ACTUAL_STATE,  isTrigger);
 		createButton("Send Desired State",CMD_SEND_DESIRED_STATE,  isTrigger);
 		createButton("Create Box Collider",CMD_CREATE_BOX_COLLISION_SHAPE,isTrigger);
-		
+		createButton("Set Physics Params",CMD_SEND_PHYSICS_SIMULATION_PARAMETERS,isTrigger);
+		createButton("Init Pose",CMD_INIT_POSE,isTrigger);
 	} else
 	{
 		/*
@@ -264,7 +296,7 @@ void	RobotControlExample::stepSimulation(float deltaTime)
 	if (m_physicsClient.isConnected())
     {
 		
-		ServerStatus status;
+		SharedMemoryStatus status;
 		bool hasStatus = m_physicsClient.processServerStatus(status);
 		if (hasStatus && status.m_type == CMD_URDF_LOADING_COMPLETED)
 		{
@@ -272,12 +304,12 @@ void	RobotControlExample::stepSimulation(float deltaTime)
 			{
 				PoweredJointInfo info;
 				m_physicsClient.getPoweredJointInfo(i,info);
-				b3Printf("1-DOF PoweredJoint %s at q-index %d and u-index %d\n",info.m_jointName.c_str(),info.m_qIndex,info.m_uIndex);
+				b3Printf("1-DOF PoweredJoint %s at q-index %d and u-index %d\n",info.m_jointName,info.m_qIndex,info.m_uIndex);
 				
 				if (m_numMotors<MAX_NUM_MOTORS)
 				{
 					char motorName[1024];
-					sprintf(motorName,"%s q'", info.m_jointName.c_str());
+					sprintf(motorName,"%s q'", info.m_jointName);
 					MyMotorInfo* motorInfo = &m_motorTargetVelocities[m_numMotors];
 					motorInfo->m_velTarget = 0.f;
 					motorInfo->m_uIndex = info.m_uIndex;
