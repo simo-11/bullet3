@@ -215,7 +215,11 @@ void setScalar(Gwen::Controls::Base* control, btScalar * vp){
 	if (text.length()==0)	{
 		return;
 	}
+#if defined(BT_USE_DOUBLE_PRECISION)
+	double fv = std::stod(text);
+#else
 	float fv = std::stof(text);
+#endif
 	*vp = fv;
 }
 void setLong(Gwen::Controls::Base* control, long * vp){

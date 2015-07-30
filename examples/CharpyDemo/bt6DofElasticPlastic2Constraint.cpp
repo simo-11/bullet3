@@ -671,10 +671,17 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 	const btTransform& transA,const btTransform& transB,const btVector3& linVelA,const btVector3& linVelB,const btVector3& angVelA,const btVector3& angVelB,
 	btConstraintInfo2 *info, int row, btVector3& ax1, int rotational,int rotAllowed, btScalar maxForce)
 {
+	bool useBcc = true;
 	int count = 0;
 	int srow = row * info->rowskip;
 	btScalar dt = BT_ONE / info->fps;
-	btScalar maxImpulse = maxForce*dt;
+	btScalar maxImpulse;
+	if (useBcc && maxForce < SIMD_INFINITY){
+		maxImpulse = maxForce*dt;
+	}
+	else{
+		maxImpulse = SIMD_INFINITY;
+	}
 
 	if (limot->m_currentLimit==4) 
 	{
@@ -783,7 +790,6 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 
 	if (limot->m_enableSpring)
 	{
-		bool useBcc = true;
 		if (!useBcc){
 			btScalar error = limot->m_currentPosition - limot->m_equilibriumPoint;
 			calculateJacobi(limot, transA, transB, info, srow, ax1, rotational, rotAllowed);
