@@ -2076,8 +2076,8 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 void	CharpyDemo::exitPhysics()
 {
 	b3Printf("maxCollision was %f m",(float)(-1.*minCollisionDistance));
-	b3Printf("maxImpact was %f J", maxImpact);
-	b3Printf("maxSpeed was %f m/s", sqrtf(maxSpeed2));
+	b3Printf("maxImpact was %f Ns", maxImpact);
+	b3Printf("maxSpeed was %f m/s, energyLoss was %f J", sqrtf(maxSpeed2),maxEnergy-energy);
 	b3Printf("maximum constraint forces were: %6.2f %6.2f %6.2f %6.2f %6.2f %6.2f",
 		maxForces[0], maxForces[1], maxForces[2], maxForces[3], maxForces[4], maxForces[5]);
 	if (fp){
