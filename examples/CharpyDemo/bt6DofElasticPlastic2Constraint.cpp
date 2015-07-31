@@ -849,12 +849,14 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			// bcc
 			
 			bool usePlasticity=false;
+			bool frequencyLimited = false;
 			//limit stiffness (the spring should not be sampled faster that the quarter of its angular frequency)
 			if(limot->m_springStiffnessLimited && 0.25 < angularfreq * dt)
 			{
 				// bcc
 				if (maxForce < SIMD_INFINITY){
 					usePlasticity=true;
+					frequencyLimited = true;
 				} else{
 					ks = BT_ONE / dt / dt / btScalar(16.0) * m;
 				}
@@ -886,14 +888,20 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 				}
 			}
 			/*
-			If plasticity is used, what would be suitable error indicator.
-			Currently same as above for constraint case (upper==lower) is used
-			limot->m_currentLimit==3
+			contrainError is set:
+			For frequencyLimited limited case same as above for constraint case 
+			(upper==lower/limot->m_currentLimit==3) is used 
+			If maximum impulse has been reached error is set to zero.
 			*/
 			if (usePlasticity){
 				minf = -maxImpulse;
 				maxf = maxImpulse;
-				f = info->fps*limot->m_stopERP*error;
+				if (frequencyLimited){
+					f = info->fps*limot->m_stopERP*error;
+				}
+				else{
+					f = 0;
+				}
 				info->m_constraintError[srow] = f*(rotational ? -1 : 1);
 			}
 			if(!rotational)
