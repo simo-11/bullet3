@@ -1222,7 +1222,7 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 				btScalar elasticPart = m_maxForce[i] / m_linearLimits.m_springStiffness[i];
 				btScalar newVal = currPos;
 				if (btFabs(elasticPart)<btFabs(currPos)){
-					currPos += (currPos > 0 ? -elasticPart : elasticPart);
+					newVal += (currPos > 0 ? -elasticPart : elasticPart);
 				}
 				setEquilibriumPoint(i, newVal);
 				m_currentPlasticStrain += btFabs(delta);
@@ -1244,7 +1244,7 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 				btScalar elasticPart = m_maxForce[i + 3] / m_angularLimits[i].m_springStiffness;
 				btScalar newVal = currPos;
 				if (btFabs(elasticPart)<btFabs(currPos)){
-					currPos += (currPos > 0 ? -elasticPart : elasticPart);
+					newVal += (currPos > 0 ? -elasticPart : elasticPart);
 				}
 				setEquilibriumPoint(i + 3, newVal);
 				m_currentPlasticRotation += btFabs(delta);
