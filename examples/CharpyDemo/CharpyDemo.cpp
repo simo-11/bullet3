@@ -566,7 +566,7 @@ public:
 		if (!openGraphFile || !fp){
 			return;
 		}
-		wgfv("%8.4f,", currentTime);
+		wgfv("%8.5f,", currentTime);
 		wgv(energy);
 		wgv(maxEnergy - energy);
 		if (m_mode>1){
@@ -600,7 +600,7 @@ public:
 			const btVector3 com = ro->getCenterOfMassPosition();
 			const btQuaternion rot = ro->getCenterOfMassTransform().getRotation();
 			const btVector3 rv = ro->getAngularVelocity();
-			fprintf(rbd,"%3d, %8.4f, %8.4f, %8.4f, ", i, currentTime,m,iM);
+			fprintf(rbd,"%3d, %8.5f, %8.4f, %8.4f, ", i, currentTime,m,iM);
 			wrv(&com);
 			wrv(&rot);
 			wrv(&v);
@@ -1635,7 +1635,7 @@ void CharpyDemo::showMessage()
 		sprintf_s(buf, B_LEN, "Enable writing plasticity log data to file with ^p");
 	}
 	infoMsg(buf);
-	sprintf_s(buf, B_LEN, "currentTime=%3.4f s, currentAngle=%1.4f",
+	sprintf_s(buf, B_LEN, "currentTime=%3.5f s, currentAngle=%1.4f",
 		currentTime, getHammerAngle());
 	infoMsg(buf);
 	PlasticityData::setData(&pData);
