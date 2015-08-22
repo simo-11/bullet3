@@ -82,6 +82,9 @@ const char *viewModes[] =
 };
 btScalar btZero(0);
 btScalar btOne(1);
+/** how may parts in half specimen */
+int initialSCount = 1;
+int sCount = initialSCount;
 btScalar initialL(0.055);
 btScalar l(initialL);
 btScalar initialW(0.01);
@@ -103,16 +106,16 @@ btVector3 y_up(0.01, 1., 0.01);
 btRigidBody *specimenBody, *hammerBody, *specimenBody2;
 btHingeConstraint *hammerHinge;
 btJointFeedback hammerHingeJointFeedback;
-btJointFeedback specimenJointFeedback;
-btHingeConstraint *mode5Hinge;
-btPlasticHingeConstraint *mode6Hinge;
-bt6DofElasticPlasticConstraint *mode7c;
-bt6DofElasticPlastic2Constraint *mode8c;
+btAlignedObjectArray<btJointFeedback*> specimenJointFeedback;
+btAlignedObjectArray<btHingeConstraint *>mode5Hinge;
+btAlignedObjectArray<btPlasticHingeConstraint *>mode6Hinge;
+btAlignedObjectArray<bt6DofElasticPlasticConstraint *>mode7c;
+btAlignedObjectArray<bt6DofElasticPlastic2Constraint *>mode8c;
 btScalar initialRestitution(0.);
 btScalar restitution(initialRestitution);
 btScalar initialMaxPlasticRotation(3.);
 btScalar maxPlasticRotation(initialMaxPlasticRotation);
-btTypedConstraint *tc; // points to specimen constraint
+btAlignedObjectArray<btTypedConstraint*>tc; // points to specimen constraints
 btScalar breakingImpulseThreshold = 0;
 btScalar w1;
 float maxForces[6];
@@ -230,6 +233,152 @@ void setLong(Gwen::Controls::Base* control, long * vp){
 	long fv = std::stol(text);
 	*vp = fv;
 }
+void setInt(Gwen::Controls::Base* control, int * vp){
+	string text = getText(control);
+	if (text.length() == 0)	{
+		return;
+	}
+	int fv = std::stoi(text);
+	*vp = fv;
+}
+
+/**
+http://www.bulletphysics.org/mediawiki-1.5.8/index.php?title=Anti_tunneling_by_Motion_Clamping
+*/
+void resetCcdMotionThreshHold()
+{
+	btScalar radius(ccdMotionThreshHold / 5.f);
+	for (int i = dw->getNumCollisionObjects() - 1; i >= 0; i--)
+	{
+		btCollisionObject* obj = dw->getCollisionObjectArray()[i];
+		btRigidBody* body = btRigidBody::upcast(obj);
+		if (body && body->getMotionState())
+		{
+			body->setCcdMotionThreshold(ccdMotionThreshHold);
+			body->setCcdSweptSphereRadius(radius);
+		}
+	}
+}
+float getRotationEnergy(btScalar invInertia, btScalar angularVelocity){
+	if (invInertia == 0){
+		return 0.f;
+	}
+	float inertia = 1.f / invInertia;
+	float e = 0.5*inertia*angularVelocity*angularVelocity;
+	return e;
+}
+
+void updateEnergy(){
+	energy = 0;
+	btVector3 gravity = dw->getGravity();
+	const btCollisionObjectArray objects = dw->getCollisionObjectArray();
+	for (int i = 0; i<objects.capacity(); i++)
+	{
+		const btCollisionObject* o = objects[i];
+		const btRigidBody* ro = btRigidBody::upcast(o);
+		btScalar iM = ro->getInvMass();
+		if (iM == 0){
+			continue;
+		}
+		btVector3 v = ro->getLinearVelocity();
+		btScalar m = 1 / iM;
+		float linearEnergy = 0.5*m*v.length2();
+		btVector3 com = ro->getCenterOfMassPosition();
+		float gravitationalEnergy = -m*gravity.dot(com);
+		const btVector3 rv = ro->getAngularVelocity();
+		const btVector3 iI = ro->getInvInertiaDiagLocal();
+		float inertiaEnergy = 0;
+		inertiaEnergy += getRotationEnergy(iI.getX(), rv.getX());
+		inertiaEnergy += getRotationEnergy(iI.getY(), rv.getY());
+		inertiaEnergy += getRotationEnergy(iI.getZ(), rv.getZ());
+		energy += linearEnergy;
+		energy += inertiaEnergy;
+		energy += gravitationalEnergy;
+	}
+	if (energy > maxEnergy){
+		maxEnergy = energy;
+	}
+}
+void tuneRestitution(btRigidBody* rb){
+	rb->setRestitution(restitution);
+}
+
+void tuneMode5(){
+	// this is currently no-op if target speed is zero
+	for (int i = 0; i < mode5Hinge.size(); i++){
+		mode5Hinge[i]->setMaxMotorImpulse(w1*timeStep);
+	}
+}
+
+/**
+* tunes hammerSpeed
+* currently mostly no-op as moment is handled in btHingeConstraint.
+*/
+void tune(btPlasticHingeConstraint* mode6Hinge, int index){
+	if (!mode6Hinge->isEnabled()){
+		return;
+	}
+	if (!hammerHitsSpecimen){
+		return;
+	}
+	btScalar applied = specimenJointFeedback[index]->m_appliedTorqueBodyA[1];
+	btScalar capacity = mode6Hinge->getPlasticMoment();
+	if (applied >= capacity){
+		mode6Hinge->updateCurrentPlasticRotation();
+	}
+	return;
+	btScalar energyLoss = mode6Hinge->getAbsorbedEnergy();
+	if (energyLoss > 0){
+		btRigidBody* ro = hammerBody;
+		btScalar iM = ro->getInvMass();
+		btVector3 v = ro->getLinearVelocity();
+		btScalar m = 1 / iM;
+		float linearEnergy = 0.5*m*v.length2();
+		const btVector3 rv = ro->getAngularVelocity();
+		const btVector3 iI = ro->getInvInertiaDiagLocal();
+		float inertiaEnergy = 0;
+		float rx = getRotationEnergy(iI.getX(), rv.getX());
+		float ry = getRotationEnergy(iI.getY(), rv.getY());
+		float rz = getRotationEnergy(iI.getZ(), rv.getZ());
+		float currentEnergy = linearEnergy + rx + ry + rz;
+		float velMultiplier = 0;
+		if (currentEnergy > energyLoss){
+			velMultiplier = btSqrt(1 - (energyLoss / currentEnergy));
+		}
+		ro->setLinearVelocity(velMultiplier*ro->getLinearVelocity());
+		ro->setAngularVelocity(velMultiplier*ro->getAngularVelocity());
+	}
+
+}
+void tuneMode6(){
+	for (int i = 0; i < mode6Hinge.size(); i++){
+		tune(mode6Hinge[i], i);
+	}
+}
+
+/*
+dw->setInternalTickCallback(mode#callback);
+*/
+void mode5callback(btDynamicsWorld *world, btScalar timeStep) {
+	tuneMode5();
+}
+void mode6callback(btDynamicsWorld *world, btScalar timeStep) {
+	tuneMode6();
+}
+void mode7callback(btDynamicsWorld *world, btScalar timeStep) {
+	for (int i = 0; i < mode7c.size(); i++){
+		if (mode7c[i]->isEnabled()){
+			mode7c[i]->updatePlasticity(*specimenJointFeedback[i]);
+		}
+	}
+}
+void mode8callback(btDynamicsWorld *world, btScalar timeStep) {
+	for (int i = 0; i < mode8c.size(); i++){
+		if (mode8c[i]->isEnabled()){
+			mode8c[i]->updatePlasticity(*specimenJointFeedback[i]);
+		}
+	}
+}
 
 class CharpyDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 {
@@ -297,6 +446,10 @@ public:
 	}
 	void resetHandler(Gwen::Controls::Base* control){
 		reinit();
+		restartHandler(control);
+	}
+	void setSCount(Gwen::Controls::Base* control){
+		setInt(control, &sCount);
 		restartHandler(control);
 	}
 	void setStartAngle(Gwen::Controls::Base* control){
@@ -388,6 +541,16 @@ public:
 		gc->SetPos(gx, gy);
 		gy += gyInc;
 		gc->onPress.Add(pPage, &CharpyDemo::handlePauseSimulation);
+	}
+	void addSCount(){
+		addLabel("parts in half");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = std::to_string(sCount);
+		gc->SetText(text);
+		gc->SetPos(gx, gy);
+		gc->SetWidth(100);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setSCount);
 	}
 	void addStartAngle(){
 		addLabel("startAngle +/-");
@@ -520,6 +683,7 @@ public:
 
 		pPage = gui->getInternalData()->m_demoPage->GetPage();
 		gy = 5;
+		addSCount();
 		addStartAngle();
 		addE();
 		addFu();
@@ -570,11 +734,13 @@ public:
 		wgv(energy);
 		wgv(maxEnergy - energy);
 		if (m_mode>1){
-			for (int i = 0; i < 3; i++){
-				wgv(specimenJointFeedback.m_appliedForceBodyA[i]);
-			}
-			for (int i = 0; i < 3; i++){
-				wgv(specimenJointFeedback.m_appliedTorqueBodyA[i]);
+			for (int j = 0; j < specimenJointFeedback.size(); j++){
+				for (int i = 0; i < 3; i++){
+					wgv(specimenJointFeedback[j]->m_appliedForceBodyA[i]);
+				}
+				for (int i = 0; i < 3; i++){
+					wgv(specimenJointFeedback[j]->m_appliedTorqueBodyA[i]);
+				}
 			}
 		}
 		fprintf(fp, ";\n");
@@ -610,6 +776,70 @@ public:
 	}
 	btScalar getBodySpeed2(const btCollisionObject* o){
 		return o->getInterpolationLinearVelocity().length2();
+	}
+	/**
+	get half length for given part
+	if we have more than one part in each side
+	use hammer width and space between anvils (10 mm peaces)
+	and for other split evenly
+	*/
+	btScalar getHalfLength(int partNumber){
+		if (m_mode == 1){
+			return btScalar(l / 2);
+		}
+		int centerParts;
+		btScalar centerWidth;
+		switch (sCount){
+		case 1:
+			centerWidth = btScalar(0.);
+			centerParts = 0;
+			break;
+		case 2:
+			centerWidth = btScalar(0.02);
+			centerParts = 1;
+			break;
+		default:
+			centerWidth = btScalar(0.04);
+			centerParts = 2;
+			break;
+		}
+		if (nearCenter(centerParts, partNumber)){
+			return btScalar(0.005);
+		}
+		btScalar halfLength = btScalar((l - centerWidth) / ((sCount - centerParts) * 4));
+		return halfLength;
+	}
+	/**
+	Get length for constraint stiffness calculations.
+	*/
+	btScalar getLengthForStiffness(int firstPart){
+		btScalar l1 = getHalfLength(firstPart);
+		btScalar l2 = getHalfLength(firstPart + 1);
+		return btScalar(l1 + l2);
+
+	}
+	/*
+	start from negative z side	-l/2 and
+	add twice other parts and half of current part
+
+	(m_mode>1 ? (i == 0 ? -1 : 1)*halfLength : 0.f));
+
+	*/
+	btScalar getZPosition(int partNumber){
+		if (m_mode == 1){
+			return btScalar(0);
+		}
+		btScalar z = -l / 2;
+		for (int i = 0; i < partNumber; i++){
+			z += 2 * getHalfLength(i);
+		}
+		z += getHalfLength(partNumber);
+		return z;
+	}
+	btVector3 getPosition(int partNumber){
+		btScalar zPosition = getZPosition(partNumber);
+		btVector3 pos(w / 2, 0.2 + w / 2, getZPosition(partNumber));
+		return pos;
 	}
 
 	btScalar getManifoldSpeed2(btPersistentManifold* manifold){
@@ -713,13 +943,19 @@ public:
 		getBreakingImpulseThreshold();
 		switch (m_mode){
 		case 6:
-			mode6Hinge->setMaxPlasticRotation(maxPlasticRotation);
+			for (int i = 0; i < mode6Hinge.size(); i++){
+				mode6Hinge[i]->setMaxPlasticRotation(maxPlasticRotation);
+			}
 			break;
 		case 7:
-			mode7c->scalePlasticity(scale);
+			for (int i = 0; i < mode6Hinge.size(); i++){
+				mode7c[i]->scalePlasticity(scale);
+			}
 			break;
 		case 8:
-			mode8c->scalePlasticity(scale);
+			for (int i = 0; i < mode6Hinge.size(); i++){
+				mode8c[i]->scalePlasticity(scale);
+			}
 			break;
 		}
 	}
@@ -728,79 +964,91 @@ public:
 	*/
 	void addSpringConstraint(btAlignedObjectArray<btRigidBody*> ha,
 		btAlignedObjectArray<btTransform> ta){
-		btGeneric6DofSpringConstraint *sc =
-			new btGeneric6DofSpringConstraint(*ha[0], *ha[1],
-			ta[0], ta[1], true);
-		tc = sc;
-		sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
-		sc->setJointFeedback(&specimenJointFeedback);
-		btScalar b(w);
-		btScalar h(w - 0.002); // notch is 2 mm
-		btScalar I1(b*h*h*h / 12); // weaker
-		btScalar I2(h*b*b*b / 12); // stronger
-		btScalar k0(E*b*h / l / 2); // axial
-		btScalar k1(48 * E*I1 / l / l / l);
-		btScalar k2(48 * E*I2 / l / l / l);
-		w1 = fu*b*h*h / 4;
-		btScalar w2(fu*b*b*h / 4);
-		sc->setStiffness(0, k1);
-		sc->setStiffness(1, k2);
-		sc->setStiffness(2, k0);
-		sc->setStiffness(3, w2); 
-		sc->setStiffness(4, w1);
-		sc->setStiffness(5, (w1+w2)/2);
-		dw->addConstraint(sc, true);
-		for (int i = 0; i<6; i++)
-		{
-			sc->enableSpring(i, true);
+		int loopSize = ha.size() - 1;
+		for (int i = 0; i < loopSize; i++){
+			btScalar l4s = getLengthForStiffness(i);
+			btGeneric6DofSpringConstraint *sc =
+				new btGeneric6DofSpringConstraint(*ha[i], *ha[i+1],
+				ta[i], ta[i+1], true);
+			tc.push_back(sc);
+			sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
+			btJointFeedback jf;
+			specimenJointFeedback.push_back(&jf);
+			sc->setJointFeedback(&jf);
+			btScalar b(w);
+			btScalar h(w - 0.002); // notch is 2 mm
+			btScalar I1(b*h*h*h / 12); // weaker
+			btScalar I2(h*b*b*b / 12); // stronger
+			btScalar k0(E*b*h / l4s / 2); // axial
+			btScalar k1(48 * E*I1 / l4s / l4s / l4s);
+			btScalar k2(48 * E*I2 / l4s / l4s / l4s);
+			w1 = fu*b*h*h / 4;
+			btScalar w2(fu*b*b*h / 4);
+			sc->setStiffness(0, k1);
+			sc->setStiffness(1, k2);
+			sc->setStiffness(2, k0);
+			sc->setStiffness(3, w2);
+			sc->setStiffness(4, w1);
+			sc->setStiffness(5, (w1 + w2) / 2);
+			dw->addConstraint(sc, true);
+			for (int i = 0; i < 6; i++)
+			{
+				sc->enableSpring(i, true);
+			}
+			for (int i = 0; i < 6; i++)
+			{
+				sc->setDamping(i, damping);
+			}
+			sc->setEquilibriumPoint();
 		}
-		for (int i = 0; i<6; i++)
-		{
-			sc->setDamping(i, damping);
-		}
-		sc->setEquilibriumPoint();
 	}
 	/**
 	mode 4
 	*/
 	void addSpring2Constraint(btAlignedObjectArray<btRigidBody*> ha,
 		btAlignedObjectArray<btTransform> ta){
-		btGeneric6DofSpring2Constraint *sc =
-			new btGeneric6DofSpring2Constraint(*ha[0], *ha[1],
-			ta[0], ta[1]);
-		tc = sc;
-		sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
-		sc->setJointFeedback(&specimenJointFeedback);
-		btScalar b(w);
-		btScalar h(w - 0.002); // notch is 2 mm
-		btScalar I1(b*h*h*h / 12);
-		btScalar I2(h*b*b*b / 12);
-		btScalar k0(E*b*h / l / 2);
-		btScalar k1(48 * E*I1 / l / l / l);
-		btScalar k2(48 * E*I1 / l / l / l);
-		w1 = fu*b*h*h / 4;
-		btScalar w2(fu*b*b*h / 4);
-		sc->setStiffness(0, k1);
-		sc->setLimit(0, 0, 0);
-		sc->setStiffness(1, k2);
-		sc->setLimit(1, 0, 0);
-		sc->setStiffness(2, k0);
-		sc->setLimit(2, 0, 0);
-		sc->setStiffness(3, w2);
-		sc->setLimit(3, 0, 0);
-		sc->setStiffness(4, w1);
-		sc->setStiffness(5, (w1 + w2) / 2);
-		sc->setLimit(5, 0, 0);
-		dw->addConstraint(sc, true);
-		for (int i = 0; i<6; i++)
-		{
-			sc->enableSpring(i, true);
+		int loopSize = ha.size() - 1;
+		for (int i = 0; i < loopSize; i++){
+			btScalar l4s = getLengthForStiffness(i);
+			btGeneric6DofSpring2Constraint *sc =
+				new btGeneric6DofSpring2Constraint(*ha[i], *ha[i+1],
+				ta[i], ta[i+1]);
+			tc.push_back(sc);
+			sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
+			btJointFeedback jf;
+			specimenJointFeedback.push_back(&jf);
+			sc->setJointFeedback(&jf);
+			btScalar b(w);
+			btScalar h(w - 0.002); // notch is 2 mm
+			btScalar I1(b*h*h*h / 12);
+			btScalar I2(h*b*b*b / 12);
+			btScalar k0(E*b*h / l4s / 2);
+			btScalar k1(48 * E*I1 / l4s / l4s / l4s);
+			btScalar k2(48 * E*I1 / l4s / l4s / l4s);
+			w1 = fu*b*h*h / 4;
+			btScalar w2(fu*b*b*h / 4);
+			sc->setStiffness(0, k1);
+			sc->setLimit(0, 0, 0);
+			sc->setStiffness(1, k2);
+			sc->setLimit(1, 0, 0);
+			sc->setStiffness(2, k0);
+			sc->setLimit(2, 0, 0);
+			sc->setStiffness(3, w2);
+			sc->setLimit(3, 0, 0);
+			sc->setStiffness(4, w1);
+			sc->setStiffness(5, (w1 + w2) / 2);
+			sc->setLimit(5, 0, 0);
+			dw->addConstraint(sc, true);
+			for (int i = 0; i < 6; i++)
+			{
+				sc->enableSpring(i, true);
+			}
+			for (int i = 0; i < 6; i++)
+			{
+				sc->setDamping(i, damping);
+			}
+			sc->setEquilibriumPoint();
 		}
-		for (int i = 0; i<6; i++)
-		{
-			sc->setDamping(i, damping);
-		}
-		sc->setEquilibriumPoint();
 	}
 
 	/**
@@ -808,61 +1056,79 @@ public:
 	*/
 	void addFixedConstraint(btAlignedObjectArray<btRigidBody*> ha,
 		btAlignedObjectArray<btTransform> ta){
-		btGeneric6DofConstraint *sc =
-			new btGeneric6DofConstraint(*ha[0], *ha[1],
-			ta[0], ta[1], true);
-		tc = sc;
-		sc->setJointFeedback(&specimenJointFeedback);
-		sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
-		dw->addConstraint(sc, true);
-		for (int i = 0; i<6; i++){
-			sc->setLimit(i, 0, 0); // make fixed
+		int loopSize = ha.size() - 1;
+		for (int i = 0; i < loopSize; i++){
+			btGeneric6DofConstraint *sc =
+				new btGeneric6DofConstraint(*ha[i], *ha[i + 1],
+				ta[i], ta[i + 1], true);
+			tc.push_back(sc);
+			btJointFeedback jf;
+			specimenJointFeedback.push_back(&jf);
+			sc->setJointFeedback(&jf);
+			sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
+			dw->addConstraint(sc, true);
+			for (int i = 0; i < 6; i++){
+				sc->setLimit(i, 0, 0); // make fixed
+			}
 		}
 	}
 	/**
 	mode 5
 	*/
 	void addHingeConstraint(btAlignedObjectArray<btRigidBody*> ha){
-		btVector3 pivotAxis(btZero, btScalar(1), btZero);
-		btVector3 pivotInA(btZero, btZero, l / 4);
-		btVector3 pivotInB(btZero, btZero, -l / 4);
-		btHingeConstraint *sc =
-			new btHingeConstraint(*ha[0], *ha[1],
-			pivotInA, pivotInB, pivotAxis, pivotAxis, false);
-		tc = sc;
-		sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
-		mode5Hinge = sc;
-		tc = sc;
-		btScalar b(w);
-		btScalar h(w - 0.002); // notch is 2 mm
-		w1 = fu*b*h*h / 4;
-		sc->setJointFeedback(&specimenJointFeedback);
-		sc->setLimit(-SIMD_PI, SIMD_PI); // until parts are overturn
-		sc->enableAngularMotor(true, 0, w1*timeStep);
-		dw->addConstraint(sc, true);
+		int loopSize = ha.size() - 1;
+		for (int i = 0; i < loopSize; i++){
+			btScalar la = getHalfLength(i);
+			btScalar lb = getHalfLength(i + 1);
+			btVector3 pivotAxis(btZero, btScalar(1), btZero);
+			btVector3 pivotInA(btZero, btZero, la);
+			btVector3 pivotInB(btZero, btZero, -lb);
+			btHingeConstraint *sc =
+				new btHingeConstraint(*ha[i], *ha[i + 1],
+				pivotInA, pivotInB, pivotAxis, pivotAxis, false);
+			tc.push_back(sc);
+			sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
+			mode5Hinge.push_back(sc);
+			btScalar b(w);
+			btScalar h(w - 0.002); // notch is 2 mm
+			w1 = fu*b*h*h / 4;
+			btJointFeedback jf;
+			specimenJointFeedback.push_back(&jf);
+			sc->setJointFeedback(&jf);
+			sc->setLimit(-SIMD_PI, SIMD_PI); // until parts are overturn
+			sc->enableAngularMotor(true, 0, w1*timeStep);
+			dw->addConstraint(sc, true);
+		}
 	}
 
 	/*
 	mode 6
 	*/
 	void addPlasticHingeConstraint(btAlignedObjectArray<btRigidBody*> ha){
-		btVector3 pivotAxis(btZero, btScalar(1), btZero);
-		btVector3 pivotInA(btZero, btZero, l / 4);
-		btVector3 pivotInB(btZero, btZero, -l / 4);
-		btPlasticHingeConstraint *sc =
-			new btPlasticHingeConstraint(*ha[0], *ha[1],
-			pivotInA, pivotInB, pivotAxis, pivotAxis, false);
-		tc = sc;
-		mode6Hinge = sc;
-		mode6Hinge->setMaxPlasticRotation(maxPlasticRotation);
-		btScalar b(w);
-		btScalar h(w - 0.002); // notch is 2 mm
-		w1 = fu*b*h*h / 4;
-		sc->setJointFeedback(&specimenJointFeedback);
-		sc->setLimit(-SIMD_HALF_PI, SIMD_HALF_PI); // until parts are overturn
-		sc->setPlasticMoment(w1);
-		sc->setLimit(0, 0);
-		dw->addConstraint(sc, true);
+		int loopSize = ha.size() - 1;
+		for (int i = 0; i < loopSize; i++){
+			btScalar la = getHalfLength(i);
+			btScalar lb = getHalfLength(i+1);
+			btVector3 pivotAxis(btZero, btScalar(1), btZero);
+			btVector3 pivotInA(btZero, btZero, la);
+			btVector3 pivotInB(btZero, btZero, -lb);
+			btPlasticHingeConstraint *sc =
+				new btPlasticHingeConstraint(*ha[i], *ha[i + 1],
+				pivotInA, pivotInB, pivotAxis, pivotAxis, false);
+			tc.push_back(sc);
+			mode6Hinge.push_back(sc);
+			sc->setMaxPlasticRotation(maxPlasticRotation);
+			btScalar b(w);
+			btScalar h(w - 0.002); // notch is 2 mm
+			w1 = fu*b*h*h / 4;
+			btJointFeedback jf;
+			specimenJointFeedback.push_back(&jf);
+			sc->setJointFeedback(&jf);
+			sc->setLimit(-SIMD_HALF_PI, SIMD_HALF_PI); // until parts are overturn
+			sc->setPlasticMoment(w1);
+			sc->setLimit(0, 0);
+			dw->addConstraint(sc, true);
+		}
 	}
 
 	/*
@@ -870,47 +1136,53 @@ public:
 	*/
 	void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha,
 		btAlignedObjectArray<btTransform> ta){
-		bt6DofElasticPlasticConstraint *sc =
-			new bt6DofElasticPlasticConstraint(*ha[0], *ha[1],
-			ta[0], ta[1], true);
-		tc = sc;
-		mode7c = sc;
-		mode7c->setMaxPlasticRotation(maxPlasticRotation);
-		mode7c->setMaxPlasticStrain(w);
-		sc->setJointFeedback(&specimenJointFeedback);
-		btScalar b(w);
-		btScalar h(w - 0.002); // notch is 2 mm
-		btScalar I1(b*h*h*h / 12);
-		btScalar I2(h*b*b*b / 12);
-		btScalar It(0.14*b*h*h*h);
-		btScalar k0(E*b*h / l / 2);
-		btScalar k1(48 * E*I1 / l / l / l);
-		btScalar k2(48 * E*I2 / l / l / l);
-		w1 = fu*b*h*h / 4;
-		btScalar w2(fu*b*b*h / 4);
-		sc->setStiffness(2, k0);
-		sc->setMaxForce(2, fu*b*h);
-		sc->setStiffness(0, k1);
-		sc->setMaxForce(0, fu*b*h / 2);
-		sc->setStiffness(1, k2);
-		sc->setMaxForce(1, fu*b*h / 2);
-		sc->setStiffness(5, G*It / l); // not very exact
-		sc->setMaxForce(5, fu / 2 * It / (h / 2)); // not very exact
-		sc->setStiffness(4, 3 * E*I1 / l); // not very exact
-		sc->setMaxForce(4, w1);
-		sc->setStiffness(3, 3 * E*I2 / l); // not very exact
-		sc->setMaxForce(3, w2);
-		dw->addConstraint(sc, true);
-		for (int i = 0; i<6; i++)
-		{
-			sc->enableSpring(i, true);
+		int loopSize = ha.size() - 1;
+		for (int i = 0; i < loopSize; i++){
+			bt6DofElasticPlasticConstraint *sc =
+				new bt6DofElasticPlasticConstraint(*ha[i], *ha[i + 1],
+				ta[i], ta[i + 1], true);
+			btScalar l4s = getLengthForStiffness(i);
+			tc.push_back(sc);
+			mode7c.push_back(sc);
+			sc->setMaxPlasticRotation(maxPlasticRotation);
+			sc->setMaxPlasticStrain(w);
+			btJointFeedback jf;
+			specimenJointFeedback.push_back(&jf);
+			sc->setJointFeedback(&jf);
+			btScalar b(w);
+			btScalar h(w - 0.002); // notch is 2 mm
+			btScalar I1(b*h*h*h / 12);
+			btScalar I2(h*b*b*b / 12);
+			btScalar It(0.14*b*h*h*h);
+			btScalar k0(E*b*h / l4s / 2);
+			btScalar k1(48 * E*I1 / l4s / l4s / l4s);
+			btScalar k2(48 * E*I2 / l4s / l4s / l4s);
+			w1 = fu*b*h*h / 4;
+			btScalar w2(fu*b*b*h / 4);
+			sc->setStiffness(2, k0);
+			sc->setMaxForce(2, fu*b*h);
+			sc->setStiffness(0, k1);
+			sc->setMaxForce(0, fu*b*h / 2);
+			sc->setStiffness(1, k2);
+			sc->setMaxForce(1, fu*b*h / 2);
+			sc->setStiffness(5, G*It / l4s); // not very exact
+			sc->setMaxForce(5, fu / 2 * It / (h / 2)); // not very exact
+			sc->setStiffness(4, 3 * E*I1 / l4s); // not very exact
+			sc->setMaxForce(4, w1);
+			sc->setStiffness(3, 3 * E*I2 / l4s); // not very exact
+			sc->setMaxForce(3, w2);
+			dw->addConstraint(sc, true);
+			for (int i = 0; i < 6; i++)
+			{
+				sc->enableSpring(i, true);
+			}
+			for (int i = 0; i < 6; i++)
+			{
+				sc->setDamping(i, damping);
+			}
+			sc->setFrequencyRatio(frequencyRatio);
+			sc->setEquilibriumPoint();
 		}
-		for (int i = 0; i<6; i++)
-		{
-			sc->setDamping(i, damping);
-		}
-		sc->setFrequencyRatio(frequencyRatio);
-		sc->setEquilibriumPoint();
 	}
 
 	/**
@@ -918,60 +1190,231 @@ public:
 	*/
 	void addElasticPlastic2Constraint(btAlignedObjectArray<btRigidBody*> ha,
 		btAlignedObjectArray<btTransform> ta){
-		bt6DofElasticPlastic2Constraint *sc =
-			new bt6DofElasticPlastic2Constraint(*ha[0], *ha[1],
-			ta[0], ta[1]);
-		tc = sc;
-		mode8c = sc;
-		mode8c->setMaxPlasticRotation(maxPlasticRotation);
-		mode8c->setMaxPlasticStrain(w);
-		sc->setJointFeedback(&specimenJointFeedback);
-		btScalar b(w);
-		btScalar h(w - 0.002); // notch is 2 mm
-		btScalar I1(b*h*h*h / 12);
-		btScalar I2(h*b*b*b / 12);
-		btScalar It(0.14*b*h*h*h);
-		btScalar k0(E*b*h / l / 2);
-		btScalar k1(48 * E*I1 / l / l / l);
-		btScalar k2(48 * E*I2 / l / l / l);
-		w1 = fu*b*h*h / 4;
-		btScalar w2(fu*b*b*h / 4);
-		sc->setStiffness(2, k0);
-		sc->setMaxForce(2, fu*b*h);
-		sc->setStiffness(0, k1);
-		sc->setMaxForce(0, fu*b*h / 2);
-		sc->setStiffness(1, k2);
-		sc->setMaxForce(1, fu*b*h / 2);
-		sc->setStiffness(5, G*It / l); // not very exact
-		sc->setMaxForce(5, fu / 2 * It / (h / 2)); // not very exact
-		sc->setStiffness(4, 3 * E*I1 / l); // not very exact
-		sc->setMaxForce(4, w1);
-		sc->setStiffness(3, 3 * E*I2 / l); // not very exact
-		sc->setMaxForce(3, w2);
-// #define DEBUG_TOO_SOFT 1
-#if DEBUG_TOO_SOFT
-		sc->setStiffness(0, k1);
-		sc->setStiffness(1, k2);
-		sc->setStiffness(2, k0);
-		sc->setStiffness(3, w2);
-		sc->setStiffness(4, w1);
-		sc->setStiffness(5, (w1 + w2) / 2);
-		for (int i = 0; i < 6; i++)
-		{
-			sc->setMaxForce(i,SIMD_INFINITY);
+		int loopSize = ha.size() - 1;
+		for (int i = 0; i < loopSize; i++){
+			bt6DofElasticPlastic2Constraint *sc =
+				new bt6DofElasticPlastic2Constraint(*ha[i], *ha[i+1],
+				ta[i], ta[i+1]);
+			btScalar l4s = getLengthForStiffness(i);
+			tc.push_back(sc);
+			mode8c.push_back(sc);
+			sc->setMaxPlasticRotation(maxPlasticRotation);
+			sc->setMaxPlasticStrain(w);
+			btJointFeedback jf;
+			specimenJointFeedback.push_back(&jf);
+			sc->setJointFeedback(&jf);
+			btScalar b(w);
+			btScalar h(w - 0.002); // notch is 2 mm
+			btScalar I1(b*h*h*h / 12);
+			btScalar I2(h*b*b*b / 12);
+			btScalar It(0.14*b*h*h*h);
+			btScalar k0(E*b*h / l4s / 2);
+			btScalar k1(48 * E*I1 / l4s / l4s / l4s);
+			btScalar k2(48 * E*I2 / l4s / l4s / l4s);
+			w1 = fu*b*h*h / 4;
+			btScalar w2(fu*b*b*h / 4);
+			sc->setStiffness(2, k0);
+			sc->setMaxForce(2, fu*b*h);
+			sc->setStiffness(0, k1);
+			sc->setMaxForce(0, fu*b*h / 2);
+			sc->setStiffness(1, k2);
+			sc->setMaxForce(1, fu*b*h / 2);
+			sc->setStiffness(5, G*It / l4s); // not very exact
+			sc->setMaxForce(5, fu / 2 * It / (h / 2)); // not very exact
+			sc->setStiffness(4, 3 * E*I1 / l4s); // not very exact
+			sc->setMaxForce(4, w1);
+			sc->setStiffness(3, 3 * E*I2 / l4s); // not very exact
+			sc->setMaxForce(3, w2);
+			dw->addConstraint(sc, true);
+			for (int i = 0; i<6; i++)
+			{
+				sc->enableSpring(i, true);
+			}
+			for (int i = 0; i<6; i++)
+			{
+				sc->setDamping(i, damping);
+			}
+			sc->setEquilibriumPoint();
 		}
-#endif
-		// end of debug extra softness
-		dw->addConstraint(sc, true);
-		for (int i = 0; i<6; i++)
-		{
-			sc->enableSpring(i, true);
+	}
+	int getObjectCount(){
+		return (m_mode > 1 ? sCount * 2 : 1);
+	}
+	/**
+	*/
+	bool nearCenter(int centerParts, int partNumber){
+		if (m_mode == 1){
+			return false;
 		}
-		for (int i = 0; i<6; i++)
-		{
-			sc->setDamping(i, damping);
+		if (partNumber >= sCount){
+			partNumber = 2 * sCount - partNumber - 1;
 		}
-		sc->setEquilibriumPoint();
+		if (partNumber > sCount - centerParts -1){
+			return true;
+		}
+		return false;
+	}
+	// charpy specimen using sCount parts, 
+	// symmetrically around z=0
+	// bottom at y=0.2
+	// backside at x=0
+	void addSpecimenParts(){
+		btAlignedObjectArray<btRigidBody*> ha;
+		btAlignedObjectArray<btTransform> ta;
+		btVector3 localInertia(0, 0, 0);
+		// Only one object in mode 1
+		int objectCount = getObjectCount(); 
+		for (int i = 0; i<objectCount; i++)
+		{	
+			btScalar halfLength = getHalfLength(i);
+			btBoxShape* shape =
+				new btBoxShape(btVector3(w / 2, w / 2, halfLength));
+			btScalar sMass(w*w*halfLength*2.0f*7800.0f);
+			m_collisionShapes.push_back(shape);
+			shape->calculateLocalInertia(sMass, localInertia);
+			btTransform tr;
+			tr.setIdentity();
+			btVector3 pos = getPosition(i);
+			tr.setOrigin(pos);
+			btDefaultMotionState* myMotionState
+				= new btDefaultMotionState(tr);
+			btRigidBody::btRigidBodyConstructionInfo
+				rbInfo(sMass, myMotionState, shape, localInertia);
+			btRigidBody* body =
+				new btRigidBody(rbInfo);
+			tuneRestitution(body);
+			m_dynamicsWorld->addRigidBody(body);
+			ha.push_back(body);
+			btTransform ctr;
+			ctr.setIdentity();
+			btVector3 cpos(0, 0,
+				(m_mode>1 ? (i == 0 ? 1 : -1)*halfLength : 0));
+			ctr.setOrigin(cpos);
+			ta.push_back(ctr);
+		}
+		int middleIndex = (m_mode==1?0:sCount-1);
+		specimenBody = ha[middleIndex];
+		if (m_mode != 1){
+			specimenBody2 = ha[middleIndex+1];
+		}
+		switch (m_mode) {
+		case 2:
+			addSpringConstraint(ha, ta);
+			break;
+		case 3:
+			addFixedConstraint(ha, ta);
+			break;
+		case 4:
+			addSpring2Constraint(ha, ta);
+			break;
+		case 5:
+			addHingeConstraint(ha);
+			dw->setInternalTickCallback(mode5callback);
+			break;
+		case 6:
+			addPlasticHingeConstraint(ha);
+			dw->setInternalTickCallback(mode6callback);
+			break;
+		case 7:
+			addElasticPlasticConstraint(ha, ta);
+			dw->setInternalTickCallback(mode7callback);
+			break;
+		case 8:
+			addElasticPlastic2Constraint(ha, ta);
+			dw->setInternalTickCallback(mode8callback);
+			break;
+		}
+	}
+	// hammer with arm and hinge
+	// hammer is 0.5 m wide and 0.25 m high, thickness is 0.02
+	// hammer and hinge are positioned so that impact is horizontal 
+	// (global x-direction)
+	// hammer should be able to provide impact of about 500 J
+	// m*g*h=500
+	// m~500/2/10~25 kg
+	void addHammer(){
+		btCompoundShape* compound = new btCompoundShape();
+		btCollisionShape* hammer =
+			new btBoxShape(btVector3(0.25, 0.125, 0.01));
+		btScalar hMass = 0.5*0.25*0.02 * 7800;
+		btTransform hTr;
+		hTr.setIdentity();
+		// create hammer at y=0
+		compound->addChildShape(hTr, hammer);
+		btCollisionShape* arm =
+			new btBoxShape(btVector3(0.02, 0.5, 0.02));
+		btScalar aMass = 0.04*1.0*0.04 * 7800;
+		btTransform aTr;
+		aTr.setIdentity();
+		// arm above hammer
+		btVector3 aPos(btZero, btScalar(0.5 + 0.125), btZero);
+		aTr.setOrigin(aPos);
+		compound->addChildShape(aTr, arm);
+		btTransform cTr;
+		// move compound down so that axis-position
+		// corresponding to armPivot is at y=0
+		// rotate and then move back up and in
+		// x-direction so that at impact time hammer is in down position
+		// up so that center of hammer is about y=0.2
+		const btVector3 armPivot(btZero,
+			btScalar(1), btZero);
+		btVector3 cPos(btZero, btScalar(1.2), btZero);
+		btScalar xPos;
+		// tune for cases where angle is negative and hammer hits from
+		// opposite (negative) side
+		if (startAngle > 0){
+			xPos = btScalar(0.25 + w);
+		}
+		else{
+			xPos = btScalar(-0.25);
+		}
+		btVector3 lPos(xPos, btZero, btZero);
+		btTransform downTr;
+		btTransform upTr;
+		upTr.setIdentity();
+		upTr.setOrigin(cPos);
+		downTr.setIdentity();
+		downTr.setOrigin(btScalar(-1)*armPivot);
+		btQuaternion cRot;
+		btVector3 axis(btZero, btZero, btScalar(1));
+		cRot.setRotation(axis, btScalar(startAngle)); // pi means up
+		btTransform axTr;
+		axTr.setIdentity();
+		axTr.setOrigin(cPos + lPos);
+		//
+		btTransform leftTr;
+		leftTr.setIdentity();
+		leftTr.setOrigin(lPos);
+		// multiply transformations in reverse order
+		cTr.setIdentity();
+		cTr *= leftTr;
+		cTr *= upTr;
+		cTr *= btTransform(cRot);
+		cTr *= downTr;
+		btRigidBody *hBody = localCreateRigidBody(hMass + aMass, cTr, compound);
+		hammerBody = hBody;
+		tuneRestitution(hammerBody);
+		btVector3 aDims(btScalar(0.01), btScalar(0.01), btScalar(0.05));
+		btCollisionShape* axil =
+			new btCylinderShapeZ(aDims);
+		m_collisionShapes.push_back(axil);
+		btRigidBody *axilBody = localCreateRigidBody(btZero, axTr, axil);
+		const btVector3 axilPivot(btZero, btZero, btZero);
+		btVector3 pivotAxis(btZero, btZero, btScalar(1));
+		hammerHinge =
+			new btHingeConstraint(*hBody, *axilBody,
+			armPivot, axilPivot, pivotAxis, pivotAxis, false);
+		hammerHinge->setJointFeedback(&hammerHingeJointFeedback);
+		m_dynamicsWorld->addConstraint(hammerHinge, true);
+	}
+	bool isBroken(){
+		int loopSize = tc.size();
+		for (int i = 0; i < loopSize; i++){
+			if (!tc[i]->isEnabled()){
+				return true;
+			}
+		}
+		return false;
 	}
 };
 /* 
@@ -1045,135 +1488,6 @@ void toggleRigidBodyDataFile(){
 
 
 
-/**
-http://www.bulletphysics.org/mediawiki-1.5.8/index.php?title=Anti_tunneling_by_Motion_Clamping
-*/
-void resetCcdMotionThreshHold()
-{
-	btScalar radius(ccdMotionThreshHold/5.f);
-	for (int i=dw->getNumCollisionObjects()-1; i>=0 ;i--)
-	{
-		btCollisionObject* obj = dw->getCollisionObjectArray()[i];
-		btRigidBody* body = btRigidBody::upcast(obj);
-		if (body && body->getMotionState())
-		{
-			body->setCcdMotionThreshold(ccdMotionThreshHold);
-			body->setCcdSweptSphereRadius(radius);
-		}
-	}
-}
-float getRotationEnergy(btScalar invInertia, btScalar angularVelocity){
-	if (invInertia == 0){
-		return 0.f;
-	}
-	float inertia = 1.f / invInertia;
-	float e=0.5*inertia*angularVelocity*angularVelocity;
-	return e;
-}
-
-void updateEnergy(){
-	energy = 0;
-	btVector3 gravity = dw->getGravity();
-	const btCollisionObjectArray objects = dw->getCollisionObjectArray();
-	for (int i = 0; i<objects.capacity(); i++)
-	{
-		const btCollisionObject* o = objects[i];
-		const btRigidBody* ro = btRigidBody::upcast(o);
-		btScalar iM = ro->getInvMass();
-		if (iM == 0){
-			continue;
-		}
-		btVector3 v = ro->getLinearVelocity();
-		btScalar m = 1 / iM;
-		float linearEnergy = 0.5*m*v.length2();
-		btVector3 com = ro->getCenterOfMassPosition();
-		float gravitationalEnergy = -m*gravity.dot(com);
-		const btVector3 rv = ro->getAngularVelocity();
-		const btVector3 iI = ro->getInvInertiaDiagLocal();
-		float inertiaEnergy = 0;
-		inertiaEnergy += getRotationEnergy(iI.getX(), rv.getX());
-		inertiaEnergy += getRotationEnergy(iI.getY(), rv.getY());
-		inertiaEnergy += getRotationEnergy(iI.getZ(), rv.getZ());
-		energy += linearEnergy;
-		energy += inertiaEnergy;
-		energy += gravitationalEnergy;
-	}
-	if (energy > maxEnergy){
-		maxEnergy = energy;
-	}
-}
-
-void tuneRestitution(btRigidBody* rb){
-	rb->setRestitution(restitution);
-}
-
-void tuneMode5(){
-	// this is currently no-op if target speed is zero
-	mode5Hinge->setMaxMotorImpulse(w1*timeStep);
-}
-
-/**
-* tunes hammerSpeed
-* currently mostly no-op as moment is handled in btHingeConstraint.
-*/
-void tuneMode6(){
-	if (!mode6Hinge->isEnabled()){
-		return;
-	}
-	if (!hammerHitsSpecimen){
-		return;
-	}
-	btScalar applied = specimenJointFeedback.m_appliedTorqueBodyA[1];
-	btScalar capacity = mode6Hinge->getPlasticMoment();
-	if (applied >= capacity){
-		mode6Hinge->updateCurrentPlasticRotation();
-	}
-	return;
-	btScalar energyLoss = mode6Hinge->getAbsorbedEnergy();
-	if (energyLoss > 0){
-		btRigidBody* ro = hammerBody;
-		btScalar iM = ro->getInvMass();
-		btVector3 v = ro->getLinearVelocity();
-		btScalar m = 1 / iM;
-		float linearEnergy = 0.5*m*v.length2();
-		const btVector3 rv = ro->getAngularVelocity();
-		const btVector3 iI = ro->getInvInertiaDiagLocal();
-		float inertiaEnergy = 0;
-		float rx = getRotationEnergy(iI.getX(), rv.getX());
-		float ry = getRotationEnergy(iI.getY(), rv.getY());
-		float rz = getRotationEnergy(iI.getZ(), rv.getZ());
-		float currentEnergy = linearEnergy + rx + ry + rz;
-		float velMultiplier = 0;
-		if (currentEnergy > energyLoss){
-			velMultiplier = btSqrt(1 - (energyLoss / currentEnergy));
-		}
-		ro->setLinearVelocity(velMultiplier*ro->getLinearVelocity());
-		ro->setAngularVelocity(velMultiplier*ro->getAngularVelocity());
-	}
-
-}
-
-/*
-dw->setInternalTickCallback(mode#callback);
-*/
-void mode5callback(btDynamicsWorld *world, btScalar timeStep) {
-	tuneMode5();
-}
-void mode6callback(btDynamicsWorld *world, btScalar timeStep) {
-	tuneMode6();
-}
-void mode7callback(btDynamicsWorld *world, btScalar timeStep) {
-	if (!mode7c->isEnabled()){
-		return;
-	}
-	mode7c->updatePlasticity(specimenJointFeedback);
-}
-void mode8callback(btDynamicsWorld *world, btScalar timeStep) {
-	if (!mode8c->isEnabled()){
-		return;
-	}
-	mode8c->updatePlasticity(specimenJointFeedback);
-}
 
 btRigidBody* CharpyDemo::localCreateRigidBody(btScalar mass, const btTransform& startTransform, 
 	btCollisionShape* shape)
@@ -1264,162 +1578,8 @@ void	CharpyDemo::initPhysics()
 			tuneRestitution(rb);
 		}
 	}
-
-	// charpy specimen using two halfs, 
-	// symmetrically around z=0
-	// bottom at y=0.2
-	// backside at x=0
-	{
-		btScalar halfLength=l/4;
-		if(m_mode==1){
-			halfLength=l/2;
-		}
-		btScalar sMass(w*w*halfLength*2.0f*7800.0f);
-		btAlignedObjectArray<btRigidBody*> ha;
-		btAlignedObjectArray<btTransform> ta;
-		btBoxShape* shape = 
-			new btBoxShape(btVector3(w/2,w/2,halfLength));
-		m_collisionShapes.push_back(shape);
-		btVector3 localInertia(0,0,0);
-		shape->calculateLocalInertia(sMass,localInertia);
-		// Only one object in mode 1
-		for (int i=0;(m_mode>1?i<2:i<1);i++)
-		{	
-			btTransform tr;
-			tr.setIdentity();
-			btVector3 pos(w/2,0.2+w/2,
-				(m_mode>1?(i==0?-1:1)*halfLength:0.f));
-			tr.setOrigin(pos);
-			btDefaultMotionState* myMotionState 
-				= new btDefaultMotionState(tr);
-			btRigidBody::btRigidBodyConstructionInfo 
-				rbInfo(sMass,myMotionState,shape,localInertia);
-			btRigidBody* body =
-				new btRigidBody(rbInfo);
-			tuneRestitution(body);
-			m_dynamicsWorld->addRigidBody(body);
-			ha.push_back(body);
-			btTransform ctr;
-			ctr.setIdentity();
-			btVector3 cpos(0,0,
-				(m_mode>1?(i==0?1:-1)*halfLength:0));
-			ctr.setOrigin(cpos);
-			ta.push_back(ctr);
-		}
-		specimenBody = ha[0];
-		if (m_mode != 1){
-			specimenBody2 = ha[1];
-		}
-		switch(m_mode) {
-		case 2:
-			addSpringConstraint(ha,ta);
-			break;
-		case 3:
-			addFixedConstraint(ha,ta);
-			break;
-		case 4:
-			addSpring2Constraint(ha, ta);
-			break;
-		case 5:
-			addHingeConstraint(ha);
-			dw->setInternalTickCallback(mode5callback);
-			break;
-		case 6:
-			addPlasticHingeConstraint(ha);
-			dw->setInternalTickCallback(mode6callback);
-			break;
-		case 7:
-			addElasticPlasticConstraint(ha,ta);
-			dw->setInternalTickCallback(mode7callback);
-			break;
-		case 8:
-			addElasticPlastic2Constraint(ha,ta);
-			dw->setInternalTickCallback(mode8callback);
-			break;
-		}
-	}
-	// hammer with arm and hinge
-	// hammer is 0.5 m wide and 0.25 m high, thickness is 0.02
-	// hammer and hinge are positioned so that impact is horizontal 
-	// (global x-direction)
-	// hammer should be able to provide impact of about 500 J
-	// m*g*h=500
-	// m~500/2/10~25 kg
-	{
-		btCompoundShape* compound = new btCompoundShape();
-		btCollisionShape* hammer =
-			new btBoxShape(btVector3(0.25, 0.125, 0.01));
-		btScalar hMass = 0.5*0.25*0.02 * 7800;
-		btTransform hTr;
-		hTr.setIdentity();
-		// create hammer at y=0
-		compound->addChildShape(hTr, hammer);
-		btCollisionShape* arm =
-			new btBoxShape(btVector3(0.02, 0.5, 0.02));
-		btScalar aMass = 0.04*1.0*0.04 * 7800;
-		btTransform aTr;
-		aTr.setIdentity();
-		// arm above hammer
-		btVector3 aPos(btZero, btScalar(0.5 + 0.125), btZero);
-		aTr.setOrigin(aPos);
-		compound->addChildShape(aTr, arm);
-		btTransform cTr;
-		// move compound down so that axis-position
-		// corresponding to armPivot is at y=0
-		// rotate and then move back up and in
-		// x-direction so that at impact time hammer is in down position
-		// up so that center of hammer is about y=0.2
-		const btVector3 armPivot(btZero,
-			btScalar(1), btZero);
-		btVector3 cPos(btZero, btScalar(1.2), btZero);
-		btScalar xPos;
-		// tune for cases where angle is negative and hammer hits from
-		// opposite (negative) side
-		if (startAngle > 0){
-			xPos = btScalar(0.25 + w);
-		}
-		else{
-			xPos = btScalar(-0.25);
-		}
-		btVector3 lPos(xPos, btZero, btZero);
-		btTransform downTr;
-		btTransform upTr;
-		upTr.setIdentity();
-		upTr.setOrigin(cPos);
-		downTr.setIdentity();
-		downTr.setOrigin(btScalar(-1)*armPivot);
-		btQuaternion cRot;
-		btVector3 axis(btZero, btZero, btScalar(1));
-		cRot.setRotation(axis, btScalar(startAngle)); // pi means up
-		btTransform axTr;
-		axTr.setIdentity();
-		axTr.setOrigin(cPos + lPos);
-		//
-		btTransform leftTr;
-		leftTr.setIdentity();
-		leftTr.setOrigin(lPos);
-		// multiply transformations in reverse order
-		cTr.setIdentity();
-		cTr *= leftTr;
-		cTr *= upTr;
-		cTr *= btTransform(cRot);
-		cTr *= downTr;
-		btRigidBody *hBody = localCreateRigidBody(hMass + aMass, cTr, compound);
-		hammerBody = hBody;
-		tuneRestitution(hammerBody);
-		btVector3 aDims(btScalar(0.01),btScalar(0.01),btScalar(0.05));
-		btCollisionShape* axil = 
-		new btCylinderShapeZ(aDims);
-		m_collisionShapes.push_back(axil);
-		btRigidBody *axilBody=localCreateRigidBody(btZero,axTr,axil);
-		const btVector3 axilPivot(btZero,btZero,btZero);
-		btVector3 pivotAxis(btZero,btZero,btScalar(1)); 
-		hammerHinge=
-			new btHingeConstraint( *hBody,*axilBody, 
-			armPivot, axilPivot, pivotAxis,pivotAxis, false );
-		hammerHinge->setJointFeedback(&hammerHingeJointFeedback);
-		m_dynamicsWorld->addConstraint(hammerHinge, true);
-	}
+	addSpecimenParts();
+	addHammer();
 	resetCcdMotionThreshHold();
 	updateEnergy();
 	currentTime=0;
@@ -1450,13 +1610,13 @@ void updateMaxForces(int baseIndex, const btVector3 &v){
 }
 
 void addForces(char *buf, const btVector3 &v){
-	sprintf_s(buf,B_LEN, "Constraint forces:X/Y/Z %9.4f/%9.4f/%9.4f N",
+	sprintf_s(buf,B_LEN, "Constraint forces:X/Y/Z % 8.2g/% 8.2g/% 8.2g N",
 		v.m_floats[0], v.m_floats[1], v.m_floats[2]);
 	updateMaxForces(0,v);
 }
 
 void addMoments(char *buf, const btVector3 &v){
-	sprintf_s(buf,B_LEN, "Constraint moments:X/Y/Z %9.4f/%9.4f/%9.4f Nm",
+	sprintf_s(buf,B_LEN, "Constraint moments:X/Y/Z  % 8.2g/% 8.2g/% 8.2g Nm",
 		v.m_floats[0], v.m_floats[1], v.m_floats[2]);
 	updateMaxForces(3, v);
 }
@@ -1526,14 +1686,17 @@ void CharpyDemo::showMessage()
 		return;
 	}
 	pData.clear();
+	int ci = sCount - 1; // constraint index for e.g. feedback in the middle
 	char buf[B_LEN];
 	sprintf_s(buf, B_LEN, "energy:max/current/loss %9.3g/%9.3g/%9.3g J", 
 		maxEnergy,energy,maxEnergy-energy);
 	infoMsg(buf);
-	addForces(buf, specimenJointFeedback.m_appliedForceBodyA);
-	infoMsg(buf);
-	addMoments(buf, specimenJointFeedback.m_appliedTorqueBodyA);
-	infoMsg(buf);
+	if (sCount == 1){
+		addForces(buf, specimenJointFeedback[sCount-1]->m_appliedForceBodyA);
+		infoMsg(buf);
+		addMoments(buf, specimenJointFeedback[sCount-1]->m_appliedTorqueBodyA);
+		infoMsg(buf);
+	}
 	sprintf_s(buf,B_LEN, "minCollisionDistance: simulation/step % 1.3f/% 1.3f",
 		minCollisionDistance, minCurrentCollisionDistance);
 	infoMsg(buf);
@@ -1541,7 +1704,7 @@ void CharpyDemo::showMessage()
 	infoMsg(buf);
 	if (m_mode == 5){
 		sprintf_s(buf,B_LEN, "hingeAngle=% 2.3f",
-			btFabs(mode5Hinge->getHingeAngle()));
+			btFabs(mode5Hinge[ci]->getHingeAngle()));
 		infoMsg(buf);
 	}
 	switch (m_mode){
@@ -1550,28 +1713,28 @@ void CharpyDemo::showMessage()
 	case 6:
 		sprintf_s(buf,B_LEN, "^a/^A to change mpr, "
 			"mpr=%1.3f, cpr=%1.3f, ha=%1.3f",
-			mode6Hinge->getMaxPlasticRotation(),
-			mode6Hinge->getCurrentPlasticRotation(),
-			btFabs(mode6Hinge->getHingeAngle()));
+			mode6Hinge[ci]->getMaxPlasticRotation(),
+			mode6Hinge[ci]->getCurrentPlasticRotation(),
+			btFabs(mode6Hinge[ci]->getHingeAngle()));
 		infoMsg(buf);
 		break;
 	case 7:
 		sprintf_s(buf,B_LEN, "^a/^A for mpr, "
 			"mpr=%1.3f, cpr=%1.3f, mps=%1.3f, cps=%1.3f",
-			mode7c->getMaxPlasticRotation(),
-			mode7c->getCurrentPlasticRotation(),
-			mode7c->getMaxPlasticStrain(),
-			mode7c->getCurrentPlasticStrain()
+			mode7c[ci]->getMaxPlasticRotation(),
+			mode7c[ci]->getCurrentPlasticRotation(),
+			mode7c[ci]->getMaxPlasticStrain(),
+			mode7c[ci]->getCurrentPlasticStrain()
 			);
 		infoMsg(buf);
 		break;
 	case 8:
 		sprintf_s(buf, B_LEN, "^a/^A for mpr, "
 			"mpr=%1.3f, cpr=%1.3f, mps=%1.3f, cps=%1.3f",
-			mode8c->getMaxPlasticRotation(),
-			mode8c->getCurrentPlasticRotation(),
-			mode8c->getMaxPlasticStrain(),
-			mode8c->getCurrentPlasticStrain()
+			mode8c[ci]->getMaxPlasticRotation(),
+			mode8c[ci]->getCurrentPlasticRotation(),
+			mode8c[ci]->getMaxPlasticStrain(),
+			mode8c[ci]->getCurrentPlasticStrain()
 			);
 		infoMsg(buf);
 		break;
@@ -1587,7 +1750,7 @@ void CharpyDemo::showMessage()
 		break;
 	default:
 		sprintf_s(buf,B_LEN, "%sbroken",
-			(tc->isEnabled()?"un":""));
+			(isBroken()?"un":""));
 		infoMsg(buf);
 		break;
 	}
@@ -1709,6 +1872,7 @@ void reinit(){
 	restitution = initialRestitution;
 	maxPlasticRotation = initialMaxPlasticRotation;
 	solverType = initialSolverType;
+	sCount = initialSCount;
 	E = initialE;
 	initG();
 	fu = initialFu;
@@ -2138,6 +2302,12 @@ void	CharpyDemo::exitPhysics()
 
 	delete basePoint;
 	basePoint = 0;
+	specimenJointFeedback.clear();
+	mode5Hinge.clear();
+	mode6Hinge.clear();
+	mode7c.clear();
+	mode8c.clear();
+	tc.clear();
 }
 CommonExampleInterface*    CharpyDemoF1CreateFunc(CommonExampleOptions& options)
 {
