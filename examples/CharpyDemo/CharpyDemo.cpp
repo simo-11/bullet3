@@ -959,17 +959,30 @@ public:
 			break;
 		}
 	}
+	btTransform getTr(int i, btScalar scaleZ){
+		btScalar halfLength = getHalfLength(i);
+		btTransform ctr;
+		ctr.setIdentity();
+		btVector3 cpos(0, 0,scaleZ*halfLength);
+		ctr.setOrigin(cpos);
+		return ctr;
+	}
+	btTransform getTa(int i){
+		return getTr(i, btScalar(1));
+	}
+	btTransform getTb(int i){
+		return getTr(i + 1,btScalar(-1));
+	}
 	/**
 	mode 2
 	*/
-	void addSpringConstraint(btAlignedObjectArray<btRigidBody*> ha,
-		btAlignedObjectArray<btTransform> ta){
+	void addSpringConstraint(btAlignedObjectArray<btRigidBody*> ha){
 		int loopSize = ha.size() - 1;
 		for (int i = 0; i < loopSize; i++){
 			btScalar l4s = getLengthForStiffness(i);
 			btGeneric6DofSpringConstraint *sc =
 				new btGeneric6DofSpringConstraint(*ha[i], *ha[i+1],
-				ta[i], ta[i+1], true);
+				getTa(i), getTb(i), true);
 			tc.push_back(sc);
 			sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
 			btJointFeedback jf;
@@ -1005,14 +1018,13 @@ public:
 	/**
 	mode 4
 	*/
-	void addSpring2Constraint(btAlignedObjectArray<btRigidBody*> ha,
-		btAlignedObjectArray<btTransform> ta){
+	void addSpring2Constraint(btAlignedObjectArray<btRigidBody*> ha){
 		int loopSize = ha.size() - 1;
 		for (int i = 0; i < loopSize; i++){
 			btScalar l4s = getLengthForStiffness(i);
 			btGeneric6DofSpring2Constraint *sc =
 				new btGeneric6DofSpring2Constraint(*ha[i], *ha[i+1],
-				ta[i], ta[i+1]);
+				getTa(i), getTb(i));
 			tc.push_back(sc);
 			sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
 			btJointFeedback jf;
@@ -1054,13 +1066,12 @@ public:
 	/**
 	mode 3
 	*/
-	void addFixedConstraint(btAlignedObjectArray<btRigidBody*> ha,
-		btAlignedObjectArray<btTransform> ta){
+	void addFixedConstraint(btAlignedObjectArray<btRigidBody*> ha){
 		int loopSize = ha.size() - 1;
 		for (int i = 0; i < loopSize; i++){
 			btGeneric6DofConstraint *sc =
 				new btGeneric6DofConstraint(*ha[i], *ha[i + 1],
-				ta[i], ta[i + 1], true);
+				getTa(i), getTb(i),true);
 			tc.push_back(sc);
 			btJointFeedback jf;
 			specimenJointFeedback.push_back(&jf);
@@ -1134,13 +1145,12 @@ public:
 	/*
 	Mode 7
 	*/
-	void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha,
-		btAlignedObjectArray<btTransform> ta){
+	void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha){
 		int loopSize = ha.size() - 1;
 		for (int i = 0; i < loopSize; i++){
 			bt6DofElasticPlasticConstraint *sc =
 				new bt6DofElasticPlasticConstraint(*ha[i], *ha[i + 1],
-				ta[i], ta[i + 1], true);
+				getTa(i), getTb(i), true);
 			btScalar l4s = getLengthForStiffness(i);
 			tc.push_back(sc);
 			mode7c.push_back(sc);
@@ -1188,13 +1198,12 @@ public:
 	/**
 	mode 8
 	*/
-	void addElasticPlastic2Constraint(btAlignedObjectArray<btRigidBody*> ha,
-		btAlignedObjectArray<btTransform> ta){
+	void addElasticPlastic2Constraint(btAlignedObjectArray<btRigidBody*> ha){
 		int loopSize = ha.size() - 1;
 		for (int i = 0; i < loopSize; i++){
 			bt6DofElasticPlastic2Constraint *sc =
 				new bt6DofElasticPlastic2Constraint(*ha[i], *ha[i+1],
-				ta[i], ta[i+1]);
+				getTa(i), getTb(i));
 			btScalar l4s = getLengthForStiffness(i);
 			tc.push_back(sc);
 			mode8c.push_back(sc);
@@ -1285,12 +1294,6 @@ public:
 			tuneRestitution(body);
 			m_dynamicsWorld->addRigidBody(body);
 			ha.push_back(body);
-			btTransform ctr;
-			ctr.setIdentity();
-			btVector3 cpos(0, 0,
-				(m_mode>1 ? (i == 0 ? 1 : -1)*halfLength : 0));
-			ctr.setOrigin(cpos);
-			ta.push_back(ctr);
 		}
 		int middleIndex = (m_mode==1?0:sCount-1);
 		specimenBody = ha[middleIndex];
@@ -1299,13 +1302,13 @@ public:
 		}
 		switch (m_mode) {
 		case 2:
-			addSpringConstraint(ha, ta);
+			addSpringConstraint(ha);
 			break;
 		case 3:
-			addFixedConstraint(ha, ta);
+			addFixedConstraint(ha);
 			break;
 		case 4:
-			addSpring2Constraint(ha, ta);
+			addSpring2Constraint(ha);
 			break;
 		case 5:
 			addHingeConstraint(ha);
@@ -1316,11 +1319,11 @@ public:
 			dw->setInternalTickCallback(mode6callback);
 			break;
 		case 7:
-			addElasticPlasticConstraint(ha, ta);
+			addElasticPlasticConstraint(ha);
 			dw->setInternalTickCallback(mode7callback);
 			break;
 		case 8:
-			addElasticPlastic2Constraint(ha, ta);
+			addElasticPlastic2Constraint(ha);
 			dw->setInternalTickCallback(mode8callback);
 			break;
 		}
@@ -1691,12 +1694,10 @@ void CharpyDemo::showMessage()
 	sprintf_s(buf, B_LEN, "energy:max/current/loss %9.3g/%9.3g/%9.3g J", 
 		maxEnergy,energy,maxEnergy-energy);
 	infoMsg(buf);
-	if (sCount == 1){
-		addForces(buf, specimenJointFeedback[sCount-1]->m_appliedForceBodyA);
-		infoMsg(buf);
-		addMoments(buf, specimenJointFeedback[sCount-1]->m_appliedTorqueBodyA);
-		infoMsg(buf);
-	}
+	addForces(buf, specimenJointFeedback[ci]->m_appliedForceBodyA);
+	infoMsg(buf);
+	addMoments(buf, specimenJointFeedback[ci]->m_appliedTorqueBodyA);
+	infoMsg(buf);
 	sprintf_s(buf,B_LEN, "minCollisionDistance: simulation/step % 1.3f/% 1.3f",
 		minCollisionDistance, minCurrentCollisionDistance);
 	infoMsg(buf);
@@ -1750,7 +1751,7 @@ void CharpyDemo::showMessage()
 		break;
 	default:
 		sprintf_s(buf,B_LEN, "%sbroken",
-			(isBroken()?"un":""));
+			(isBroken()?"":"un"));
 		infoMsg(buf);
 		break;
 	}
