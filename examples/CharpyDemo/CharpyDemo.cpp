@@ -985,9 +985,9 @@ public:
 				getTa(i), getTb(i), true);
 			tc.push_back(sc);
 			sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
-			btJointFeedback jf;
-			specimenJointFeedback.push_back(&jf);
-			sc->setJointFeedback(&jf);
+			btJointFeedback* jf = new btJointFeedback();
+			specimenJointFeedback.push_back(jf);
+			sc->setJointFeedback(jf);
 			btScalar b(w);
 			btScalar h(w - 0.002); // notch is 2 mm
 			btScalar I1(b*h*h*h / 12); // weaker
@@ -1016,6 +1016,26 @@ public:
 		}
 	}
 	/**
+	mode 3
+	*/
+	void addFixedConstraint(btAlignedObjectArray<btRigidBody*> ha){
+		int loopSize = ha.size() - 1;
+		for (int i = 0; i < loopSize; i++){
+			btGeneric6DofConstraint *sc =
+				new btGeneric6DofConstraint(*ha[i], *ha[i + 1],
+				getTa(i), getTb(i), true);
+			tc.push_back(sc);
+			btJointFeedback* jf = new btJointFeedback();
+			specimenJointFeedback.push_back(jf);
+			sc->setJointFeedback(jf);
+			sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
+			dw->addConstraint(sc, true);
+			for (int i = 0; i < 6; i++){
+				sc->setLimit(i, 0, 0); // make fixed
+			}
+		}
+	}
+	/**
 	mode 4
 	*/
 	void addSpring2Constraint(btAlignedObjectArray<btRigidBody*> ha){
@@ -1027,9 +1047,9 @@ public:
 				getTa(i), getTb(i));
 			tc.push_back(sc);
 			sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
-			btJointFeedback jf;
-			specimenJointFeedback.push_back(&jf);
-			sc->setJointFeedback(&jf);
+			btJointFeedback* jf = new btJointFeedback();
+			specimenJointFeedback.push_back(jf);
+			sc->setJointFeedback(jf);
 			btScalar b(w);
 			btScalar h(w - 0.002); // notch is 2 mm
 			btScalar I1(b*h*h*h / 12);
@@ -1064,26 +1084,6 @@ public:
 	}
 
 	/**
-	mode 3
-	*/
-	void addFixedConstraint(btAlignedObjectArray<btRigidBody*> ha){
-		int loopSize = ha.size() - 1;
-		for (int i = 0; i < loopSize; i++){
-			btGeneric6DofConstraint *sc =
-				new btGeneric6DofConstraint(*ha[i], *ha[i + 1],
-				getTa(i), getTb(i),true);
-			tc.push_back(sc);
-			btJointFeedback jf;
-			specimenJointFeedback.push_back(&jf);
-			sc->setJointFeedback(&jf);
-			sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
-			dw->addConstraint(sc, true);
-			for (int i = 0; i < 6; i++){
-				sc->setLimit(i, 0, 0); // make fixed
-			}
-		}
-	}
-	/**
 	mode 5
 	*/
 	void addHingeConstraint(btAlignedObjectArray<btRigidBody*> ha){
@@ -1103,9 +1103,9 @@ public:
 			btScalar b(w);
 			btScalar h(w - 0.002); // notch is 2 mm
 			w1 = fu*b*h*h / 4;
-			btJointFeedback jf;
-			specimenJointFeedback.push_back(&jf);
-			sc->setJointFeedback(&jf);
+			btJointFeedback* jf = new btJointFeedback();
+			specimenJointFeedback.push_back(jf);
+			sc->setJointFeedback(jf);
 			sc->setLimit(-SIMD_PI, SIMD_PI); // until parts are overturn
 			sc->enableAngularMotor(true, 0, w1*timeStep);
 			dw->addConstraint(sc, true);
@@ -1132,9 +1132,9 @@ public:
 			btScalar b(w);
 			btScalar h(w - 0.002); // notch is 2 mm
 			w1 = fu*b*h*h / 4;
-			btJointFeedback jf;
-			specimenJointFeedback.push_back(&jf);
-			sc->setJointFeedback(&jf);
+			btJointFeedback* jf=new btJointFeedback();
+			specimenJointFeedback.push_back(jf);
+			sc->setJointFeedback(jf);
 			sc->setLimit(-SIMD_HALF_PI, SIMD_HALF_PI); // until parts are overturn
 			sc->setPlasticMoment(w1);
 			sc->setLimit(0, 0);
@@ -1156,9 +1156,9 @@ public:
 			mode7c.push_back(sc);
 			sc->setMaxPlasticRotation(maxPlasticRotation);
 			sc->setMaxPlasticStrain(w);
-			btJointFeedback jf;
-			specimenJointFeedback.push_back(&jf);
-			sc->setJointFeedback(&jf);
+			btJointFeedback* jf = new btJointFeedback();
+			specimenJointFeedback.push_back(jf);
+			sc->setJointFeedback(jf);
 			btScalar b(w);
 			btScalar h(w - 0.002); // notch is 2 mm
 			btScalar I1(b*h*h*h / 12);
@@ -1209,9 +1209,9 @@ public:
 			mode8c.push_back(sc);
 			sc->setMaxPlasticRotation(maxPlasticRotation);
 			sc->setMaxPlasticStrain(w);
-			btJointFeedback jf;
-			specimenJointFeedback.push_back(&jf);
-			sc->setJointFeedback(&jf);
+			btJointFeedback* jf = new btJointFeedback();
+			specimenJointFeedback.push_back(jf);
+			sc->setJointFeedback(jf);
 			btScalar b(w);
 			btScalar h(w - 0.002); // notch is 2 mm
 			btScalar I1(b*h*h*h / 12);
@@ -2303,6 +2303,11 @@ void	CharpyDemo::exitPhysics()
 
 	delete basePoint;
 	basePoint = 0;
+	for (int j = 0; j<specimenJointFeedback.size(); j++)
+	{
+		btJointFeedback* jf = specimenJointFeedback[j];
+		delete jf;
+	}
 	specimenJointFeedback.clear();
 	mode5Hinge.clear();
 	mode6Hinge.clear();
