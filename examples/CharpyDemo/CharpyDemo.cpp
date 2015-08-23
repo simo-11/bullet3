@@ -85,6 +85,8 @@ btScalar btOne(1);
 /** how may parts in half specimen */
 int initialSCount = 1;
 int sCount = initialSCount;
+btScalar initialNotchSize(0.002);
+btScalar notchSize(initialNotchSize);
 btScalar initialL(0.055);
 btScalar l(initialL);
 btScalar initialW(0.01);
@@ -108,6 +110,7 @@ btHingeConstraint *hammerHinge;
 btJointFeedback hammerHingeJointFeedback;
 btAlignedObjectArray<btJointFeedback*> specimenJointFeedback;
 btAlignedObjectArray<btHingeConstraint *>mode5Hinge;
+btAlignedObjectArray<btScalar *>mode5HingeW1s;
 btAlignedObjectArray<btPlasticHingeConstraint *>mode6Hinge;
 btAlignedObjectArray<bt6DofElasticPlasticConstraint *>mode7c;
 btAlignedObjectArray<bt6DofElasticPlastic2Constraint *>mode8c;
@@ -117,7 +120,6 @@ btScalar initialMaxPlasticRotation(3.);
 btScalar maxPlasticRotation(initialMaxPlasticRotation);
 btAlignedObjectArray<btTypedConstraint*>tc; // points to specimen constraints
 btScalar breakingImpulseThreshold = 0;
-btScalar w1;
 float maxForces[6];
 FILE *fp;
 bool openGraphFile = false;
@@ -306,7 +308,8 @@ void tuneRestitution(btRigidBody* rb){
 void tuneMode5(){
 	// this is currently no-op if target speed is zero
 	for (int i = 0; i < mode5Hinge.size(); i++){
-		mode5Hinge[i]->setMaxMotorImpulse(w1*timeStep);
+		btScalar* w1 = mode5HingeW1s[i];
+		mode5Hinge[i]->setMaxMotorImpulse((*w1)*timeStep);
 	}
 }
 
@@ -928,7 +931,7 @@ public:
 	*/
 	btScalar getBreakingImpulseThreshold(){
 		btScalar b(w);
-		btScalar h(w - 0.002); // notch is 2 mm
+		btScalar h(w - notchSize); // notch is 2 mm
 		btScalar w1(fu*b*h*h / 4);
 		btScalar M(w1*maxPlasticRotation);
 		btScalar v(60); // m/s but no known physical meaning
@@ -973,6 +976,22 @@ public:
 	btTransform getTb(int i){
 		return getTr(i + 1,btScalar(-1));
 	}
+	bool isNotch(int objectNumber){
+		if (objectNumber == sCount - 1){
+			return true;
+		}
+		return false;
+	}
+	btScalar getH(int i){
+		btScalar h;
+		if (isNotch(i)){
+			h = btScalar(w - notchSize);
+		}
+		else{
+			h = w;
+		}
+		return h;
+	}
 	/**
 	mode 2
 	*/
@@ -989,13 +1008,13 @@ public:
 			specimenJointFeedback.push_back(jf);
 			sc->setJointFeedback(jf);
 			btScalar b(w);
-			btScalar h(w - 0.002); // notch is 2 mm
+			btScalar h=getH(i);
 			btScalar I1(b*h*h*h / 12); // weaker
 			btScalar I2(h*b*b*b / 12); // stronger
 			btScalar k0(E*b*h / l4s / 2); // axial
 			btScalar k1(48 * E*I1 / l4s / l4s / l4s);
 			btScalar k2(48 * E*I2 / l4s / l4s / l4s);
-			w1 = fu*b*h*h / 4;
+			btScalar w1 = fu*b*h*h / 4;
 			btScalar w2(fu*b*b*h / 4);
 			sc->setStiffness(0, k1);
 			sc->setStiffness(1, k2);
@@ -1051,13 +1070,13 @@ public:
 			specimenJointFeedback.push_back(jf);
 			sc->setJointFeedback(jf);
 			btScalar b(w);
-			btScalar h(w - 0.002); // notch is 2 mm
+			btScalar h = getH(i);
 			btScalar I1(b*h*h*h / 12);
 			btScalar I2(h*b*b*b / 12);
 			btScalar k0(E*b*h / l4s / 2);
 			btScalar k1(48 * E*I1 / l4s / l4s / l4s);
 			btScalar k2(48 * E*I1 / l4s / l4s / l4s);
-			w1 = fu*b*h*h / 4;
+			btScalar w1 = fu*b*h*h / 4;
 			btScalar w2(fu*b*b*h / 4);
 			sc->setStiffness(0, k1);
 			sc->setLimit(0, 0, 0);
@@ -1101,8 +1120,9 @@ public:
 			sc->setBreakingImpulseThreshold(getBreakingImpulseThreshold());
 			mode5Hinge.push_back(sc);
 			btScalar b(w);
-			btScalar h(w - 0.002); // notch is 2 mm
-			w1 = fu*b*h*h / 4;
+			btScalar h=getH(i);
+			btScalar w1 = fu*b*h*h / 4;
+			mode5HingeW1s.push_back(new btScalar(w1));
 			btJointFeedback* jf = new btJointFeedback();
 			specimenJointFeedback.push_back(jf);
 			sc->setJointFeedback(jf);
@@ -1130,8 +1150,8 @@ public:
 			mode6Hinge.push_back(sc);
 			sc->setMaxPlasticRotation(maxPlasticRotation);
 			btScalar b(w);
-			btScalar h(w - 0.002); // notch is 2 mm
-			w1 = fu*b*h*h / 4;
+			btScalar h=getH(i);
+			btScalar w1 = fu*b*h*h / 4;
 			btJointFeedback* jf=new btJointFeedback();
 			specimenJointFeedback.push_back(jf);
 			sc->setJointFeedback(jf);
@@ -1160,14 +1180,14 @@ public:
 			specimenJointFeedback.push_back(jf);
 			sc->setJointFeedback(jf);
 			btScalar b(w);
-			btScalar h(w - 0.002); // notch is 2 mm
+			btScalar h=getH(i);
 			btScalar I1(b*h*h*h / 12);
 			btScalar I2(h*b*b*b / 12);
 			btScalar It(0.14*b*h*h*h);
 			btScalar k0(E*b*h / l4s / 2);
 			btScalar k1(48 * E*I1 / l4s / l4s / l4s);
 			btScalar k2(48 * E*I2 / l4s / l4s / l4s);
-			w1 = fu*b*h*h / 4;
+			btScalar w1 = fu*b*h*h / 4;
 			btScalar w2(fu*b*b*h / 4);
 			sc->setStiffness(2, k0);
 			sc->setMaxForce(2, fu*b*h);
@@ -1213,14 +1233,14 @@ public:
 			specimenJointFeedback.push_back(jf);
 			sc->setJointFeedback(jf);
 			btScalar b(w);
-			btScalar h(w - 0.002); // notch is 2 mm
+			btScalar h = getH(i);
 			btScalar I1(b*h*h*h / 12);
 			btScalar I2(h*b*b*b / 12);
 			btScalar It(0.14*b*h*h*h);
 			btScalar k0(E*b*h / l4s / 2);
 			btScalar k1(48 * E*I1 / l4s / l4s / l4s);
 			btScalar k2(48 * E*I2 / l4s / l4s / l4s);
-			w1 = fu*b*h*h / 4;
+			btScalar w1 = fu*b*h*h / 4;
 			btScalar w2(fu*b*b*h / 4);
 			sc->setStiffness(2, k0);
 			sc->setMaxForce(2, fu*b*h);
@@ -1879,6 +1899,7 @@ void reinit(){
 	fu = initialFu;
 	l = initialL;
 	w = initialW;
+	notchSize = initialNotchSize;
 	frequencyRatio = initialFrequencyRatio;
 	damping = initialDamping;
 	firstRun = true;
@@ -2309,6 +2330,12 @@ void	CharpyDemo::exitPhysics()
 		delete jf;
 	}
 	specimenJointFeedback.clear();
+	for (int j = 0; j<mode5HingeW1s.size(); j++)
+	{
+		btScalar* f = mode5HingeW1s[j];
+		delete f;
+	}
+	mode5HingeW1s.clear();
 	mode5Hinge.clear();
 	mode6Hinge.clear();
 	mode7c.clear();
