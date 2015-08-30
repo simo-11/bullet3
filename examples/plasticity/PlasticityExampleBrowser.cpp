@@ -593,7 +593,7 @@ bool PlasticityExampleBrowser::init(int argc, char* argv[])
     {
 		char title[BLEN];
 		sprintf_s(title,BLEN, "%s using OpenGL3+. %s %s", appTitle,optMode,buf);
-        simpleApp = new SimpleOpenGL3App(title,width,height);
+        simpleApp = new SimpleOpenGL3App(title,width,height,true);
         s_app = simpleApp;
     }
 #endif
