@@ -159,12 +159,14 @@ if not _OPTIONS["ios"] then
 
 	include "../examples/ExampleBrowser"
 	include "../examples/OpenGLWindow"
-	include "../examples/SharedMemory"	
+	include "../examples/SharedMemory"
+	include "../examples/MultiThreading"
 	include "../examples/ThirdPartyLibs/Gwen"
 	include "../Extras"
 
 	include "../examples/HelloWorld"
 	include "../examples/BasicDemo"
+	include "../test/SharedMemory"
 	
 	if _OPTIONS["enet"] then
 		include "../examples/ThirdPartyLibs/enet"

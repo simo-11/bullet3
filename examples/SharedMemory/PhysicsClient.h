@@ -2,9 +2,9 @@
 #define BT_PHYSICS_CLIENT_API_H
 
 #include "SharedMemoryCommands.h"
+#include "LinearMath/btVector3.h"
 
-
-class PhysicsClientSharedMemory  //: public CommonPhysicsClientInterface
+class PhysicsClientSharedMemory 
 {
 	struct PhysicsClientSharedMemoryInternalData*	m_data;
 protected:
@@ -15,7 +15,9 @@ public:
 	virtual ~PhysicsClientSharedMemory();
 
 	//return true if connection succesfull, can also check 'isConnected'
-	virtual bool	connect(bool allowSharedMemoryInitialization = true);
+	virtual bool	connect();
+    
+    virtual void disconnectSharedMemory ();
 
 	virtual bool	isConnected() const;
 
@@ -26,10 +28,20 @@ public:
 	
 	virtual bool	submitClientCommand(const SharedMemoryCommand& command);
 
-	virtual int		getNumPoweredJoints() const;
+	virtual int		getNumJoints() const;
 	
-	virtual void	getPoweredJointInfo(int index, PoweredJointInfo& info) const;
+	virtual void	getJointInfo(int index, b3JointInfo& info) const;
 	
+	virtual void setSharedMemoryKey(int key);
+
+	virtual void	uploadBulletFileToSharedMemory(const char* data, int len);
+
+	virtual int	getNumDebugLines() const;
+
+	virtual const btVector3* getDebugLinesFrom() const;
+	virtual const btVector3* getDebugLinesTo() const;
+	virtual const btVector3* getDebugLinesColor() const;
+
 };
 
 #endif //BT_PHYSICS_CLIENT_API_H

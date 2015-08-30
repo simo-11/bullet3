@@ -112,7 +112,7 @@ static GLuint BindFont(const CTexFont *_Font)
 
 extern unsigned char OpenSansData[];
 
-SimpleOpenGL3App::SimpleOpenGL3App(	const char* title, int width,int height)
+SimpleOpenGL3App::SimpleOpenGL3App(	const char* title, int width,int height, bool allowRetina)
 {
 	gApp = this;
 	m_data = new SimpleInternalData;
@@ -123,6 +123,8 @@ SimpleOpenGL3App::SimpleOpenGL3App(	const char* title, int width,int height)
 	m_data->m_upAxis = 1;
 
 	m_window = new b3gDefaultOpenGLWindow();
+	m_window->setAllowRetina(allowRetina);
+	
 	b3gWindowConstructionInfo ci;
 	ci.m_title = title;
 	ci.m_width = width;
@@ -133,7 +135,11 @@ SimpleOpenGL3App::SimpleOpenGL3App(	const char* title, int width,int height)
 
 	b3Assert(glGetError() ==GL_NO_ERROR);
 
-	glClearColor(0.9,0.9,1,1);
+	glClearColor(	m_backgroundColorRGB[0],
+					m_backgroundColorRGB[1],
+					m_backgroundColorRGB[2],
+					1.f);
+	
 	m_window->startRendering();
 	b3Assert(glGetError() ==GL_NO_ERROR);
 
@@ -415,30 +421,30 @@ struct GfxVertex
 		float u,v;
 	};
 
-int	SimpleOpenGL3App::registerCubeShape(float halfExtentsX,float halfExtentsY, float halfExtentsZ)
+int	SimpleOpenGL3App::registerCubeShape(float halfExtentsX,float halfExtentsY, float halfExtentsZ, int textureIndex, float textureScaling)
 {
 
 
 	int strideInBytes = 9*sizeof(float);
-	int numVertices = sizeof(cube_vertices)/strideInBytes;
+	int numVertices = sizeof(cube_vertices_textured)/strideInBytes;
 	int numIndices = sizeof(cube_indices)/sizeof(int);
 
 	b3AlignedObjectArray<GfxVertex> verts;
 	verts.resize(numVertices);
 	for (int i=0;i<numVertices;i++)
 	{
-		verts[i].x = halfExtentsX*cube_vertices[i*9];
-		verts[i].y = halfExtentsY*cube_vertices[i*9+1];
-		verts[i].z = halfExtentsZ*cube_vertices[i*9+2];
-		verts[i].w = cube_vertices[i*9+3];
-		verts[i].nx = cube_vertices[i*9+4];
-		verts[i].ny = cube_vertices[i*9+5];
-		verts[i].nz = cube_vertices[i*9+6];
-		verts[i].u = cube_vertices[i*9+7];
-		verts[i].v = cube_vertices[i*9+8];
+		verts[i].x = halfExtentsX*cube_vertices_textured[i*9];
+		verts[i].y = halfExtentsY*cube_vertices_textured[i*9+1];
+		verts[i].z = halfExtentsZ*cube_vertices_textured[i*9+2];
+		verts[i].w = cube_vertices_textured[i*9+3];
+		verts[i].nx = cube_vertices_textured[i*9+4];
+		verts[i].ny = cube_vertices_textured[i*9+5];
+		verts[i].nz = cube_vertices_textured[i*9+6];
+		verts[i].u = cube_vertices_textured[i*9+7]*textureScaling;
+		verts[i].v = cube_vertices_textured[i*9+8]*textureScaling;
 	}
 	
-	int shapeId = m_instancingRenderer->registerShape(&verts[0].x,numVertices,cube_indices,numIndices);
+	int shapeId = m_instancingRenderer->registerShape(&verts[0].x,numVertices,cube_indices,numIndices,B3_GL_TRIANGLES,textureIndex);
 	return shapeId;
 }
 
@@ -476,42 +482,46 @@ void SimpleOpenGL3App::registerGrid(int cells_x, int cells_z, float color0[4], f
 	
 }
 
-
-int	SimpleOpenGL3App::registerGraphicsSphereShape(float radius, bool usePointSprites, int largeSphereThreshold, int mediumSphereThreshold)
+int	SimpleOpenGL3App::registerGraphicsUnitSphereShape(EnumSphereLevelOfDetail lod, int textureId)
 {
 
 	int strideInBytes = 9*sizeof(float);
 
 	int graphicsShapeIndex = -1;
 
-	if (radius>=largeSphereThreshold)
+	switch (lod)
 	{
-		int numVertices = sizeof(detailed_sphere_vertices)/strideInBytes;
-		int numIndices = sizeof(detailed_sphere_indices)/sizeof(int);
-		graphicsShapeIndex = m_instancingRenderer->registerShape(&detailed_sphere_vertices[0],numVertices,detailed_sphere_indices,numIndices);
-	} else
-	{
-
-		if (usePointSprites)
+		case 		SPHERE_LOD_POINT_SPRITE:
 		{
 			int numVertices = sizeof(point_sphere_vertices)/strideInBytes;
 			int numIndices = sizeof(point_sphere_indices)/sizeof(int);
-			graphicsShapeIndex = m_instancingRenderer->registerShape(&point_sphere_vertices[0],numVertices,point_sphere_indices,numIndices,B3_GL_POINTS);
-		} else
-		{
-			if (radius>=mediumSphereThreshold)
-			{
-				int numVertices = sizeof(medium_sphere_vertices)/strideInBytes;
-				int numIndices = sizeof(medium_sphere_indices)/sizeof(int);
-				graphicsShapeIndex = m_instancingRenderer->registerShape(&medium_sphere_vertices[0],numVertices,medium_sphere_indices,numIndices);
-			} else
-			{
-				int numVertices = sizeof(low_sphere_vertices)/strideInBytes;
-				int numIndices = sizeof(low_sphere_indices)/sizeof(int);
-				graphicsShapeIndex = m_instancingRenderer->registerShape(&low_sphere_vertices[0],numVertices,low_sphere_indices,numIndices);
-			}
+			graphicsShapeIndex = m_instancingRenderer->registerShape(&point_sphere_vertices[0],numVertices,point_sphere_indices,numIndices,B3_GL_POINTS,textureId);
+			break;
 		}
-	}
+
+		case SPHERE_LOD_LOW:
+		{
+			int numVertices = sizeof(low_sphere_vertices)/strideInBytes;
+			int numIndices = sizeof(low_sphere_indices)/sizeof(int);
+			graphicsShapeIndex = m_instancingRenderer->registerShape(&low_sphere_vertices[0],numVertices,low_sphere_indices,numIndices,B3_GL_TRIANGLES,textureId);
+			break;
+		}
+		case SPHERE_LOD_MEDIUM:
+		{
+			int numVertices = sizeof(medium_sphere_vertices)/strideInBytes;
+			int numIndices = sizeof(medium_sphere_indices)/sizeof(int);
+			graphicsShapeIndex = m_instancingRenderer->registerShape(&medium_sphere_vertices[0],numVertices,medium_sphere_indices,numIndices,B3_GL_TRIANGLES,textureId);
+			break;
+		}
+		case SPHERE_LOD_HIGH:
+		default:
+		{
+			int numVertices = sizeof(detailed_sphere_vertices)/strideInBytes;
+			int numIndices = sizeof(detailed_sphere_indices)/sizeof(int);
+			graphicsShapeIndex = m_instancingRenderer->registerShape(&detailed_sphere_vertices[0],numVertices,detailed_sphere_indices,numIndices,B3_GL_TRIANGLES,textureId);
+			break;
+		}
+	};
 	return graphicsShapeIndex;
 }
 
@@ -609,6 +619,12 @@ void SimpleOpenGL3App::drawGrid(DrawGridData data)
 	m_instancingRenderer->drawPoint(b3MakeVector3(0,0,1),b3MakeVector3(0,0,1),6);
 }
 
+void SimpleOpenGL3App::setBackgroundColor(float red, float green, float blue)
+{
+	CommonGraphicsApp::setBackgroundColor(red,green,blue);
+	glClearColor(m_backgroundColorRGB[0],m_backgroundColorRGB[1],m_backgroundColorRGB[2],1.f);
+}
+
 SimpleOpenGL3App::~SimpleOpenGL3App()
 {
 	delete m_primRenderer ;
@@ -692,11 +708,11 @@ void SimpleOpenGL3App::swapBuffer()
         writeTextureToFile((int)m_window->getRetinaScale()*m_instancingRenderer->getScreenWidth(),
                           (int) m_window->getRetinaScale()*this->m_instancingRenderer->getScreenHeight(),m_data->m_frameDumpPngFileName,
                           m_data->m_ffmpegFile);
-        //m_data->m_renderTexture->disable();
-        //if (m_data->m_ffmpegFile==0)
-        //{
-        m_data->m_frameDumpPngFileName = 0;
-        //}
+        m_data->m_renderTexture->disable();
+        if (m_data->m_ffmpegFile==0)
+        {
+			m_data->m_frameDumpPngFileName = 0;
+        }
     }
 	m_window->startRendering();
 }
@@ -755,7 +771,7 @@ void SimpleOpenGL3App::dumpNextFrameToPng(const char* filename)
             //glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, g_OpenGLWidth,g_OpenGLHeight, 0,GL_RGBA, GL_UNSIGNED_BYTE, 0);
             //glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F, g_OpenGLWidth,g_OpenGLHeight, 0,GL_RGBA, GL_FLOAT, 0);
             glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F,
-                         m_instancingRenderer->getScreenWidth(),m_instancingRenderer->getScreenHeight()
+                         m_instancingRenderer->getScreenWidth()*m_window->getRetinaScale(),m_instancingRenderer->getScreenHeight()*m_window->getRetinaScale()
                          , 0,GL_RGBA, GL_FLOAT, 0);
 
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -763,7 +779,7 @@ void SimpleOpenGL3App::dumpNextFrameToPng(const char* filename)
             //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-            m_data->m_renderTexture->init(m_instancingRenderer->getScreenWidth(),this->m_instancingRenderer->getScreenHeight(),renderTextureId, RENDERTEXTURE_COLOR);
+            m_data->m_renderTexture->init(m_instancingRenderer->getScreenWidth()*m_window->getRetinaScale(),this->m_instancingRenderer->getScreenHeight()*m_window->getRetinaScale(),renderTextureId, RENDERTEXTURE_COLOR);
     }
 
     m_data->m_renderTexture->enable();

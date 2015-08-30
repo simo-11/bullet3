@@ -38,8 +38,9 @@
 #include "../SharedMemory/PhysicsClientExample.h"
 #include "../Constraints/TestHingeTorque.h"
 #include "../RenderingExamples/TimeSeriesExample.h"
-
-
+#include "../Tutorial/Tutorial.h"
+#include "../Tutorial/Dof6ConstraintTutorial.h"
+#include "../MultiThreading/MultiThreadingExample.h"
 #ifdef ENABLE_LUA
 #include "../LuaDemo/LuaPhysicsSetup.h"
 #endif
@@ -77,6 +78,8 @@ static ExampleEntry gDefaultExamples[]=
 {
 	
 	
+	
+	
 	ExampleEntry(0,"API"),
 	ExampleEntry(1,"Basic Example","Create some rigid bodies using box collision shapes. This is a good example to familiarize with the basic initialization of Bullet. The Basic Example can also be compiled without graphical user interface, as a console application. Press W for wireframe, A to show AABBs, I to suspend/restart physics simulation. Press D to toggle auto-deactivation of the simulation. ", BasicExampleCreateFunc),
 
@@ -105,6 +108,17 @@ static ExampleEntry gDefaultExamples[]=
 	ExampleEntry(1,"TestJointTorque","Apply a torque to a btMultiBody with 1-DOF joints (mobilizers). This setup is similar to API/TestHingeTorque.", TestJointTorqueCreateFunc),
  ExampleEntry(1,"Constraint Feedback", "The example shows how to receive joint reaction forces in a btMultiBody. Also the applied impulse is available for a btMultiBodyJointMotor", MultiBodyConstraintFeedbackCreateFunc),
 	ExampleEntry(1,"Inverted Pendulum PD","Keep an inverted pendulum up using open loop PD control", InvertedPendulumPDControlCreateFunc),
+
+	
+	ExampleEntry(0,"Tutorial"),
+	ExampleEntry(1,"Constant Velocity","Free moving rigid body, without external or constraint forces", TutorialCreateFunc,TUT_VELOCITY),
+	ExampleEntry(1,"Gravity Acceleration","Motion of a free falling rigid body under constant gravitational acceleration", TutorialCreateFunc,TUT_ACCELERATION),
+	ExampleEntry(1,"Contact Computation","Discrete Collision Detection for sphere-sphere", TutorialCreateFunc,TUT_COLLISION),
+	ExampleEntry(1,"Solve Contact Constraint","Compute and apply the impulses needed to satisfy non-penetrating contact constraints", TutorialCreateFunc,TUT_SOLVE_CONTACT_CONSTRAINT),
+
+	
+	
+	ExampleEntry(1,"Spring constraint","A rigid body with a spring constraint attached", Dof6ConstraintTutorialCreateFunc,0),
 
 #ifdef INCLUDE_CLOTH_DEMOS
 	ExampleEntry(0,"Soft Body"),
@@ -190,8 +204,12 @@ static ExampleEntry gDefaultExamples[]=
 
 	ExampleEntry(0,"Experiments"),
 	
-	ExampleEntry(1,"Robot Control", "Perform some robot control tasks, using physics server and client that communicate over shared memory",
-			RobotControlExampleCreateFunc),
+	ExampleEntry(1,"Robot Control (Velocity)", "Perform some robot control tasks, using physics server and client that communicate over shared memory",
+			RobotControlExampleCreateFunc,ROBOT_VELOCITY_CONTROL),
+	ExampleEntry(1,"Robot Control (PD)", "Perform some robot control tasks, using physics server and client that communicate over shared memory",
+			RobotControlExampleCreateFunc,ROBOT_PD_CONTROL),
+	ExampleEntry(1,"Robot Joint Feedback", "Apply some small ping-pong target velocity jitter, and read the joint reaction forces, using physics server and client that communicate over shared memory.",
+			RobotControlExampleCreateFunc,ROBOT_PING_PONG_JOINT_FEEDBACK),
 	
 	ExampleEntry(1,"Physics Server", "Create a physics server that communicates with a physics client over shared memory",
 			PhysicsServerCreateFunc),
@@ -200,6 +218,9 @@ static ExampleEntry gDefaultExamples[]=
 	ExampleEntry(1,"Lua Script", "Create the dynamics world, collision shapes and rigid bodies using Lua scripting",
 				 LuaDemoCreateFunc),
 #endif
+	ExampleEntry(1,"MultiThreading (submitJob)", "Simple example of executing jobs across multiple threads.",
+			MultiThreadingExampleCreateFunc,SINGLE_SIM_THREAD),
+	
 	ExampleEntry(1,"Voronoi Fracture", "Automatically create a compound rigid body using voronoi tesselation. Individual parts are modeled as rigid bodies using a btConvexHullShape.",
 				 VoronoiFractureCreateFunc),
 

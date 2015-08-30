@@ -2,6 +2,8 @@
 #include "PosixSharedMemory.h"
 #include "Win32SharedMemory.h"
 #include "LinearMath/btAlignedObjectArray.h"
+#include "LinearMath/btVector3.h"
+
 #include "Bullet3Common/b3Logging.h"
 #include "../Utils/b3ResourcePath.h"
 #include "../../Extras/Serialize/BulletFileLoader/btBulletFile.h"
@@ -22,14 +24,19 @@ struct PhysicsClientSharedMemoryInternalData
 	SharedMemoryBlock*   m_testBlock1;
 
 	btAlignedObjectArray<bParse::btBulletFile*> m_robotMultiBodyData;
-	btAlignedObjectArray<PoweredJointInfo> m_poweredJointInfo;
+	btAlignedObjectArray<b3JointInfo> m_jointInfo;
+	btAlignedObjectArray<btVector3> m_debugLinesFrom;
+	btAlignedObjectArray<btVector3> m_debugLinesTo;
+	btAlignedObjectArray<btVector3> m_debugLinesColor;
 	
 	int m_counter;
 	bool m_serverLoadUrdfOK;
 	bool m_isConnected;
 	bool m_waitingForServer;
 	bool m_hasLastServerStatus;
-	
+	int m_sharedMemoryKey;
+	bool m_verboseOutput;
+
 	PhysicsClientSharedMemoryInternalData()
 		:m_sharedMemory(0),
 		m_testBlock1(0),
@@ -37,7 +44,9 @@ struct PhysicsClientSharedMemoryInternalData
 		m_serverLoadUrdfOK(false),
 		m_isConnected(false),
 		m_waitingForServer(false),
-		m_hasLastServerStatus(false)
+		m_hasLastServerStatus(false),
+		m_sharedMemoryKey(SHARED_MEMORY_KEY),
+		m_verboseOutput(false)
 	{
 	}
 
@@ -51,14 +60,14 @@ struct PhysicsClientSharedMemoryInternalData
 };
 
 
-int		PhysicsClientSharedMemory::getNumPoweredJoints() const
+int		PhysicsClientSharedMemory::getNumJoints() const
 {
-	return m_data->m_poweredJointInfo.size();
+	return m_data->m_jointInfo.size();
 }
 
-void PhysicsClientSharedMemory::getPoweredJointInfo(int index, PoweredJointInfo& info) const
+void PhysicsClientSharedMemory::getJointInfo(int index, b3JointInfo& info) const
 {
-	info = m_data->m_poweredJointInfo[index];
+	info = m_data->m_jointInfo[index];
 }
 
 
@@ -66,7 +75,7 @@ PhysicsClientSharedMemory::PhysicsClientSharedMemory()
 
 {
 	m_data = new PhysicsClientSharedMemoryInternalData;	
-
+	
 #ifdef _WIN32
 	m_data->m_sharedMemory = new Win32SharedMemoryClient();
 #else
@@ -77,9 +86,26 @@ PhysicsClientSharedMemory::PhysicsClientSharedMemory()
 
 PhysicsClientSharedMemory::~PhysicsClientSharedMemory()
 {
-	m_data->m_sharedMemory->releaseSharedMemory(SHARED_MEMORY_KEY, SHARED_MEMORY_SIZE);
+    if (m_data->m_isConnected)
+    {
+        disconnectSharedMemory();
+    }
 	delete m_data->m_sharedMemory;
 	delete m_data;
+}
+
+void PhysicsClientSharedMemory::setSharedMemoryKey(int key)
+{
+	m_data->m_sharedMemoryKey = key;
+}
+
+void PhysicsClientSharedMemory::disconnectSharedMemory ()
+{
+    if (m_data->m_isConnected)
+    {
+        m_data->m_sharedMemory->releaseSharedMemory(m_data->m_sharedMemoryKey, SHARED_MEMORY_SIZE);
+        m_data->m_isConnected = false;
+    }
 }
 
 bool	PhysicsClientSharedMemory::isConnected() const
@@ -87,30 +113,26 @@ bool	PhysicsClientSharedMemory::isConnected() const
 	return m_data->m_isConnected ;
 }
 
-bool PhysicsClientSharedMemory::connect(bool allowSharedMemoryInitialization)
+bool PhysicsClientSharedMemory::connect()
 {
-	bool allowCreation = true;
-	m_data->m_testBlock1 = (SharedMemoryBlock*)m_data->m_sharedMemory->allocateSharedMemory(SHARED_MEMORY_KEY, SHARED_MEMORY_SIZE, allowCreation);
+    ///server always has to create and initialize shared memory
+    bool allowCreation = false;
+	m_data->m_testBlock1 = (SharedMemoryBlock*)m_data->m_sharedMemory->allocateSharedMemory(m_data->m_sharedMemoryKey, SHARED_MEMORY_SIZE, allowCreation);
 	
     if (m_data->m_testBlock1)
     {
         if (m_data->m_testBlock1->m_magicId !=SHARED_MEMORY_MAGIC_NUMBER)
         {
-			if (allowSharedMemoryInitialization)
-			{
-				InitSharedMemoryBlock(m_data->m_testBlock1);
-				b3Printf("Created and initialized shared memory block");
-				m_data->m_isConnected = true;
-			} else
-			{
-				b3Error("Error: please start server before client\n");
-				m_data->m_sharedMemory->releaseSharedMemory(SHARED_MEMORY_KEY, SHARED_MEMORY_SIZE);
-				m_data->m_testBlock1 = 0;
-				return false;
-			}
-        } else
+            b3Error("Error: please start server before client\n");
+            m_data->m_sharedMemory->releaseSharedMemory(m_data->m_sharedMemoryKey, SHARED_MEMORY_SIZE);
+            m_data->m_testBlock1 = 0;
+            return false;
+       } else
 		{
-			b3Printf("Connected to existing shared memory, status OK.\n");
+			if (m_data->m_verboseOutput)
+			{
+				b3Printf("Connected to existing shared memory, status OK.\n");
+			}
 			m_data->m_isConnected = true;
 		}
     } else
@@ -126,9 +148,20 @@ bool PhysicsClientSharedMemory::connect(bool allowSharedMemoryInitialization)
 
 bool	PhysicsClientSharedMemory::processServerStatus(SharedMemoryStatus& serverStatus)
 {
-	btAssert(m_data->m_testBlock1);
 	bool hasStatus = false;
 	
+	if (!m_data->m_testBlock1)
+	{
+		serverStatus.m_type = CMD_SHARED_MEMORY_NOT_INITIALIZED;
+		return true;
+	}
+
+	if (!m_data->m_waitingForServer)
+	{
+		serverStatus.m_type = CMD_WAITING_FOR_CLIENT_COMMAND;
+		return true;
+	}
+
 	if (m_data->m_testBlock1->m_numServerCommands> m_data->m_testBlock1->m_numProcessedServerCommands)
 	{
 		btAssert(m_data->m_testBlock1->m_numServerCommands==m_data->m_testBlock1->m_numProcessedServerCommands+1);
@@ -136,15 +169,25 @@ bool	PhysicsClientSharedMemory::processServerStatus(SharedMemoryStatus& serverSt
 		const SharedMemoryStatus& serverCmd =m_data->m_testBlock1->m_serverCommands[0];
 		hasStatus = true;
 		serverStatus = serverCmd;
-		
+		EnumSharedMemoryServerStatus s = (EnumSharedMemoryServerStatus)serverCmd.m_type;
 		//consume the command
 		switch (serverCmd.m_type)
 		{
-
+			case CMD_CLIENT_COMMAND_COMPLETED:
+			{
+				if (m_data->m_verboseOutput)
+				{
+					b3Printf("Server completed command");
+				}
+				break;
+			}
 			case CMD_URDF_LOADING_COMPLETED:
 			{
 				m_data->m_serverLoadUrdfOK = true;
-				b3Printf("Server loading the URDF OK\n");
+				if (m_data->m_verboseOutput)
+				{
+					b3Printf("Server loading the URDF OK\n");
+				}
 
 				if (serverCmd.m_dataStreamArguments.m_streamChunkLength>0)
 					{
@@ -164,29 +207,43 @@ bool	PhysicsClientSharedMemory::processServerStatus(SharedMemoryStatus& serverSt
 								Bullet::btMultiBodyDoubleData* mb = (Bullet::btMultiBodyDoubleData*)bf->m_multiBodies[i];
 								if (mb->m_baseName)
 								{
-									b3Printf("mb->m_baseName = %s\n",mb->m_baseName);
+									if (m_data->m_verboseOutput)
+									{
+										b3Printf("mb->m_baseName = %s\n",mb->m_baseName);
+									}
 								}
+
 								for (int link=0;link<mb->m_numLinks;link++)
 								{
-									if ((mb->m_links[link].m_jointType == eRevoluteType)||
-										(mb->m_links[link].m_jointType == ePrismaticType))
 									{
-										PoweredJointInfo info;
-										info.m_qIndex = qOffset;
-										info.m_uIndex = uOffset;
+										b3JointInfo info;
+                                        					info.m_flags = 0;
+										info.m_qIndex = (0 < mb->m_links[link].m_posVarCount) ? qOffset : -1;
+										info.m_uIndex = (0 < mb->m_links[link].m_dofCount) ? uOffset : -1;
 										
 										if (mb->m_links[link].m_linkName)
 										{
-											b3Printf("mb->m_links[%d].m_linkName = %s\n",link,mb->m_links[link].m_linkName);
+											if (m_data->m_verboseOutput)
+											{
+												b3Printf("mb->m_links[%d].m_linkName = %s\n",link,mb->m_links[link].m_linkName);
+											}
 											info.m_linkName = mb->m_links[link].m_linkName;
 										}
 										if (mb->m_links[link].m_jointName)
 										{
-											b3Printf("mb->m_links[%d].m_jointName = %s\n",link,mb->m_links[link].m_jointName);
+											if (m_data->m_verboseOutput)
+											{
+												b3Printf("mb->m_links[%d].m_jointName = %s\n",link,mb->m_links[link].m_jointName);
+											}
 											info.m_jointName = mb->m_links[link].m_jointName;
 											info.m_jointType = mb->m_links[link].m_jointType;
 										}
-										m_data->m_poweredJointInfo.push_back(info);
+                                        if ((mb->m_links[link].m_jointType == eRevoluteType)||
+                                            (mb->m_links[link].m_jointType == ePrismaticType))
+                                        {
+                                            info.m_flags |= JOINT_HAS_MOTORIZED_POWER;
+                                        }
+										m_data->m_jointInfo.push_back(info);
 									}
 									qOffset+= mb->m_links[link].m_posVarCount;
 									uOffset+= mb->m_links[link].m_dofCount;
@@ -198,29 +255,42 @@ bool	PhysicsClientSharedMemory::processServerStatus(SharedMemoryStatus& serverSt
 								Bullet::btMultiBodyFloatData* mb = (Bullet::btMultiBodyFloatData*) bf->m_multiBodies[i];
 								if (mb->m_baseName)
 								{
-									b3Printf("mb->m_baseName = %s\n",mb->m_baseName);
+									if (m_data->m_verboseOutput)
+									{
+										b3Printf("mb->m_baseName = %s\n",mb->m_baseName);
+									}
 								}
 								for (int link=0;link<mb->m_numLinks;link++)
 								{
-									if ((mb->m_links[link].m_jointType == eRevoluteType)||
-										(mb->m_links[link].m_jointType == ePrismaticType))
 									{
-										PoweredJointInfo info;
-										info.m_qIndex = qOffset;
-										info.m_uIndex = uOffset;
+										b3JointInfo info;
+                                        info.m_flags = 0;
+										info.m_qIndex = (0 < mb->m_links[link].m_posVarCount) ? qOffset : -1;
+										info.m_uIndex = (0 < mb->m_links[link].m_dofCount) ? uOffset : -1;
 										
 										if (mb->m_links[link].m_linkName)
 										{
-											b3Printf("mb->m_links[%d].m_linkName = %s\n",link,mb->m_links[link].m_linkName);
+											if (m_data->m_verboseOutput)
+											{
+												b3Printf("mb->m_links[%d].m_linkName = %s\n",link,mb->m_links[link].m_linkName);
+											}
 											info.m_linkName = mb->m_links[link].m_linkName;
 										}
 										if (mb->m_links[link].m_jointName)
 										{
-											b3Printf("mb->m_links[%d].m_jointName = %s\n",link,mb->m_links[link].m_jointName);
+											if (m_data->m_verboseOutput)
+											{
+												b3Printf("mb->m_links[%d].m_jointName = %s\n",link,mb->m_links[link].m_jointName);
+											}
 											info.m_jointName = mb->m_links[link].m_jointName;
 											info.m_jointType = mb->m_links[link].m_jointType;
 										}
-										m_data->m_poweredJointInfo.push_back(info);
+                                        if ((mb->m_links[link].m_jointType == eRevoluteType)||
+                                            (mb->m_links[link].m_jointType == ePrismaticType))
+                                        {
+                                            info.m_flags |= JOINT_HAS_MOTORIZED_POWER;
+                                        }
+										m_data->m_jointInfo.push_back(info);
 									}
 									qOffset+= mb->m_links[link].m_posVarCount;
 									uOffset+= mb->m_links[link].m_dofCount;
@@ -230,7 +300,10 @@ bool	PhysicsClientSharedMemory::processServerStatus(SharedMemoryStatus& serverSt
 						}
 						if (bf->ok())
 						{
-							b3Printf("Received robot description ok!\n");
+							if (m_data->m_verboseOutput)
+							{
+								b3Printf("Received robot description ok!\n");
+							}
 						} else
 						{
 							b3Warning("Robot description not received");
@@ -240,22 +313,36 @@ bool	PhysicsClientSharedMemory::processServerStatus(SharedMemoryStatus& serverSt
 			}
 			case CMD_DESIRED_STATE_RECEIVED_COMPLETED:
                 {
+					if (m_data->m_verboseOutput)
+					{
+						b3Printf("Server received desired state");
+					}
                     break;
                 }
 			case CMD_STEP_FORWARD_SIMULATION_COMPLETED:
 			{
+				if (m_data->m_verboseOutput)
+				{
+					b3Printf("Server completed step simulation");
+				}
 				break;
 			}
 			case CMD_URDF_LOADING_FAILED:
 			{
-				b3Printf("Server failed loading the URDF...\n");
+				if (m_data->m_verboseOutput)
+				{
+					b3Printf("Server failed loading the URDF...\n");
+				}
 				m_data->m_serverLoadUrdfOK = false;
 				break;
 			}
 
 			case CMD_BULLET_DATA_STREAM_RECEIVED_COMPLETED:
 				{
-					b3Printf("Server received bullet data stream OK\n");
+					if (m_data->m_verboseOutput)
+					{
+						b3Printf("Server received bullet data stream OK\n");
+					}
 
 					
 
@@ -264,7 +351,10 @@ bool	PhysicsClientSharedMemory::processServerStatus(SharedMemoryStatus& serverSt
 				}
 			case CMD_BULLET_DATA_STREAM_RECEIVED_FAILED:
 				{
-					b3Printf("Server failed receiving bullet data stream\n");
+					if (m_data->m_verboseOutput)
+					{
+						b3Printf("Server failed receiving bullet data stream\n");
+					}
 
 					break;
 				}
@@ -272,12 +362,18 @@ bool	PhysicsClientSharedMemory::processServerStatus(SharedMemoryStatus& serverSt
 
 			case CMD_ACTUAL_STATE_UPDATE_COMPLETED:
 				{
-					b3Printf("Received actual state\n");
+					if (m_data->m_verboseOutput)
+					{
+						b3Printf("Received actual state\n");
+					}
 					SharedMemoryStatus& command = m_data->m_testBlock1->m_serverCommands[0];
 
 					int numQ = command.m_sendActualStateArgs.m_numDegreeOfFreedomQ;
 					int numU = command.m_sendActualStateArgs.m_numDegreeOfFreedomU;
-					b3Printf("size Q = %d, size U = %d\n", numQ,numU);
+					if (m_data->m_verboseOutput)
+					{
+						b3Printf("size Q = %d, size U = %d\n", numQ,numU);
+					}
 					char msg[1024];
 
 					{
@@ -295,7 +391,10 @@ bool	PhysicsClientSharedMemory::processServerStatus(SharedMemoryStatus& serverSt
 						}
 						sprintf(msg,"%s]",msg);
 					}	
-					b3Printf(msg);
+					if (m_data->m_verboseOutput)
+					{
+						b3Printf(msg);
+					}
 					
 					{
 						sprintf(msg,"U=[");
@@ -313,15 +412,59 @@ bool	PhysicsClientSharedMemory::processServerStatus(SharedMemoryStatus& serverSt
 						sprintf(msg,"%s]",msg);
 						
 					}
-					b3Printf(msg);
+					if (m_data->m_verboseOutput)
+					{
+						b3Printf(msg);
+					}
 					
 					
-					b3Printf("\n");
+					if (m_data->m_verboseOutput)
+					{
+						b3Printf("\n");
+					}
 					break;
 				}
+				case 	CMD_DEBUG_LINES_COMPLETED:
+				{
+					if (m_data->m_verboseOutput)
+					{
+						b3Printf("Success receiving %d debug lines",serverCmd.m_sendDebugLinesArgs.m_numDebugLines);
+					}
+
+					int numLines = serverCmd.m_sendDebugLinesArgs.m_numDebugLines;
+					btScalar* linesFrom = (btScalar*)&m_data->m_testBlock1->m_bulletStreamDataServerToClient[0];
+					btScalar* linesTo = (btScalar*)(&m_data->m_testBlock1->m_bulletStreamDataServerToClient[0]+numLines*sizeof(btVector3));
+					btScalar* linesColor = (btScalar*)(&m_data->m_testBlock1->m_bulletStreamDataServerToClient[0]+2*numLines*sizeof(btVector3));
+
+					m_data->m_debugLinesFrom.resize(numLines);
+					m_data->m_debugLinesTo.resize(numLines);
+					m_data->m_debugLinesColor.resize(numLines);
+
+					for (int i=0;i<numLines;i++)
+					{
+						btVector3 from(linesFrom[i*4],linesFrom[i*4+1],linesFrom[i*4+2]);
+                     				btVector3 to(linesTo[i*4],linesTo[i*4+1],linesTo[i*4+2]);
+						btVector3 color(linesColor[i*4],linesColor[i*4+1],linesColor[i*4+2]);
+
+						m_data->m_debugLinesFrom[i] = from;
+						m_data->m_debugLinesTo[i] = to;
+						m_data->m_debugLinesColor[i] = color;
+					}
+					break;
+				}
+				case CMD_DEBUG_LINES_OVERFLOW_FAILED:
+				{
+					b3Warning("Error receiving debug lines");
+					m_data->m_debugLinesFrom.resize(0);
+					m_data->m_debugLinesTo.resize(0);
+					m_data->m_debugLinesColor.resize(0);
+
+					break;
+				}
+
 			default:
 			{
-				b3Error("Unknown server command\n");
+				b3Error("Unknown server status\n");
 				btAssert(0);
 			}
 		};
@@ -338,7 +481,14 @@ bool	PhysicsClientSharedMemory::processServerStatus(SharedMemoryStatus& serverSt
 		{
 			m_data->m_waitingForServer = true;
 		}
-	}
+	} else
+    {
+		if (m_data->m_verboseOutput)
+		{
+			b3Printf("m_numServerStatus  = %d, processed = %d\n", m_data->m_testBlock1->m_numServerCommands,
+                 m_data->m_testBlock1->m_numProcessedServerCommands);
+		}
+    }
 	return hasStatus;
 }
 
@@ -349,171 +499,73 @@ bool PhysicsClientSharedMemory::canSubmitCommand() const
 
 bool	PhysicsClientSharedMemory::submitClientCommand(const SharedMemoryCommand& command)
 {
+	///at the moment we allow a maximum of 1 outstanding command, so we check for this
+	//once the server processed the command and returns a status, we clear the flag "m_data->m_waitingForServer" and allow submitting the next command
+    btAssert(!m_data->m_waitingForServer);
+
 	if (!m_data->m_waitingForServer)
+	{
+		//a reset simulation command needs special attention, cleanup state
+		if (command.m_type==CMD_RESET_SIMULATION)
 		{
-			//process command
+			for (int i=0;i<m_data->m_robotMultiBodyData.size();i++)
 			{
-				m_data->m_waitingForServer = true;
-
-				switch (command.m_type)
-				{
-				    
-				case CMD_LOAD_URDF:
-					{
-						if (!m_data->m_serverLoadUrdfOK)
-						{
-							m_data->m_testBlock1->m_clientCommands[0] = command;
-							
-							m_data->m_testBlock1->m_numClientCommands++;
-							b3Printf("Client created CMD_LOAD_URDF\n");
-						} else
-						{
-							b3Warning("Server already loaded URDF, no client command submitted\n");
-						}
-						break;
-					}
-				case CMD_CREATE_BOX_COLLISION_SHAPE:
-					{
-						if (m_data->m_serverLoadUrdfOK)
-						{
-							b3Printf("Requesting create box collision shape\n");
-							m_data->m_testBlock1->m_clientCommands[0].m_type =CMD_CREATE_BOX_COLLISION_SHAPE;
-							m_data->m_testBlock1->m_numClientCommands++;
-						} else
-						{
-							b3Warning("No URDF loaded\n");
-						}
-						break;
-					}
-				case CMD_SEND_BULLET_DATA_STREAM:
-					{
-						b3Printf("Sending a Bullet Data Stream\n");
-						///The idea is to pass a stream of chunks from client to server
-						///over shared memory. The server will process it
-						///Initially we will just copy an entire .bullet file into shared
-						///memory but we can also send individual chunks one at a time
-						///so it becomes a streaming solution
-						///In addition, we can make a separate API to create those chunks
-						///if needed, instead of using a 3d modeler or the Bullet SDK btSerializer
-						
-						char relativeFileName[1024];
-						const char* fileName = "slope.bullet";
-						bool fileFound = b3ResourcePath::findResourcePath(fileName,relativeFileName,1024);
-						if (fileFound)
-						{
-							FILE *fp = fopen(relativeFileName, "rb");
-							if (fp)
-							{
-								fseek(fp, 0L, SEEK_END);
-								int mFileLen = ftell(fp);
-								fseek(fp, 0L, SEEK_SET);
-								if (mFileLen<SHARED_MEMORY_MAX_STREAM_CHUNK_SIZE)
-								{
-								
-									fread(m_data->m_testBlock1->m_bulletStreamDataClientToServer, mFileLen, 1, fp);
-
-									fclose(fp);
-
-									m_data->m_testBlock1->m_clientCommands[0].m_type =CMD_SEND_BULLET_DATA_STREAM;
-									m_data->m_testBlock1->m_clientCommands[0].m_dataStreamArguments.m_streamChunkLength = mFileLen;
-									m_data->m_testBlock1->m_numClientCommands++;
-									b3Printf("Send bullet data stream command\n");
-								} else
-								{
-									b3Warning("Bullet file size (%d) exceeds of streaming memory chunk size (%d)\n", mFileLen,SHARED_MEMORY_MAX_STREAM_CHUNK_SIZE);
-								}
-							} else
-							{
-								b3Warning("Cannot open file %s\n", relativeFileName);
-							}
-						} else
-						{
-							b3Warning("Cannot find file %s\n", fileName);
-						}
-						
-						break;
-					}
-						
-					case CMD_INIT_POSE:
-					{
-						if (m_data->m_serverLoadUrdfOK)
-						{
-							b3Printf("Initialize Pose");
-							m_data->m_testBlock1->m_clientCommands[0] = command;
-							m_data->m_testBlock1->m_numClientCommands++;
-
-						}
-						break;
-					}
-					case CMD_SEND_PHYSICS_SIMULATION_PARAMETERS:
-					{
-						b3Printf("Send Physics Simulation Parameters");
-						m_data->m_testBlock1->m_clientCommands[0] = command;
-						m_data->m_testBlock1->m_numClientCommands++;
-						break;
-					}
-						
-				case CMD_REQUEST_ACTUAL_STATE:
-					{
-						if (m_data->m_serverLoadUrdfOK)
-						{
-							b3Printf("Requesting actual state\n");
-							m_data->m_testBlock1->m_clientCommands[0].m_type =CMD_REQUEST_ACTUAL_STATE;
-							m_data->m_testBlock1->m_numClientCommands++;
-
-						} else
-						{
-							b3Warning("No URDF loaded\n");
-						}
-						break;
-					}
-                case CMD_SEND_DESIRED_STATE:
-                    {
-                        if (m_data->m_serverLoadUrdfOK)
-						{
-							b3Printf("Sending desired state (pos, vel, torque)\n");
-							m_data->m_testBlock1->m_clientCommands[0] = command;
-							
-							m_data->m_testBlock1->m_numClientCommands++;
-
-						} else
-						{
-							b3Warning("Cannot send CMD_SEND_DESIRED_STATE, no URDF loaded\n");
-						}
-                        break;
-                    }
-				case CMD_STEP_FORWARD_SIMULATION:
-					{
-						if (m_data->m_serverLoadUrdfOK)
-						{
-						
-							m_data->m_testBlock1->m_clientCommands[0].m_type =CMD_STEP_FORWARD_SIMULATION;
-						//	m_data->m_testBlock1->m_clientCommands[0].m_stepSimulationArguments.m_deltaTimeInSeconds = 1./60.;
-							m_data->m_testBlock1->m_numClientCommands++;
-							b3Printf("client created CMD_STEP_FORWARD_SIMULATION %d\n", m_data->m_counter++);
-						} else
-						{
-							b3Warning("No URDF loaded yet, no client CMD_STEP_FORWARD_SIMULATION submitted\n");
-						}
-						break;
-					}
-				case CMD_SHUTDOWN:
-					{
-						
-						m_data->m_testBlock1->m_clientCommands[0].m_type =CMD_SHUTDOWN;
-						m_data->m_testBlock1->m_numClientCommands++;
-						m_data->m_serverLoadUrdfOK = false;
-						b3Printf("client created CMD_SHUTDOWN\n");
-						break;
-					}
-				default:
-					{
-						b3Error("unknown command requested\n");
-					}
-				}
+				delete m_data->m_robotMultiBodyData[i];
 			}
+			m_data->m_robotMultiBodyData.clear();
+			
+			m_data->m_jointInfo.clear();
 		}
 		
+		m_data->m_testBlock1->m_clientCommands[0] = command;
+		m_data->m_testBlock1->m_numClientCommands++;
+		m_data->m_waitingForServer = true;
 		return true;
+	}
+	return false;
 }
 
+void	PhysicsClientSharedMemory::uploadBulletFileToSharedMemory(const char* data, int len)
+{
+	btAssert(len<SHARED_MEMORY_MAX_STREAM_CHUNK_SIZE);
+	if (len>=SHARED_MEMORY_MAX_STREAM_CHUNK_SIZE)
+	{
+		b3Warning("uploadBulletFileToSharedMemory %d exceeds max size %d\n",len,SHARED_MEMORY_MAX_STREAM_CHUNK_SIZE);
+	} else
+	{
+		for (int i=0;i<len;i++)
+		{
+			m_data->m_testBlock1->m_bulletStreamDataClientToServer[i] = data[i];
+		}
+	}
+}
+
+
+const btVector3* PhysicsClientSharedMemory::getDebugLinesFrom() const
+{
+	if (m_data->m_debugLinesFrom.size())
+	{
+		return &m_data->m_debugLinesFrom[0];
+	} 
+	return 0;
+}
+const btVector3* PhysicsClientSharedMemory::getDebugLinesTo() const
+{
+	if (m_data->m_debugLinesTo.size())
+	{
+		return &m_data->m_debugLinesTo[0];
+	} 
+	return 0;
+}
+const btVector3* PhysicsClientSharedMemory::getDebugLinesColor() const
+{
+	if (m_data->m_debugLinesColor.size())
+	{
+		return &m_data->m_debugLinesColor[0];
+	} 
+	return 0;
+}
+int	PhysicsClientSharedMemory::getNumDebugLines() const
+{
+	return m_data->m_debugLinesFrom.size();
+}

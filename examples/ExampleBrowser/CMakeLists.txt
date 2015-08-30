@@ -27,6 +27,10 @@ SET(App_ExampleBrowser_SRCS
 	../BasicDemo/BasicExample.h
 	../ForkLift/ForkLiftDemo.cpp
 	../ForkLift/ForkLiftDemo.h
+	../Tutorial/Tutorial.cpp
+	../Tutorial/Tutorial.h
+	../Tutorial/Dof6ConstraintTutorial.cpp
+	../Tutorial/Dof6ConstraintTutorial.h
 	../GyroscopicDemo/GyroscopicSetup.cpp
 	../GyroscopicDemo/GyroscopicSetup.h
 	../Planar2D/Planar2D.cpp
@@ -41,7 +45,16 @@ SET(App_ExampleBrowser_SRCS
 	../FractureDemo/btFractureDynamicsWorld.h
 	../DynamicControlDemo/MotorDemo.cpp
 	../DynamicControlDemo/MotorDemo.h
-		../RenderingExamples/CoordinateSystemDemo.cpp
+	../MultiThreading/MultiThreadingExample.cpp
+        ../MultiThreading/b3PosixThreadSupport.cpp
+	../MultiThreading/b3Win32ThreadSupport.cpp
+        ../MultiThreading/b3ThreadSupportInterface.cpp
+	../RenderingExamples/TimeSeriesCanvas.cpp
+	../RenderingExamples/TimeSeriesCanvas.h
+	../RenderingExamples/TimeSeriesFontData.cpp
+	../RenderingExamples/TimeSeriesFontData.h
+	
+	../RenderingExamples/CoordinateSystemDemo.cpp
 	../RenderingExamples/CoordinateSystemDemo.h
 	../RenderingExamples/RaytracerSetup.cpp
 	../RenderingExamples/RaytracerSetup.h
@@ -118,6 +131,9 @@ SET(App_ExampleBrowser_SRCS
   ../Constraints/ConstraintPhysicsSetup.h
   
 	
+	../ThirdPartyLibs/stb_image/stb_image.cpp
+	../ThirdPartyLibs/stb_image/stb_image.h
+
     ../ThirdPartyLibs/Wavefront/tiny_obj_loader.cpp
     ../ThirdPartyLibs/tinyxml/tinystr.cpp
     ../ThirdPartyLibs/tinyxml/tinyxml.cpp
