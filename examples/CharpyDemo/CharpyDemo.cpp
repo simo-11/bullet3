@@ -85,6 +85,10 @@ btScalar btOne(1);
 /** how may parts in half specimen */
 int initialSCount = 1;
 int sCount = initialSCount;
+btScalar initialHammerThickness(0.02);
+btScalar hammerThickness(initialHammerThickness);
+btScalar initialSpaceBetweenAnvils(0.04);
+btScalar spaceBetweenAnvils(initialSpaceBetweenAnvils);
 btScalar initialNotchSize(0.002);
 btScalar notchSize(initialNotchSize);
 btScalar initialL(0.055);
@@ -479,6 +483,10 @@ public:
 		setScalar(control, &w);
 		restartHandler(control);
 	}
+	void setSpaceBetweenAnvils(Gwen::Controls::Base* control){
+		setScalar(control, &spaceBetweenAnvils);
+		restartHandler(control);
+	}
 	void setRestitution(Gwen::Controls::Base* control){
 		setScalar(control, &restitution);
 		restartHandler(control);
@@ -610,6 +618,17 @@ public:
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setW);
 	}
+	void addSpaceBetweenAnvils(){
+		addLabel("anvil distance [m]");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = std::to_string(spaceBetweenAnvils);
+		gc->SetText(text);
+		gc->SetToolTip("Space between anvils");
+		gc->SetPos(gx, gy);
+		gc->SetWidth(100);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setSpaceBetweenAnvils);
+	}
 	void addRestitution(){
 		addLabel("Restitution");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
@@ -692,6 +711,7 @@ public:
 		addFu();
 		addL();
 		addW();
+		addSpaceBetweenAnvils();
 		addRestitution();
 		if (isDampingUsed()){
 			addDamping();
@@ -783,8 +803,8 @@ public:
 	/**
 	get half length for given part
 	if we have more than one part in each side
-	use hammer width and space between anvils (10 mm peaces)
-	and for other split evenly
+	use hammer width and space between anvils
+	and for others split evenly
 	*/
 	btScalar getHalfLength(int partNumber){
 		if (m_mode == 1){
@@ -798,16 +818,22 @@ public:
 			centerParts = 0;
 			break;
 		case 2:
-			centerWidth = btScalar(0.02);
+			centerWidth = btScalar(hammerThickness);
 			centerParts = 1;
 			break;
 		default:
-			centerWidth = btScalar(0.04);
+			centerWidth = btScalar(spaceBetweenAnvils);
 			centerParts = 2;
 			break;
 		}
-		if (nearCenter(centerParts, partNumber)){
-			return btScalar(0.005);
+		int centerDistance = getCenterDistance(partNumber);
+		if (centerParts > centerDistance){
+			switch (centerDistance){
+			case 0:
+				return hammerThickness / 4;
+			case 1:
+				return (spaceBetweenAnvils - hammerThickness) / 4;
+			}
 		}
 		btScalar halfLength = btScalar((l - centerWidth) / ((sCount - centerParts) * 4));
 		return halfLength;
@@ -1271,17 +1297,54 @@ public:
 	}
 	/**
 	*/
-	bool nearCenter(int centerParts, int partNumber){
+	int getCenterDistance(int partNumber){
 		if (m_mode == 1){
-			return false;
+			return 0;
 		}
 		if (partNumber >= sCount){
 			partNumber = 2 * sCount - partNumber - 1;
 		}
-		if (partNumber > sCount - centerParts -1){
-			return true;
+		return sCount - partNumber - 1;
+	}
+	// support anvils leaving spaceBetweenAnvils  open space between them
+	void addAnvilParts(){
+		btScalar zHalf(0.02); // for support shapes
+		btScalar zTrans(spaceBetweenAnvils / 2 + zHalf);
+		{ // lower part
+			btBoxShape* shape =
+				new btBoxShape(btVector3(0.05f + w, 0.1f, zHalf));
+			m_collisionShapes.push_back(shape);
+			// symmetrically around z=0 and x=0
+			// top at y=0.2
+			for (int i = 0; i<2; i++)
+			{
+				btTransform tr;
+				tr.setIdentity();
+				btVector3 pos(0, btScalar(0.1), btScalar((i == 0 ? -1 : 1)*zTrans));
+				tr.setOrigin(pos);
+				btRigidBody* rb = localCreateRigidBody(0.f, tr, shape);
+				tuneRestitution(rb);
+			}
 		}
-		return false;
+		{ // back support
+			btBoxShape* shape =
+				new btBoxShape(btVector3(0.025 + w / 2, 0.02 + w, zHalf));
+			m_collisionShapes.push_back(shape);
+			// symmetrically around z=0
+			// bottom at y=0.2
+			// frontsize at x=0
+			for (int i = 0; i<2; i++)
+			{
+				btTransform tr;
+				tr.setIdentity();
+				btVector3 pos(btScalar(-0.025 - w / 2),
+					btScalar(0.22 + w),
+					btScalar((i == 0 ? -1 : 1)*zTrans));
+				tr.setOrigin(pos);
+				btRigidBody* rb = localCreateRigidBody(0.f, tr, shape);
+				tuneRestitution(rb);
+			}
+		}
 	}
 	// charpy specimen using sCount parts, 
 	// symmetrically around z=0
@@ -1356,10 +1419,11 @@ public:
 	// m*g*h=500
 	// m~500/2/10~25 kg
 	void addHammer(){
+		btScalar zHalf = hammerThickness / 2;
 		btCompoundShape* compound = new btCompoundShape();
 		btCollisionShape* hammer =
-			new btBoxShape(btVector3(0.25, 0.125, 0.01));
-		btScalar hMass = 0.5*0.25*0.02 * 7800;
+			new btBoxShape(btVector3(0.25, 0.125, zHalf));
+		btScalar hMass = 0.5*0.25*hammerThickness * 7800;
 		btTransform hTr;
 		hTr.setIdentity();
 		// create hammer at y=0
@@ -1564,43 +1628,7 @@ void	CharpyDemo::initPhysics()
 		rb->setRollingFriction(0.8); //
 	}
 
-
-	// support anvils leaving 40 mm open space between them
-	{ // lower part
-		btBoxShape* shape = 
-			new btBoxShape(btVector3(0.05f+w,0.1f,0.02f));
-		m_collisionShapes.push_back(shape);
-		// symmetrically around z=0 and x=0
-		// top at y=0.2
-		for (int i=0;i<2;i++)
-		{	
-			btTransform tr;
-			tr.setIdentity();
-			btVector3 pos(0,btScalar(0.1),btScalar((i==0?-1:1)*0.04));
-			tr.setOrigin(pos);
-			btRigidBody* rb=localCreateRigidBody(0.f,tr,shape);
-			tuneRestitution(rb);
-		}
-	}
-	{ // back support
-		btBoxShape* shape = 
-			new btBoxShape(btVector3(0.025+w/2,0.02+w,0.02f));
-		m_collisionShapes.push_back(shape);
-		// symmetrically around z=0
-		// bottom at y=0.2
-		// frontsize at x=0
-		for (int i=0;i<2;i++)
-		{	
-			btTransform tr;
-			tr.setIdentity();
-			btVector3 pos(btScalar(-0.025-w/2),
-				btScalar(0.22+w),
-				btScalar((i==0?-1:1)*0.04));
-			tr.setOrigin(pos);
-			btRigidBody* rb=localCreateRigidBody(0.f, tr, shape);
-			tuneRestitution(rb);
-		}
-	}
+	addAnvilParts();
 	addSpecimenParts();
 	addHammer();
 	resetCcdMotionThreshHold();
@@ -1899,6 +1927,7 @@ void reinit(){
 	fu = initialFu;
 	l = initialL;
 	w = initialW;
+	spaceBetweenAnvils = initialSpaceBetweenAnvils;
 	notchSize = initialNotchSize;
 	frequencyRatio = initialFrequencyRatio;
 	damping = initialDamping;
