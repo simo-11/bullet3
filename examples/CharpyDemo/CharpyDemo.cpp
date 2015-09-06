@@ -87,6 +87,13 @@ int initialSCount = 1;
 int sCount = initialSCount;
 btScalar initialHammerThickness(0.02);
 btScalar hammerThickness(initialHammerThickness);
+btScalar initialHammerWidth(0.5);
+btScalar hammerWidth(initialHammerWidth);
+btScalar initialHammerHeight(0.25);
+btScalar hammerHeight(initialHammerHeight);
+/** in [m] */
+btScalar initialHammerDraft(0.04);
+btScalar hammerDraft(initialHammerDraft);
 btScalar initialSpaceBetweenAnvils(0.04);
 btScalar spaceBetweenAnvils(initialSpaceBetweenAnvils);
 btScalar initialNotchSize(0.002);
@@ -487,6 +494,14 @@ public:
 		setScalar(control, &spaceBetweenAnvils);
 		restartHandler(control);
 	}
+	void setHammerThickness(Gwen::Controls::Base* control){
+		setScalar(control, &hammerThickness);
+		restartHandler(control);
+	}
+	void setHammerDraft(Gwen::Controls::Base* control){
+		setScalar(control, &hammerDraft);
+		restartHandler(control);
+	}
 	void setRestitution(Gwen::Controls::Base* control){
 		setScalar(control, &restitution);
 		restartHandler(control);
@@ -629,6 +644,26 @@ public:
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setSpaceBetweenAnvils);
 	}
+	void addHammerThickness(){
+		addLabel("hammer thickness [m]");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = std::to_string(hammerThickness);
+		gc->SetText(text);
+		gc->SetPos(gx, gy);
+		gc->SetWidth(100);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setHammerThickness);
+	}
+	void addHammerDraft(){
+		addLabel("hammer draft [m]");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = std::to_string(hammerDraft);
+		gc->SetText(text);
+		gc->SetPos(gx, gy);
+		gc->SetWidth(100);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setHammerDraft);
+	}
 	void addRestitution(){
 		addLabel("Restitution");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
@@ -712,6 +747,8 @@ public:
 		addL();
 		addW();
 		addSpaceBetweenAnvils();
+		addHammerThickness();
+		addHammerDraft();
 		addRestitution();
 		if (isDampingUsed()){
 			addDamping();
@@ -877,7 +914,7 @@ public:
 		return s0>s1 ? s0 : s1;
 	}
 	btScalar getHammerAngle(){
-		return hammerBody->getCenterOfMassTransform().getRotation().getZ();
+		return hammerBody->getCenterOfMassTransform().getRotation().getAngle();
 	}
 	void tuneDisplayWait(){
 		if (timeStep<1e-3){
@@ -1411,6 +1448,28 @@ public:
 			break;
 		}
 	}
+	/**
+	* base has same corners as hammer
+	* top is 2 mm wide
+	*/
+	btConvexHullShape* createDraft(){
+		btScalar z = hammerThickness / 2;
+		btScalar x = btZero;
+		btScalar y = hammerHeight / 2;
+		btConvexHullShape* draft = new btConvexHullShape();
+		draft->addPoint(btVector3(x,-y,z ));
+		draft->addPoint(btVector3(x, y, z));
+		draft->addPoint(btVector3(x, y, -z));
+		draft->addPoint(btVector3(x, -y, -z));
+		x = -hammerDraft;
+		z = btScalar(0.001);
+		draft->addPoint(btVector3(x, -y, z));
+		draft->addPoint(btVector3(x, y, z));
+		draft->addPoint(btVector3(x, y, -z));
+		draft->addPoint(btVector3(x, -y, -z));
+		draft->setMargin(0.0001);
+		return draft;
+	}
 	// hammer with arm and hinge
 	// hammer is 0.5 m wide and 0.25 m high, thickness is 0.02
 	// hammer and hinge are positioned so that impact is horizontal 
@@ -1420,14 +1479,22 @@ public:
 	// m~500/2/10~25 kg
 	void addHammer(){
 		btScalar zHalf = hammerThickness / 2;
+		btScalar xHalf = hammerWidth / 2;
+		btScalar yHalf = hammerHeight / 2;
 		btCompoundShape* compound = new btCompoundShape();
 		btCollisionShape* hammer =
-			new btBoxShape(btVector3(0.25, 0.125, zHalf));
-		btScalar hMass = 0.5*0.25*hammerThickness * 7800;
+			new btBoxShape(btVector3(xHalf, yHalf, zHalf));
+		btScalar hMass = hammerWidth*hammerHeight*hammerThickness * 7800;
 		btTransform hTr;
 		hTr.setIdentity();
 		// create hammer at y=0
 		compound->addChildShape(hTr, hammer);
+		// draft
+		btTransform dTr;
+		dTr.setIdentity();
+		btVector3 dPos(-xHalf, btZero, btZero);
+		dTr.setOrigin(dPos);
+		compound->addChildShape(dTr, createDraft());
 		btCollisionShape* arm =
 			new btBoxShape(btVector3(0.02, 0.5, 0.02));
 		btScalar aMass = 0.04*1.0*0.04 * 7800;
@@ -1450,10 +1517,10 @@ public:
 		// tune for cases where angle is negative and hammer hits from
 		// opposite (negative) side
 		if (startAngle > 0){
-			xPos = btScalar(0.25 + w);
+			xPos = btScalar(xHalf + w + hammerDraft);
 		}
 		else{
-			xPos = btScalar(-0.25);
+			xPos = btScalar(-xHalf);
 		}
 		btVector3 lPos(xPos, btZero, btZero);
 		btTransform downTr;
