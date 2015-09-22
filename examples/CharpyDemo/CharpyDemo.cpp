@@ -20,6 +20,7 @@ target is to break objects using plasticity.
 #include "LinearMath/btQuickprof.h"
 #include "BulletDynamics/ConstraintSolver/btGeneric6DofSpring2Constraint.h"
 #include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
+#include "BulletDynamics/MLCPSolvers/btLemkeSolver.h"
 #include "BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h"
 #include "BulletDynamics/MLCPSolvers/btMLCPSolver.h"
 #include "BulletDynamics/ConstraintSolver/btNNCGConstraintSolver.h"
@@ -139,18 +140,21 @@ FILE *rbd; // rigid body data
 bool openRigidBodyDataFile = false;
 char rbdfn[B_LEN];
 int initialSolverType = 1;
+int lemkeSolverType = 4;
 int solverType = initialSolverType;
 btConstraintSolverType solverTypes[] = {
 	BT_SEQUENTIAL_IMPULSE_SOLVER,
 	BT_SEQUENTIAL_IMPULSE_SOLVER,
 	BT_MLCP_SOLVER,
-	BT_NNCG_SOLVER
+	BT_NNCG_SOLVER,
+	BT_MLCP_SOLVER
 };
 const char * solverTypeNames[] = {
 	"",
 	"SI (Sequential Impulse)",
 	"MLCP (Mixed Linear Complementarity Problem)",
-	"NNCG (Nonlinear Nonsmooth Conjugate Gradient)"
+	"NNCG (Nonlinear Nonsmooth Conjugate Gradient)",
+	"MLCP (Lemke)"
 };
 list<PlasticityData> pData;
 btConstraintSolver* getSolver(){
@@ -161,7 +165,13 @@ btConstraintSolver* getSolver(){
 		break;
 	case BT_MLCP_SOLVER:
 	{
-		btDantzigSolver* mlcp = new btDantzigSolver();
+		btMLCPSolverInterface* mlcp = NULL;
+		if (solverType == lemkeSolverType){
+			mlcp = new btLemkeSolver;
+		}
+		else{
+			mlcp=new btDantzigSolver;
+		}
 		sol = new btMLCPSolver(mlcp);
 	}
 	break;
@@ -1881,7 +1891,7 @@ void CharpyDemo::showMessage()
 	infoMsg(buf);
 	sprintf_s(buf,B_LEN, "viewMode(<Shift>F1-F3)=F%d: %s", m_viewMode, viewModes[m_viewMode]);
 	infoMsg(buf);
-	sprintf_s(buf,B_LEN, "solverType(<Ctrl>F1-F3)=F%d: %s", solverType, solverTypeNames[solverType]);
+	sprintf_s(buf,B_LEN, "solverType(<Ctrl>F1-F4)=F%d: %s", solverType, solverTypeNames[solverType]);
 	infoMsg(buf);
 	if (false){ // these do not currently seem interesting
 		sprintf_s(buf,B_LEN, "</> to change ccdMotionThreshHold, now=%1.8f m",
@@ -2034,6 +2044,9 @@ bool CharpyDemo::ctrlKeyboardCallback(int key){
 		return true;
 	case B3G_F3:
 		setSolverType(3);
+		return true;
+	case B3G_F4:
+		setSolverType(lemkeSolverType);
 		return true;
 	case 1: // a
 		if (shiftActive){
