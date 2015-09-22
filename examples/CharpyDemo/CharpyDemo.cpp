@@ -117,7 +117,7 @@ float energy = 0;
 float maxEnergy;
 btDynamicsWorld* dw;
 btVector3 y_up(0.01, 1., 0.01);
-btRigidBody *specimenBody, *hammerBody, *specimenBody2;
+btRigidBody *specimenBody, *hammerBody=0, *specimenBody2;
 btHingeConstraint *hammerHinge;
 btJointFeedback hammerHingeJointFeedback;
 btAlignedObjectArray<btJointFeedback*> specimenJointFeedback;
@@ -352,7 +352,7 @@ void tune(btPlasticHingeConstraint* mode6Hinge, int index){
 	}
 	return;
 	btScalar energyLoss = mode6Hinge->getAbsorbedEnergy();
-	if (energyLoss > 0){
+	if (energyLoss > 0 && hammerBody!=0){
 		btRigidBody* ro = hammerBody;
 		btScalar iM = ro->getInvMass();
 		btVector3 v = ro->getLinearVelocity();
@@ -854,6 +854,13 @@ public:
 	and for others split evenly
 	*/
 	btScalar getHalfLength(int partNumber){
+		btScalar ht;
+		if (hammerThickness > w){
+			ht = btScalar(w);
+		}
+		else{
+			ht = btScalar(w);
+		}
 		if (m_mode == 1){
 			return btScalar(l / 2);
 		}
@@ -865,7 +872,7 @@ public:
 			centerParts = 0;
 			break;
 		case 2:
-			centerWidth = btScalar(hammerThickness);
+			centerWidth = btScalar(ht);
 			centerParts = 1;
 			break;
 		default:
@@ -877,9 +884,9 @@ public:
 		if (centerParts > centerDistance){
 			switch (centerDistance){
 			case 0:
-				return hammerThickness / 4;
+				return ht / 4;
 			case 1:
-				return (spaceBetweenAnvils - hammerThickness) / 4;
+				return (spaceBetweenAnvils - ht) / 4;
 			}
 		}
 		btScalar halfLength = btScalar((l - centerWidth) / ((sCount - centerParts) * 4));
@@ -924,6 +931,9 @@ public:
 		return s0>s1 ? s0 : s1;
 	}
 	btScalar getHammerAngle(){
+		if (hammerBody == 0){
+			return SIMD_PI;
+		}
 		return hammerBody->getCenterOfMassTransform().getRotation().getAngle();
 	}
 	void tuneDisplayWait(){
@@ -1488,6 +1498,9 @@ public:
 	// m*g*h=500
 	// m~500/2/10~25 kg
 	void addHammer(){
+		if (hammerThickness <= 0){
+			return;
+		}
 		btScalar zHalf = hammerThickness / 2;
 		btScalar xHalf = hammerWidth / 2;
 		btScalar yHalf = hammerHeight / 2;
@@ -1813,6 +1826,9 @@ void CharpyDemo::showMessage()
 	if (!PlasticityData::getCollect()){
 		return;
 	}
+	if (restartRequested){
+		return;
+	}
 	pData.clear();
 	int ci = sCount - 1; // constraint index for e.g. feedback in the middle
 	char buf[B_LEN];
@@ -2005,6 +2021,7 @@ void reinit(){
 	l = initialL;
 	w = initialW;
 	spaceBetweenAnvils = initialSpaceBetweenAnvils;
+	hammerThickness = initialHammerThickness;
 	notchSize = initialNotchSize;
 	frequencyRatio = initialFrequencyRatio;
 	damping = initialDamping;
@@ -2444,6 +2461,7 @@ void	CharpyDemo::exitPhysics()
 		btScalar* f = mode5HingeW1s[j];
 		delete f;
 	}
+	hammerBody = 0;
 	mode5HingeW1s.clear();
 	mode5Hinge.clear();
 	mode6Hinge.clear();
