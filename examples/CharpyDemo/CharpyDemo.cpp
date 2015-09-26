@@ -1750,6 +1750,24 @@ void updateMaxForces(int baseIndex, const btVector3 &v){
 	}
 }
 
+/** 
+Get displacement of specimen part at center line
+*/
+const btVector3 getDisplacements(){
+	btRigidBody *b = specimenBody;
+	btTransform r = b->getCenterOfMassTransform();
+	btBoxShape* box = (btBoxShape*)b->getCollisionShape();
+	btVector3 he = box->getHalfExtentsWithMargin();
+	btVector3 l = r*(he);
+	const btVector3 v(l.x() - 2*he.x(), l.y() - 2*he.y()-0.2, l.z());
+	return v;
+}
+
+void addDisplacements(char *buf, const btVector3 &v){
+	sprintf_s(buf, B_LEN, "Displacements:X/Y/Z % 8.2g/% 8.2g/% 8.2g m",
+		v.m_floats[0], v.m_floats[1], v.m_floats[2]);
+}
+
 void addForces(char *buf, const btVector3 &v){
 	sprintf_s(buf,B_LEN, "Constraint forces:X/Y/Z % 8.2g/% 8.2g/% 8.2g N",
 		v.m_floats[0], v.m_floats[1], v.m_floats[2]);
@@ -1834,6 +1852,8 @@ void CharpyDemo::showMessage()
 	char buf[B_LEN];
 	sprintf_s(buf, B_LEN, "energy:max/current/loss %9.3g/%9.3g/%9.3g J", 
 		maxEnergy,energy,maxEnergy-energy);
+	infoMsg(buf);
+	addDisplacements(buf, getDisplacements());
 	infoMsg(buf);
 	addForces(buf, specimenJointFeedback[ci]->m_appliedForceBodyA);
 	infoMsg(buf);
