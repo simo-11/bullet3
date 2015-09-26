@@ -5,7 +5,6 @@
 
 
 
-
 #include "PhysicsServer.h"
 
 #include "SharedMemoryCommon.h"
@@ -169,8 +168,12 @@ bool PhysicsServerExample::wantsTermination()
 
 void	PhysicsServerExample::stepSimulation(float deltaTime)
 {
-    
-    m_physicsServer.processClientCommands();
+	btClock rtc;
+	btScalar endTime = rtc.getTimeMilliseconds() + deltaTime*btScalar(800);
+	while (rtc.getTimeMilliseconds()<endTime)
+	{
+		m_physicsServer.processClientCommands();
+	}
 }
 
 void PhysicsServerExample::renderScene()

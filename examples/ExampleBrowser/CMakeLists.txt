@@ -16,11 +16,11 @@ SET(App_ExampleBrowser_SRCS
 	ExampleEntries.cpp
 	ExampleEntries.h
 	../SharedMemory/PhysicsServer.cpp
+	../SharedMemory/PhysicsClientSharedMemory.cpp
 	../SharedMemory/PhysicsClient.cpp
 	../SharedMemory/PhysicsClientC_API.cpp
 	../SharedMemory/PhysicsServerExample.cpp
 	../SharedMemory/PhysicsClientExample.cpp
-	../SharedMemory/RobotControlExample.cpp
 	../SharedMemory/PosixSharedMemory.cpp
 	../SharedMemory/Win32SharedMemory.cpp
 	../BasicDemo/BasicExample.cpp
