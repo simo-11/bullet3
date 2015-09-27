@@ -534,6 +534,13 @@ public:
 		setLong(control, &setDisplayWait);
 		dropFocus = true;
 	}
+	void setUiNumIterations(Gwen::Controls::Base* control){
+		setInt(control, &numIterations);
+		if (NULL != dw){
+			dw->getSolverInfo().m_numIterations = numIterations;
+		}
+		dropFocus = true;
+	}
 
 	Gwen::Controls::Base* pPage;
 	void addLabel(string txt){
@@ -726,6 +733,16 @@ public:
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setUiDisplayWait);
 	}
+	void addNumIterations(){
+		addLabel("Number of iterations");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = std::to_string(numIterations);
+		gc->SetText(text);
+		gc->SetPos(gx, gy);
+		gc->SetWidth(100);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setUiNumIterations);
+	}
 	bool isDampingUsed(){
 		switch (m_mode){
 		case 2:
@@ -768,6 +785,9 @@ public:
 		}
 		addTimeStep();
 		addDisplayWait();
+		if (solverType != BT_MLCP_SOLVER){
+			addNumIterations();
+		}
 		addPauseSimulationButton();
 		addRestartButton();
 		addResetButton();
