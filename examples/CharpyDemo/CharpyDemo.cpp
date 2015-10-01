@@ -868,18 +868,19 @@ public:
 		return o->getInterpolationLinearVelocity().length2();
 	}
 	/**
-	get half length for given part
-	if we have more than one part in each side
+	get half length for given part.
+	If we have more than one part in each side
 	use hammer width and space between anvils
-	and for others split evenly
+	and for others split evenly.
+	If there is no hammer, center part length is l/sCount.
 	*/
 	btScalar getHalfLength(int partNumber){
 		btScalar ht;
 		if (hammerThickness > w){
-			ht = btScalar(w);
+			ht = btScalar(hammerThickness);
 		}
 		else{
-			ht = btScalar(w);
+			ht = btScalar(l/sCount);
 		}
 		if (m_mode == 1){
 			return btScalar(l / 2);
