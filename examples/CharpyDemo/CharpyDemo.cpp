@@ -115,6 +115,8 @@ btScalar initialDamping(0.2);
 btScalar damping(initialDamping);
 btScalar initialFrequencyRatio(10);
 btScalar frequencyRatio(initialFrequencyRatio);
+bool initialLimitIfNeeded = true;
+bool limitIfNeeded=initialLimitIfNeeded;
 float energy = 0;
 float maxEnergy;
 btDynamicsWorld* dw;
@@ -526,6 +528,12 @@ public:
 		setScalar(control, &frequencyRatio);
 		restartHandler(control);
 	}
+	void setLimitIfNeeded(Gwen::Controls::Base* control){
+		Gwen::Controls::CheckBox* cb =
+			static_cast<Gwen::Controls::CheckBox*>(control);
+		limitIfNeeded = cb->IsChecked();
+		restartHandler(control);
+	}
 	void setUiTimeStep(Gwen::Controls::Base* control){
 		btScalar tv(setTimeStep*1e3);
 		setScalar(control, &tv);
@@ -715,6 +723,17 @@ public:
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setFrequencyRatio);
 	}
+	void addLimitIfNeeded(){
+		addLabel("LimitIfNeeded");
+		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
+		string text = std::to_string(frequencyRatio);
+		gc->SetToolTip("Limit stiffness to avoid blow ups");
+		gc->SetPos(gx, gy);
+		gc->SetChecked(limitIfNeeded);
+		gc->SetWidth(100);
+		gy += gyInc;
+		gc->onCheckChanged.Add(pPage, &CharpyDemo::setLimitIfNeeded);
+	}
 	void addTimeStep(){
 		addLabel("TimeStep [ms]");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
@@ -762,6 +781,14 @@ public:
 		}
 		return false;
 	}
+	bool isLimitIfNeededUsed(){
+		switch (m_mode){
+		case 4:
+		case 8:
+			return true;
+		}
+		return false;
+	}
 	void initParameterUi(){
 		gui = PlasticityExampleBrowser::getGui();
 		window = PlasticityExampleBrowser::getWindow();
@@ -784,6 +811,9 @@ public:
 		}
 		if (isFrequencyRatioUsed()){
 			addFrequencyRatio();
+		}
+		if (isLimitIfNeededUsed()){
+			addLimitIfNeeded();
 		}
 		addTimeStep();
 		addDisplayWait();
@@ -1193,16 +1223,16 @@ public:
 			btScalar k2(48 * E*I1 / l4s / l4s / l4s);
 			btScalar w1 = fu*b*h*h / 4;
 			btScalar w2(fu*b*b*h / 4);
-			sc->setStiffness(0, k1);
+			sc->setStiffness(0, k1,limitIfNeeded);
 			sc->setLimit(0, 0, 0);
-			sc->setStiffness(1, k2);
+			sc->setStiffness(1, k2, limitIfNeeded);
 			sc->setLimit(1, 0, 0);
-			sc->setStiffness(2, k0);
+			sc->setStiffness(2, k0, limitIfNeeded);
 			sc->setLimit(2, 0, 0);
-			sc->setStiffness(3, w2);
+			sc->setStiffness(3, w2, limitIfNeeded);
 			sc->setLimit(3, 0, 0);
-			sc->setStiffness(4, w1);
-			sc->setStiffness(5, (w1 + w2) / 2);
+			sc->setStiffness(4, w1, limitIfNeeded);
+			sc->setStiffness(5, (w1 + w2) / 2, limitIfNeeded);
 			sc->setLimit(5, 0, 0);
 			dw->addConstraint(sc, true);
 			for (int i = 0; i < 6; i++)
@@ -1357,17 +1387,17 @@ public:
 			btScalar k2(48 * E*I2 / l4s / l4s / l4s);
 			btScalar w1 = fu*b*h*h / 4;
 			btScalar w2(fu*b*b*h / 4);
-			sc->setStiffness(2, k0);
+			sc->setStiffness(2, k0, limitIfNeeded);
 			sc->setMaxForce(2, fu*b*h);
-			sc->setStiffness(0, k1);
+			sc->setStiffness(0, k1, limitIfNeeded);
 			sc->setMaxForce(0, fu*b*h / 2);
-			sc->setStiffness(1, k2);
+			sc->setStiffness(1, k2, limitIfNeeded);
 			sc->setMaxForce(1, fu*b*h / 2);
-			sc->setStiffness(5, G*It / l4s); // not very exact
+			sc->setStiffness(5, G*It / l4s, limitIfNeeded); // not very exact
 			sc->setMaxForce(5, fu / 2 * It / (h / 2)); // not very exact
-			sc->setStiffness(4, 3 * E*I1 / l4s); // not very exact
+			sc->setStiffness(4, 3 * E*I1 / l4s, limitIfNeeded); // not very exact
 			sc->setMaxForce(4, w1);
-			sc->setStiffness(3, 3 * E*I2 / l4s); // not very exact
+			sc->setStiffness(3, 3 * E*I2 / l4s, limitIfNeeded); // not very exact
 			sc->setMaxForce(3, w2);
 			dw->addConstraint(sc, true);
 			for (int i = 0; i<6; i++)
@@ -2078,6 +2108,7 @@ void reinit(){
 	hammerThickness = initialHammerThickness;
 	notchSize = initialNotchSize;
 	frequencyRatio = initialFrequencyRatio;
+	limitIfNeeded = initialLimitIfNeeded;
 	damping = initialDamping;
 	firstRun = true;
 	if (openGraphFile){
