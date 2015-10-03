@@ -1887,10 +1887,12 @@ void CharpyDemo::showMessage()
 	infoMsg(buf);
 	addDisplacements(buf, getDisplacements());
 	infoMsg(buf);
-	addForces(buf, specimenJointFeedback[ci]->m_appliedForceBodyA);
-	infoMsg(buf);
-	addMoments(buf, specimenJointFeedback[ci]->m_appliedTorqueBodyA);
-	infoMsg(buf);
+	if (specimenJointFeedback.size()>ci){
+		addForces(buf, specimenJointFeedback[ci]->m_appliedForceBodyA);
+		infoMsg(buf);
+		addMoments(buf, specimenJointFeedback[ci]->m_appliedTorqueBodyA);
+		infoMsg(buf);
+	}
 	sprintf_s(buf,B_LEN, "minCollisionDistance: simulation/step % 1.3f/% 1.3f",
 		minCollisionDistance, minCurrentCollisionDistance);
 	infoMsg(buf);
