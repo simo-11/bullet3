@@ -97,6 +97,8 @@ btScalar initialHammerDraft(0.04);
 btScalar hammerDraft(initialHammerDraft);
 btScalar initialSpaceBetweenAnvils(0.04);
 btScalar spaceBetweenAnvils(initialSpaceBetweenAnvils);
+btScalar initialAnvilWidth(0.04);
+btScalar anvilWidth(initialAnvilWidth);
 btScalar initialNotchSize(0.002);
 btScalar notchSize(initialNotchSize);
 btScalar initialL(0.055);
@@ -867,50 +869,59 @@ public:
 	btScalar getBodySpeed2(const btCollisionObject* o){
 		return o->getInterpolationLinearVelocity().length2();
 	}
+	int centerParts; /* number of parts in center section */
+	btScalar centerWidth; /* combined z length parts in center section */
+	btScalar ht; /* z length of middle object */
+	/**
+	init parameters for object division
+	Note that centerWidth may be wider than spaceBetweenAnvils
+	See limit parameter below
+	*/
+	void initMeshParameters(){
+		btScalar limit(1.3*spaceBetweenAnvils + 2 * anvilWidth);
+		if (l < limit){
+			centerParts = sCount;
+			centerWidth = l;
+		}
+		else{
+			centerWidth = btScalar(spaceBetweenAnvils);
+			centerParts = (int)(sCount*spaceBetweenAnvils / l);
+			if (centerParts < 1){
+				centerParts = 1;
+			}
+		}
+		if (hammerThickness > w && centerParts>1){
+			ht = btScalar(hammerThickness);
+		}
+		else{
+			ht = btScalar(l / sCount);
+			if (ht > centerWidth){
+				ht = centerWidth;
+			}
+		}
+	}
 	/**
 	get half length for given part.
 	If we have more than one part in each side
 	use hammer width and space between anvils
-	and for others split evenly.
+	and for others split about evenly.
 	If there is no hammer, center part length is l/sCount.
 	*/
 	btScalar getHalfLength(int partNumber){
-		btScalar ht;
-		if (hammerThickness > w){
-			ht = btScalar(hammerThickness);
-		}
-		else{
-			ht = btScalar(l/sCount);
-		}
 		if (m_mode == 1){
 			return btScalar(l / 2);
 		}
-		int centerParts;
-		btScalar centerWidth;
-		switch (sCount){
-		case 1:
-			centerWidth = btScalar(0.);
-			centerParts = 0;
-			break;
-		case 2:
-			centerWidth = btScalar(ht);
-			centerParts = 1;
-			break;
-		default:
-			centerWidth = btScalar(spaceBetweenAnvils);
-			centerParts = 2;
-			break;
-		}
 		int centerDistance = getCenterDistance(partNumber);
-		if (centerParts > centerDistance){
+		if (centerDistance<centerParts){
 			switch (centerDistance){
 			case 0:
 				return ht / 4;
-			case 1:
-				return (spaceBetweenAnvils - ht) / 4;
+			default:
+				return (centerWidth - ht) / ((centerParts - 1)*4);
 			}
 		}
-		btScalar halfLength = btScalar((l - centerWidth) / ((sCount - centerParts) * 4));
+		btScalar halfLength = btScalar((l - centerWidth) / 
+			((sCount - centerParts) * 4));
 		return halfLength;
 	}
 	/**
@@ -942,7 +953,7 @@ public:
 	}
 	btVector3 getPosition(int partNumber){
 		btScalar zPosition = getZPosition(partNumber);
-		btVector3 pos(w / 2, 0.2 + w / 2, getZPosition(partNumber));
+		btVector3 pos(w / 2, 0.2 + w / 2, zPosition);
 		return pos;
 	}
 
@@ -1386,7 +1397,7 @@ public:
 	}
 	// support anvils leaving spaceBetweenAnvils  open space between them
 	void addAnvilParts(){
-		btScalar zHalf(0.02); // for support shapes
+		btScalar zHalf(anvilWidth/2); // for support shapes
 		btScalar zTrans(spaceBetweenAnvils / 2 + zHalf);
 		{ // lower part
 			btBoxShape* shape =
@@ -1738,7 +1749,7 @@ void	CharpyDemo::initPhysics()
 		rb->setFriction(0.8); //
 		rb->setRollingFriction(0.8); //
 	}
-
+	initMeshParameters();
 	addAnvilParts();
 	addSpecimenParts();
 	addHammer();
