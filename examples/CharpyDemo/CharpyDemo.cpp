@@ -918,6 +918,7 @@ public:
 			centerParts = (int)(sCount*spaceBetweenAnvils / l);
 			if (centerParts < 1){
 				centerParts = 1;
+				centerWidth = l;
 			}
 		}
 		if (hammerThickness > w && centerParts>1){
@@ -1985,7 +1986,7 @@ void CharpyDemo::showMessage()
 	infoMsg(buf);
 	sprintf_s(buf,B_LEN, "^n/^N for numIterations, %d", numIterations);
 	infoMsg(buf);
-	sprintf_s(buf,B_LEN, "k/K v/V to change width/length, now=%1.6f/%1.6f m", w, l);
+	sprintf_s(buf,B_LEN, "k/K v/V to change width/length, now=%1.4f/%1.4f m", w, l);
 	infoMsg(buf);
 	sprintf_s(buf,B_LEN,"mode(F1-F8)=F%d: %s",m_mode,modes[m_mode]);
 	infoMsg(buf);
