@@ -219,7 +219,9 @@ void wrv(const btQuaternion* v){
 
 static GwenUserInterface* gui;
 static Gwen::Controls::Canvas* canvas;
-int gx = 10;
+int gx = 10; // for labels
+int gxi = 120; // for inputs elements
+int wxi = 60; // width
 int gy;
 int gyInc=25;
 bool restartRequested = false;
@@ -465,6 +467,16 @@ public:
 	virtual void restart();
 	btRigidBody* localCreateRigidBody(btScalar mass, const btTransform& startTransform,
 		btCollisionShape* shape);
+	/* 
+	Limited formatter
+	*/
+#define UIF_SIZE 10
+	std::string uif(btScalar value, const char* fmt="%.4f")
+	{
+		char buffer[UIF_SIZE];
+		sprintf_s(buffer, UIF_SIZE, fmt, value);
+		return std::string(buffer);
+	}
 	/** Gwen controls handling.
 	Just flag changes to avoid need to specify all parent references
 	if calls come from Gwen
@@ -553,24 +565,32 @@ public:
 	}
 
 	Gwen::Controls::Base* pPage;
-	void addLabel(string txt){
+	Gwen::Controls::Label* addLabel(string txt){
 		Gwen::Controls::Label* gc = new Gwen::Controls::Label(pPage);
 		gc->SetText(txt);
 		gc->SizeToContents();
 		gc->SetPos(gx, gy);
-		gy = gc->Bottom()+1;
+		return gc;
+	}
+	void addPauseSimulationButton(){
+		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
+		gc->SetText(L"Pause");
+		gc->SetPos(gx, gy);
+		gc->SetSize(wxi-4,gyInc-4);
+		gc->onPress.Add(pPage, &CharpyDemo::handlePauseSimulation);
 	}
 	void addRestartButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
 		gc->SetText(L"Restart");
-		gc->SetPos(gx, gy);
-		gy += gyInc;
+		gc->SetPos(gx+wxi, gy);
+		gc->SetSize(wxi - 4, gyInc - 4);
 		gc->onPress.Add(pPage, &CharpyDemo::restartHandler);
 	}
 	void addResetButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
 		gc->SetText(L"Reset");
-		gc->SetPos(gx, gy);
+		gc->SetPos(gx+2*wxi, gy);
+		gc->SetSize(wxi - 4, gyInc - 4);
 		gy += gyInc;
 		gc->onPress.Add(pPage, &CharpyDemo::resetHandler);
 	}
@@ -588,179 +608,174 @@ public:
 		}
 	}
 
-	void addPauseSimulationButton(){
-		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
-		gc->SetText(L"Pause");
-		gc->SetPos(gx, gy);
-		gy += gyInc;
-		gc->onPress.Add(pPage, &CharpyDemo::handlePauseSimulation);
-	}
 	void addSCount(){
 		addLabel("parts in half");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
 		string text = std::to_string(sCount);
 		gc->SetText(text);
-		gc->SetPos(gx, gy);
-		gc->SetWidth(100);
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setSCount);
 	}
 	void addStartAngle(){
 		addLabel("startAngle +/-");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = std::to_string(startAngle);
+		string text = uif(startAngle,"%.2f");
 		gc->SetText(text);
 		gc->SetToolTip("In radians");
-		gc->SetPos(gx, gy);
-		gc->SetWidth(100);
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setStartAngle);
 	}
 	void addE(){
 		addLabel("E [GPa]");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = std::to_string(E/1e9);
+		string text = uif(E / 1e9,"%.0f");
 		gc->SetText(text);
 		gc->SetToolTip("Young's modulus");
-		gc->SetPos(gx, gy);
-		gc->SetWidth(100);
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setE);
 	}
 	void addFu(){
 		addLabel("fu [MPa]");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = std::to_string(fu / 1e6);
+		string text = uif(fu / 1e6,"%.0f");
 		gc->SetText(text);
 		gc->SetToolTip("Ultimate strength");
-		gc->SetPos(gx, gy);
-		gc->SetWidth(100);
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setFu);
 	}
 	void addL(){
 		addLabel("length [m]");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = std::to_string(l);
+		string text = uif(l);
 		gc->SetText(text);
 		gc->SetToolTip("Length of specimen");
-		gc->SetPos(gx, gy);
-		gc->SetWidth(100);
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setL);
 	}
 	void addW(){
 		addLabel("width [m]");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = std::to_string(w);
+		string text = uif(w);
 		gc->SetText(text);
 		gc->SetToolTip("Width of specimen");
-		gc->SetPos(gx, gy);
-		gc->SetWidth(100);
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setW);
 	}
 	void addSpaceBetweenAnvils(){
 		addLabel("anvil distance [m]");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = std::to_string(spaceBetweenAnvils);
+		string text = uif(spaceBetweenAnvils);
 		gc->SetText(text);
 		gc->SetToolTip("Space between anvils");
-		gc->SetPos(gx, gy);
-		gc->SetWidth(100);
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setSpaceBetweenAnvils);
 	}
 	void addHammerThickness(){
-		addLabel("hammer thickness [m]");
+		addLabel("hammer t[m]");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = std::to_string(hammerThickness);
+		string text = uif(hammerThickness);
 		gc->SetText(text);
-		gc->SetPos(gx, gy);
-		gc->SetWidth(100);
+		gc->SetToolTip("Thickness of hammer, use 0 to leave out");
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setHammerThickness);
 	}
 	void addHammerDraft(){
 		addLabel("hammer draft [m]");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = std::to_string(hammerDraft);
+		string text = uif(hammerDraft);
 		gc->SetText(text);
-		gc->SetPos(gx, gy);
-		gc->SetWidth(100);
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setHammerDraft);
 	}
 	void addRestitution(){
-		addLabel("Restitution");
+		addLabel("restitution 0-1");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = std::to_string(restitution);
+		string text = uif(restitution);
 		gc->SetText(text);
-		gc->SetPos(gx, gy);
-		gc->SetWidth(100);
+		gc->SetToolTip("0 is plastic 1 elastic");
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setRestitution);
 	}
 	void addDamping(){
-		addLabel("Damping");
+		addLabel("damping 0-1");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = std::to_string(damping);
-		gc->SetToolTip("Damping in spring constraints");
+		string text = uif(damping);
+		gc->SetToolTip("0=no damping, 1=full damping");
 		gc->SetText(text);
-		gc->SetPos(gx, gy);
-		gc->SetWidth(100);
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setDamping);
 	}
 	void addFrequencyRatio(){
-		addLabel("FrequencyRatio");
+		addLabel("frequencyRatio");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = std::to_string(frequencyRatio);
+		string text = uif(frequencyRatio);
 		gc->SetToolTip("How many simulation steps are required for spring period");
 		gc->SetText(text);
-		gc->SetPos(gx, gy);
-		gc->SetWidth(100);
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setFrequencyRatio);
 	}
 	void addLimitIfNeeded(){
-		addLabel("LimitIfNeeded");
+		Gwen::Controls::Label* label=addLabel("limitIfNeeded");
 		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
-		string text = std::to_string(frequencyRatio);
 		gc->SetToolTip("Limit stiffness to avoid blow ups");
-		gc->SetPos(gx, gy);
+		gc->SetPos(gxi, gy);
 		gc->SetChecked(limitIfNeeded);
-		gc->SetWidth(100);
 		gy += gyInc;
 		gc->onCheckChanged.Add(pPage, &CharpyDemo::setLimitIfNeeded);
 	}
 	void addTimeStep(){
-		addLabel("TimeStep [ms]");
+		addLabel("timeStep [ms]");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = std::to_string(setTimeStep*1000);
+		string text = uif(setTimeStep*1000);
 		gc->SetText(text);
-		gc->SetPos(gx, gy);
-		gc->SetWidth(100);
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setUiTimeStep);
 	}
 	void addDisplayWait(){
-		addLabel("DisplayWait");
+		addLabel("displayWait [ms]");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
 		string text = std::to_string(displayWait);
+		gc->SetToolTip("wait time after each simulation step");
 		gc->SetText(text);
-		gc->SetPos(gx, gy);
-		gc->SetWidth(100);
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setUiDisplayWait);
 	}
 	void addNumIterations(){
-		addLabel("Number of iterations");
+		addLabel("iteration count");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
 		string text = std::to_string(numIterations);
 		gc->SetText(text);
-		gc->SetPos(gx, gy);
-		gc->SetWidth(100);
+		gc->SetToolTip("Number of solver iterations");
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setUiNumIterations);
 	}
