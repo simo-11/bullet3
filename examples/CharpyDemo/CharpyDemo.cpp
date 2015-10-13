@@ -424,16 +424,44 @@ class CharpyDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 
 	btDefaultCollisionConfiguration* m_collisionConfiguration;
 	int m_viewMode=1;
+	int m_option;
 	void showMessage();
-
 	CommonWindowInterface* window;
 public:
 	int m_mode;
-	CharpyDemo(struct GUIHelperInterface* helper, int mode)
-		:CommonRigidBodyBase(helper), Gwen::Event::Handler()
+	CharpyDemo(CommonExampleOptions & options)
+		:CommonRigidBodyBase(options.m_guiHelper), Gwen::Event::Handler()
 	{
-		m_mode = mode;
+		m_option = options.m_option;
+		initOptions();
 		initParameterUi();
+	}
+	void initOptions(){
+		int option = m_option;
+		reinit();
+		m_guiHelper->resetCamera(0.5, -70, 15,	0, 0.2, 0.0);
+		m_mode = option % 100;
+		option /= 100;
+		if (option%100>0){
+			sCount=(option%100);
+		}
+		while ((option /= 100) > 0){
+			switch (option % 100){
+			case 1:
+				solverType = BT_MLCP_SOLVER;
+				break;
+			case 2:
+				hammerThickness = btScalar(0);
+				break;
+			case 3:
+				l = btScalar(4.1);
+				spaceBetweenAnvils = btScalar(4.0);
+				break;
+			case 4:
+				break;
+			}
+		}
+
 	}
 	~CharpyDemo()
 	{
@@ -2570,43 +2598,8 @@ void	CharpyDemo::exitPhysics()
 	mode8c.clear();
 	tc.clear();
 }
-CommonExampleInterface*    CharpyDemoF1CreateFunc(CommonExampleOptions& options)
+CommonExampleInterface*    CharpyDemoCreateFunc(CommonExampleOptions& options)
 {
-	charpyDemo=new CharpyDemo(options.m_guiHelper,1);
-	return charpyDemo;
-}
-CommonExampleInterface*    CharpyDemoF2CreateFunc(CommonExampleOptions& options)
-{
-	charpyDemo = new CharpyDemo(options.m_guiHelper, 2);
-	return charpyDemo;
-}
-CommonExampleInterface*    CharpyDemoF3CreateFunc(CommonExampleOptions& options)
-{
-	charpyDemo = new CharpyDemo(options.m_guiHelper, 3);
-	return charpyDemo;
-}
-CommonExampleInterface*    CharpyDemoF4CreateFunc(CommonExampleOptions& options)
-{
-	charpyDemo = new CharpyDemo(options.m_guiHelper, 4);
-	return charpyDemo;
-}
-CommonExampleInterface*    CharpyDemoF5CreateFunc(CommonExampleOptions& options)
-{
-	charpyDemo = new CharpyDemo(options.m_guiHelper, 5);
-	return charpyDemo;
-}
-CommonExampleInterface*    CharpyDemoF6CreateFunc(CommonExampleOptions& options)
-{
-	charpyDemo = new CharpyDemo(options.m_guiHelper, 6);
-	return charpyDemo;
-}
-CommonExampleInterface*    CharpyDemoF7CreateFunc(CommonExampleOptions& options)
-{
-	charpyDemo = new CharpyDemo(options.m_guiHelper, 7);
-	return charpyDemo;
-}
-CommonExampleInterface*    CharpyDemoF8CreateFunc(CommonExampleOptions& options)
-{
-	charpyDemo = new CharpyDemo(options.m_guiHelper, 8);
+	charpyDemo=new CharpyDemo(options);
 	return charpyDemo;
 }

@@ -29,33 +29,42 @@ struct ExampleEntry
 	}
 };
 
+/**
+option is decoded in CharpyDemo constructor
+*/
 static ExampleEntry gDefaultExamples[]=
 {
 	ExampleEntry(0, "Charpy Impact"),
 	ExampleEntry(1,"F1",
 	"single rigid object",
-	CharpyDemoF1CreateFunc),
+	CharpyDemoCreateFunc,1),
 	ExampleEntry(1, "F2",
 	"two objects and springConstraints",
-	CharpyDemoF2CreateFunc),
+	CharpyDemoCreateFunc,2),
 	ExampleEntry(1, "F3",
 	"two objects and constraints with zero limits",
-	CharpyDemoF3CreateFunc),
+	CharpyDemoCreateFunc,3),
 	ExampleEntry(1, "F4",
 	"two objects and spring2Constraints",
-	CharpyDemoF4CreateFunc),
+	CharpyDemoCreateFunc,4),
 	ExampleEntry(1, "F5",
 	"two objects and hingeConstraint",
-	CharpyDemoF5CreateFunc),
+	CharpyDemoCreateFunc,5),
 	ExampleEntry(1, "F6",
 	"two objects and plasticHingeConstraint",
-	CharpyDemoF6CreateFunc),
+	CharpyDemoCreateFunc,6),
 	ExampleEntry(1, "F7",
 	"two objects and 6DofElasticPlasticConstraint",
-	CharpyDemoF7CreateFunc),
-	ExampleEntry(1, "F8",
+	CharpyDemoCreateFunc,7),
+	ExampleEntry(2, "F8",
 	"two objects and 6DofElasticPlastic2Constraint",
-	CharpyDemoF8CreateFunc),
+	CharpyDemoCreateFunc, 8),
+	ExampleEntry(2, "01-02-03-05-08",
+	"10 objects using 6DofElasticPlastic2Constraint, \
+MLCP solver, \
+no hammer, \
+elastic deflection, l=4 m",
+	CharpyDemoCreateFunc, 102030508),
 
 };
 struct ExampleEntriesInternalData
