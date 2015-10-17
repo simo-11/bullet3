@@ -105,6 +105,8 @@ btScalar initialL(0.055);
 btScalar l(initialL);
 btScalar initialW(0.01);
 btScalar w(initialW);
+btScalar initialH(0.01);
+btScalar h(initialH);
 btScalar initialE(200E9); // Steel
 btScalar E(initialE);
 btScalar nu(0.3); // Steel
@@ -458,6 +460,9 @@ public:
 				spaceBetweenAnvils = btScalar(4.0);
 				break;
 			case 4:
+				h = 0.05;
+				w = 0.002;
+				spaceBetweenAnvils = btScalar(0.022);
 				break;
 			}
 		}
@@ -542,6 +547,10 @@ public:
 	}
 	void setW(Gwen::Controls::Base* control){
 		setScalar(control, &w);
+		restartHandler(control);
+	}
+	void setH(Gwen::Controls::Base* control){
+		setScalar(control, &h);
 		restartHandler(control);
 	}
 	void setSpaceBetweenAnvils(Gwen::Controls::Base* control){
@@ -691,15 +700,26 @@ public:
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setL);
 	}
 	void addW(){
-		addLabel("width [m]");
+		addLabel("w [m]");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
 		string text = uif(w);
 		gc->SetText(text);
-		gc->SetToolTip("Width of specimen");
+		gc->SetToolTip("Vertical width");
 		gc->SetPos(gxi, gy);
 		gc->SetWidth(wxi);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setW);
+	}
+	void addH(){
+		addLabel("h [m]");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = uif(h);
+		gc->SetText(text);
+		gc->SetToolTip("Horizontal width");
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setH);
 	}
 	void addSpaceBetweenAnvils(){
 		addLabel("anvil distance [m]");
@@ -845,6 +865,7 @@ public:
 		addFu();
 		addL();
 		addW();
+		addH();
 		addSpaceBetweenAnvils();
 		addHammerThickness();
 		addHammerDraft();
@@ -1027,7 +1048,7 @@ public:
 	}
 	btVector3 getPosition(int partNumber){
 		btScalar zPosition = getZPosition(partNumber);
-		btVector3 pos(w / 2, 0.2 + w / 2, zPosition);
+		btVector3 pos(h / 2, 0.2 + w / 2, zPosition);
 		return pos;
 	}
 
@@ -1172,14 +1193,14 @@ public:
 		return false;
 	}
 	btScalar getH(int i){
-		btScalar h;
+		btScalar localH;
 		if (isNotch(i)){
-			h = btScalar(w - notchSize);
+			localH = btScalar(h - notchSize);
 		}
 		else{
-			h = w;
+			localH = h;
 		}
-		return h;
+		return localH;
 	}
 	/**
 	mode 2
@@ -1523,8 +1544,8 @@ public:
 		{	
 			btScalar halfLength = getHalfLength(i);
 			btBoxShape* shape =
-				new btBoxShape(btVector3(w / 2, w / 2, halfLength));
-			btScalar sMass(w*w*halfLength*2.0f*7800.0f);
+				new btBoxShape(btVector3(h / 2, w / 2, halfLength));
+			btScalar sMass(h*w*halfLength*2.0f*7800.0f);
 			m_collisionShapes.push_back(shape);
 			shape->calculateLocalInertia(sMass, localInertia);
 			btTransform tr;
@@ -1646,7 +1667,7 @@ public:
 		// tune for cases where angle is negative and hammer hits from
 		// opposite (negative) side
 		if (startAngle > 0){
-			xPos = btScalar(xHalf + w + hammerDraft);
+			xPos = btScalar(xHalf + h + hammerDraft);
 		}
 		else{
 			xPos = btScalar(-xHalf);
@@ -2148,6 +2169,7 @@ void reinit(){
 	fu = initialFu;
 	l = initialL;
 	w = initialW;
+	h = initialH;
 	spaceBetweenAnvils = initialSpaceBetweenAnvils;
 	hammerThickness = initialHammerThickness;
 	notchSize = initialNotchSize;

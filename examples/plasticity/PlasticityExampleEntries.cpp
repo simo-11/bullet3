@@ -65,6 +65,10 @@ MLCP solver, \
 no hammer, \
 elastic deflection, l=4 m",
 	CharpyDemoCreateFunc, 102030508),
+	ExampleEntry(2, "04-02-08",
+	"4 objects using 6DofElasticPlastic2Constraint, \
+	cutting case",
+	CharpyDemoCreateFunc, 40208),
 
 };
 struct ExampleEntriesInternalData
