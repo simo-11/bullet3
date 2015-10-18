@@ -460,8 +460,8 @@ public:
 				spaceBetweenAnvils = btScalar(4.0);
 				break;
 			case 4:
-				h = 0.05;
-				w = 0.002;
+				hammerDraft = btScalar(0);
+				fu = btScalar(250e6);
 				spaceBetweenAnvils = btScalar(0.022);
 				break;
 			}
