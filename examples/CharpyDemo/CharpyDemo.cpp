@@ -2172,6 +2172,7 @@ void reinit(){
 	h = initialH;
 	spaceBetweenAnvils = initialSpaceBetweenAnvils;
 	hammerThickness = initialHammerThickness;
+	hammerDraft = initialHammerDraft;
 	notchSize = initialNotchSize;
 	frequencyRatio = initialFrequencyRatio;
 	limitIfNeeded = initialLimitIfNeeded;
