@@ -417,15 +417,16 @@ void btMLCPSolver::createMLCPFast(const btContactSolverInfo& infoGlobal)
 
 
 				const unsigned int infom =  row__ < m_tmpSolverNonContactConstraintPool.size() ? m_tmpConstraintSizesPool[jj].m_numConstraintRows : numContactRows;
-				
-				const btScalar *JinvMrow = JinvM + 2*8*(size_t)row__;
-				const btScalar *Jrow = Jptr + 2*8*(size_t)row__;
-				m_A.multiply2_p8r (JinvMrow, Jrow, infom, infom, row__,row__);
-				if (orgBodyB) 
-				{
-					m_A.multiplyAdd2_p8r (JinvMrow + 8*(size_t)infom, Jrow + 8*(size_t)infom, infom, infom,  row__,row__);
+				if (infom > 0){
+					const btScalar *JinvMrow = JinvM + 2 * 8 * (size_t)row__;
+					const btScalar *Jrow = Jptr + 2 * 8 * (size_t)row__;
+					m_A.multiply2_p8r(JinvMrow, Jrow, infom, infom, row__, row__);
+					if (orgBodyB)
+					{
+						m_A.multiplyAdd2_p8r(JinvMrow + 8 * (size_t)infom, Jrow + 8 * (size_t)infom, infom, infom, row__, row__);
+					}
+					row__ += infom;
 				}
-				row__ += infom;
 				jj++;
 			}
 		}
