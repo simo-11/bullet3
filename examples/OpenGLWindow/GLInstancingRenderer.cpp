@@ -1672,6 +1672,11 @@ void GLInstancingRenderer::enableShadowMap()
 
 }
 
+void GLInstancingRenderer::clearZBuffer()
+{
+	glClear(GL_DEPTH_BUFFER_BIT);
+}
+
 int GLInstancingRenderer::getMaxShapeCapacity() const
 {
 	return m_data->m_maxShapeCapacityInBytes;

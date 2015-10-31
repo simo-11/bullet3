@@ -25,7 +25,7 @@ protected:
 	void	releaseSharedMemory();
 	
 	bool loadUrdf(const char* fileName, const class btVector3& pos, const class btQuaternion& orn,
-                             bool useMultiBody, bool useFixedBase);
+                             bool useMultiBody, bool useFixedBase, int* bodyUniqueId);
 
 public:
 	PhysicsServerSharedMemory();
@@ -53,6 +53,10 @@ public:
 	//to a physics client, over shared memory
 	void    physicsDebugDraw(int debugDrawFlags);
 	void    renderScene();
+
+	void enableCommandLogging(bool enable, const char* fileName);
+	void replayFromLogFile(const char* fileName);
+	
 
 };
 

@@ -29,7 +29,8 @@ protected:
 	bool m_wantsTermination;
     btAlignedObjectArray<int> m_userCommandRequests;
     int m_sharedMemoryKey;
-    
+    int m_selectedBody;
+	int m_prevSelectedBody;
 	void	createButton(const char* name, int id, bool isTrigger );
 
 	void createButtons();
@@ -45,12 +46,22 @@ public:
 	virtual ~PhysicsClientExample();
     
 	virtual void	initPhysics();
-    
+    void selectComboBox(int comboIndex, const char* name)
+	{
+		if (m_guiHelper && m_guiHelper->getParameterInterface())
+		{
+			int bodyIndex = comboIndex;
+			if (m_selectedBody != bodyIndex)
+			{
+				m_selectedBody = bodyIndex;
+			}
+		}
+	}
 	virtual void	stepSimulation(float deltaTime);
     
 	virtual void resetCamera()
 	{
-				float dist = 5;
+		float dist = 5;
 		float pitch = 50;
 		float yaw = 35;
 		float targetPos[3]={0,0,0};//-3,2.8,-2.5};
@@ -105,7 +116,7 @@ public:
 
 		
 			
-			float color[4] = {1,1,0,1};
+			float color[4] = {0.2,0.2,1,1};
 			
 			if (points.size() && indices.size())
 			{
@@ -144,13 +155,27 @@ public:
 };
 
 
+void MyComboBoxCallback (int combobox, const char* item, void* userPointer)
+{
+	b3Printf("Item selected %s", item);
+
+	PhysicsClientExample* cl = (PhysicsClientExample*) userPointer;
+	b3Assert(cl);
+	if (cl)
+	{
+		cl->selectComboBox(combobox,item);
+	}
+	
+}
 
 
 
 void MyCallback(int buttonId, bool buttonState, void* userPtr)
 {
 	PhysicsClientExample* cl = (PhysicsClientExample*) userPtr;
-    if (buttonState)
+	b3Assert(cl);
+
+    if (cl && buttonState)
     {
         cl->enqueueCommand(buttonId);
     }
@@ -169,13 +194,14 @@ void PhysicsClientExample::prepareAndSubmitCommand(int commandId)
         case  CMD_LOAD_URDF:
         {
             
-            b3SharedMemoryCommandHandle commandHandle = b3LoadUrdfCommandInit(m_physicsClientHandle, "r2d2.urdf");//kuka_lwr/kuka.urdf");
+            b3SharedMemoryCommandHandle commandHandle = b3LoadUrdfCommandInit(m_physicsClientHandle, "kuka_lwr/kuka.urdf");
             
             //setting the initial position, orientation and other arguments are optional
             double startPosX = 0;
-            double startPosY = 0;
+            static double startPosY = 0;
             double startPosZ = 0;
             b3LoadUrdfCommandSetStartPosition(commandHandle, startPosX,startPosY,startPosZ);
+			startPosY += 2.f;
 //            ret = b3LoadUrdfCommandSetUseFixedBase(commandHandle, 1);
             b3SubmitClientCommand(m_physicsClientHandle, commandHandle);
 
@@ -188,13 +214,81 @@ void PhysicsClientExample::prepareAndSubmitCommand(int commandId)
             b3SubmitClientCommand(m_physicsClientHandle, commandHandle);
             break;
         }
+		case CMD_CREATE_RIGID_BODY:
+		{
+			b3SharedMemoryCommandHandle commandHandle = b3CreateBoxShapeCommandInit(m_physicsClientHandle);
+            b3CreateBoxCommandSetStartPosition(commandHandle,0,0,0);
+			b3CreateBoxCommandSetMass(commandHandle,1);
+			b3CreateBoxCommandSetCollisionShapeType(commandHandle,COLLISION_SHAPE_TYPE_CYLINDER_Y);
+			double radius = 0.2;
+			double halfHeight = 0.5;
+			b3CreateBoxCommandSetHalfExtents(commandHandle,radius,halfHeight,radius);
+            b3SubmitClientCommand(m_physicsClientHandle, commandHandle);
+			break;
+		}
+
         case CMD_REQUEST_ACTUAL_STATE:
         {
-            b3SharedMemoryCommandHandle commandHandle = b3RequestActualStateCommandInit(m_physicsClientHandle);
-            b3SubmitClientCommand(m_physicsClientHandle, commandHandle);
+			if (m_selectedBody>=0)
+			{
+				b3SharedMemoryCommandHandle commandHandle = b3RequestActualStateCommandInit(m_physicsClientHandle,m_selectedBody);
+				b3SubmitClientCommand(m_physicsClientHandle, commandHandle);
+			}
             break;
         };
 
+		case CMD_INIT_POSE:
+		{
+			
+			if (m_selectedBody>=0)
+			{
+				b3SharedMemoryCommandHandle commandHandle = b3CreatePoseCommandInit(m_physicsClientHandle,m_selectedBody);
+				static int toggle = 0;
+				double pos[3] = {0,0,0};
+				pos[toggle] = 2;
+				toggle++; 
+				if (toggle>2)
+					toggle=0;
+
+				btQuaternion orn;
+				orn.setValue(0,0,0,1);
+
+				switch (toggle)
+				{
+				case 0:
+					orn = btQuaternion(btVector3(1,0,0),SIMD_HALF_PI);
+					break;
+				case 1:
+					orn = btQuaternion(btVector3(0,1,0),SIMD_HALF_PI);
+					break;
+				case 2:
+					orn = btQuaternion(btVector3(0,0,1),SIMD_HALF_PI);
+					break;
+
+				default:
+					orn.setValue(0,0,0,1);
+				};
+				
+
+				b3CreatePoseCommandSetBaseOrientation(commandHandle,orn[0],orn[1],orn[2],orn[3]);
+				b3CreatePoseCommandSetBasePosition(commandHandle, pos[0],pos[1],pos[2]);
+				int numJoints = b3GetNumJoints(m_physicsClientHandle,m_selectedBody);
+				static double jointPos = SIMD_PI/2.f;
+				
+				for (int i=0;i<numJoints;i++)
+				{
+					b3JointInfo info;
+					b3GetJointInfo(m_physicsClientHandle, m_selectedBody,i, &info);
+					if ((info.m_jointType == 0) || (info.m_jointType == 1)) //revolute or prismatic
+					{
+						b3CreatePoseCommandSetJointPosition(m_physicsClientHandle,commandHandle,i,jointPos);
+					}
+				}
+				jointPos += SIMD_PI/8.0;
+				b3SubmitClientCommand(m_physicsClientHandle, commandHandle);
+			}
+			break;
+		}
         case CMD_STEP_FORWARD_SIMULATION:
         {
         
@@ -243,6 +337,9 @@ void PhysicsClientExample::prepareAndSubmitCommand(int commandId)
 
 PhysicsClientExample::PhysicsClientExample(GUIHelperInterface* helper)
 :SharedMemoryCommon(helper),
+m_physicsClientHandle(0),
+m_selectedBody(-1),
+m_prevSelectedBody(-1),
 m_wantsTermination(false),
 m_sharedMemoryKey(SHARED_MEMORY_KEY),
 m_numMotors(0)
@@ -252,6 +349,11 @@ m_numMotors(0)
 
 PhysicsClientExample::~PhysicsClientExample()
 {
+	if (m_physicsClientHandle)
+	{
+		b3ProcessServerStatus(m_physicsClientHandle);
+		b3DisconnectSharedMemory(m_physicsClientHandle);
+	}
     b3Printf("~PhysicsClientExample\n");
 }
 
@@ -269,15 +371,54 @@ void	PhysicsClientExample::createButtons()
 	
     if (m_guiHelper && m_guiHelper->getParameterInterface())
     {
+		m_guiHelper->getParameterInterface()->removeAllParameters();
+
         createButton("Load URDF",CMD_LOAD_URDF,  isTrigger);
         createButton("Step Sim",CMD_STEP_FORWARD_SIMULATION,  isTrigger);
         createButton("Send Bullet Stream",CMD_SEND_BULLET_DATA_STREAM,  isTrigger);
         createButton("Get State",CMD_REQUEST_ACTUAL_STATE,  isTrigger);
         createButton("Send Desired State",CMD_SEND_DESIRED_STATE,  isTrigger);
         createButton("Create Box Collider",CMD_CREATE_BOX_COLLISION_SHAPE,isTrigger);
+		createButton("Create Cylinder Body",CMD_CREATE_RIGID_BODY,isTrigger);
         createButton("Reset Simulation",CMD_RESET_SIMULATION,isTrigger);
+		createButton("Initialize Pose",CMD_INIT_POSE,  isTrigger);
+
+
+		if (m_physicsClientHandle && m_selectedBody>=0)
+		{
+			int numJoints = b3GetNumJoints(m_physicsClientHandle,m_selectedBody);
+			for (int i=0;i<numJoints;i++)
+			{
+				b3JointInfo info;
+				b3GetJointInfo(m_physicsClientHandle,m_selectedBody,i,&info);
+				b3Printf("Joint %s at q-index %d and u-index %d\n",info.m_jointName,info.m_qIndex,info.m_uIndex);
+                
+				if (info.m_flags & JOINT_HAS_MOTORIZED_POWER)
+				{
+					if (m_numMotors<MAX_NUM_MOTORS)
+					{
+						char motorName[1024];
+						sprintf(motorName,"%s q'", info.m_jointName);
+						MyMotorInfo2* motorInfo = &m_motorTargetVelocities[m_numMotors];
+						motorInfo->m_velTarget = 0.f;
+						motorInfo->m_uIndex = info.m_uIndex;
+                        
+						SliderParams slider(motorName,&motorInfo->m_velTarget);
+						slider.m_minVal=-4;
+						slider.m_maxVal=4;
+						if (m_guiHelper && m_guiHelper->getParameterInterface())
+						{
+							m_guiHelper->getParameterInterface()->registerSliderFloatParameter(slider);
+						}
+						m_numMotors++;
+					}
+				}
+			}
+		}
     }
 }
+
+
 
 void	PhysicsClientExample::initPhysics()
 {
@@ -296,6 +437,9 @@ void	PhysicsClientExample::initPhysics()
         MyCallback(CMD_RESET_SIMULATION,true,this);
 	}
 
+	m_selectedBody = -1;
+	m_prevSelectedBody = -1;
+
     m_physicsClientHandle  = b3ConnectSharedMemory(m_sharedMemoryKey);
     if (!b3CanSubmitCommand(m_physicsClientHandle))
     {
@@ -307,56 +451,58 @@ void	PhysicsClientExample::initPhysics()
 
 void	PhysicsClientExample::stepSimulation(float deltaTime)
 {
-    b3SharedMemoryStatusHandle status = b3ProcessServerStatus(m_physicsClientHandle);
-    bool hasStatus = (status != 0);
-
-	if (hasStatus)
-    {
-
-        int statusType = b3GetStatusType(status);
-        
-      	if (statusType == CMD_URDF_LOADING_COMPLETED)
-		{
-            int numJoints = b3GetNumJoints(m_physicsClientHandle);
-            
-			for (int i=0;i<numJoints;i++)
-			{
-				b3JointInfo info;
-                b3GetJointInfo(m_physicsClientHandle,i,&info);
-                b3Printf("Joint %s at q-index %d and u-index %d\n",info.m_jointName,info.m_qIndex,info.m_uIndex);
-				
-			}
-		
-            for (int i=0;i<numJoints;i++)
-            {
-                b3JointInfo info;
-                b3GetJointInfo(m_physicsClientHandle,i,&info);
-                b3Printf("Joint %s at q-index %d and u-index %d\n",info.m_jointName,info.m_qIndex,info.m_uIndex);
-                
-                if (info.m_flags & JOINT_HAS_MOTORIZED_POWER)
-                {
-                    if (m_numMotors<MAX_NUM_MOTORS)
-                    {
-                        char motorName[1024];
-                        sprintf(motorName,"%s q'", info.m_jointName);
-                        MyMotorInfo2* motorInfo = &m_motorTargetVelocities[m_numMotors];
-                        motorInfo->m_velTarget = 0.f;
-                        motorInfo->m_uIndex = info.m_uIndex;
-                        
-                        SliderParams slider(motorName,&motorInfo->m_velTarget);
-                        slider.m_minVal=-4;
-                        slider.m_maxVal=4;
-                        if (m_guiHelper && m_guiHelper->getParameterInterface())
-                        {
-                        m_guiHelper->getParameterInterface()->registerSliderFloatParameter(slider);
-                        }
-                        m_numMotors++;
-                    }
-                }
-            }
-		}
+	if (m_prevSelectedBody != m_selectedBody)
+	{
+		createButtons();
+		m_prevSelectedBody = m_selectedBody;
+	}
     
-    }
+	//while (!b3CanSubmitCommand(m_physicsClientHandle))
+	{
+		b3SharedMemoryStatusHandle status = b3ProcessServerStatus(m_physicsClientHandle);
+		bool hasStatus = (status != 0);
+		if (hasStatus)
+		{
+
+			int statusType = b3GetStatusType(status);
+			if (statusType == CMD_ACTUAL_STATE_UPDATE_COMPLETED)
+			{
+				//b3Printf("bla\n");
+			}
+      		if (statusType == CMD_URDF_LOADING_COMPLETED)
+			{
+				int bodyIndex = b3GetStatusBodyIndex(status);
+				if (bodyIndex>=0)
+				{
+					int numJoints = b3GetNumJoints(m_physicsClientHandle,bodyIndex);
+            
+					for (int i=0;i<numJoints;i++)
+					{
+						b3JointInfo info;
+						b3GetJointInfo(m_physicsClientHandle,bodyIndex,i,&info);
+						b3Printf("Joint %s at q-index %d and u-index %d\n",info.m_jointName,info.m_qIndex,info.m_uIndex);
+				
+					}
+					ComboBoxParams comboParams;
+					comboParams.m_comboboxId = bodyIndex;
+					comboParams.m_numItems = 1;
+					comboParams.m_startItem = 0;
+					comboParams.m_callback = MyComboBoxCallback;
+					comboParams.m_userPointer = this;
+					const char* bla = "bla";
+					const char* blarray[1];
+					blarray[0] = bla;
+				
+					comboParams.m_items=blarray;//{&bla};
+					m_guiHelper->getParameterInterface()->registerComboBox(comboParams);
+		
+
+				}
+
+			}
+    
+		}
+	}
     if (b3CanSubmitCommand(m_physicsClientHandle))
     {
         if (m_userCommandRequests.size())
@@ -375,13 +521,11 @@ void	PhysicsClientExample::stepSimulation(float deltaTime)
             //for the CMD_RESET_SIMULATION we need to do something special: clear the GUI sliders
             if (commandId ==CMD_RESET_SIMULATION)
             {
-                if (m_guiHelper->getParameterInterface())
-                {
-                    m_guiHelper->getParameterInterface()->removeAllParameters();
-                }
+				m_selectedBody = -1;
                 m_numMotors=0;
                 createButtons();
             }
+			
             
             prepareAndSubmitCommand(commandId);
             
@@ -392,7 +536,7 @@ void	PhysicsClientExample::stepSimulation(float deltaTime)
                 enqueueCommand(CMD_SEND_DESIRED_STATE);
                 enqueueCommand(CMD_STEP_FORWARD_SIMULATION);
                 enqueueCommand(CMD_REQUEST_DEBUG_LINES);
-                enqueueCommand(CMD_REQUEST_ACTUAL_STATE);
+                //enqueueCommand(CMD_REQUEST_ACTUAL_STATE);
             }
         }
     }

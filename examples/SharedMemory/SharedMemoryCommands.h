@@ -26,7 +26,7 @@
 
 
 #define SHARED_MEMORY_SERVER_TEST_C
-#define MAX_DEGREE_OF_FREEDOM 256
+#define MAX_DEGREE_OF_FREEDOM 64
 #define MAX_NUM_SENSORS 256
 #define MAX_URDF_FILENAME_LENGTH 1024
 #define MAX_FILENAME_LENGTH MAX_URDF_FILENAME_LENGTH
@@ -65,6 +65,12 @@ struct SetJointFeedbackArgs
 	int m_isEnabled;
 };
 
+enum EnumInitPoseFlags
+{
+    INIT_POSE_HAS_INITIAL_POSITION=1,
+    INIT_POSE_HAS_INITIAL_ORIENTATION=2,
+    INIT_POSE_HAS_JOINT_STATE=4
+};
 
 
 ///InitPoseArgs is mainly to initialize (teleport) the robot in a particular position
@@ -172,7 +178,7 @@ struct SendActualStateArgs
 enum EnumSensorTypes
 {
     SENSOR_FORCE_TORQUE=1,
-    SENSOR_IMU=1,
+    SENSOR_IMU=2,
 };
 
 struct CreateSensorArgs
@@ -196,7 +202,9 @@ enum EnumBoxShapeFlags
 {
     BOX_SHAPE_HAS_INITIAL_POSITION=1,
     BOX_SHAPE_HAS_INITIAL_ORIENTATION=2,
-    BOX_SHAPE_HAS_HALF_EXTENTS=4
+    BOX_SHAPE_HAS_HALF_EXTENTS=4,
+	BOX_SHAPE_HAS_MASS=8,
+	BOX_SHAPE_HAS_COLLISION_SHAPE_TYPE=16,
 };
 ///This command will be replaced to allow arbitrary collision shape types
 struct CreateBoxShapeArgs
@@ -204,6 +212,9 @@ struct CreateBoxShapeArgs
     double m_halfExtentsX;
     double m_halfExtentsY;
     double m_halfExtentsZ;
+
+	double m_mass;
+	int m_collisionShapeType;//see SharedMemoryPublic.h
 
     double m_initialPosition[3];
 	double m_initialOrientation[4];
@@ -234,6 +245,10 @@ struct SharedMemoryCommand
     };
 };
 
+struct RigidBodyCreateArgs
+{
+	int m_bodyUniqueId; 
+};
 
 struct SharedMemoryStatus
 {
@@ -247,6 +262,7 @@ struct SharedMemoryStatus
 		struct BulletDataStreamArgs	m_dataStreamArguments;
 		struct SendActualStateArgs m_sendActualStateArgs;
 		struct SendDebugLinesArgs m_sendDebugLinesArgs;
+		struct RigidBodyCreateArgs m_rigidBodyCreateArgs;
 	};
 };
 
