@@ -59,16 +59,19 @@ static ExampleEntry gDefaultExamples[]=
 	ExampleEntry(2, "F8",
 	"two objects and 6DofElasticPlastic2Constraint",
 	CharpyDemoCreateFunc, 8),
-	ExampleEntry(2, "01-02-03-05-08",
+	ExampleEntry(2, "elastic",
 	"10 objects using 6DofElasticPlastic2Constraint, \
 MLCP solver, \
 no hammer, \
 elastic deflection, l=4 m",
 	CharpyDemoCreateFunc, 102030508),
-	ExampleEntry(2, "04-02-08",
+	ExampleEntry(2, "cutting case",
 	"4 objects using 6DofElasticPlastic2Constraint, \
-	cutting case",
+cutting case",
 	CharpyDemoCreateFunc, 40208),
+	ExampleEntry(2, "sidestep",
+	"single object does sidestep",
+		CharpyDemoCreateFunc, 50001),
 
 };
 struct ExampleEntriesInternalData

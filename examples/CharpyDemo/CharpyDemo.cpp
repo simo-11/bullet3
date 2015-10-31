@@ -464,6 +464,11 @@ public:
 				fu = btScalar(250e6);
 				spaceBetweenAnvils = btScalar(0.022);
 				break;
+			case 5:
+				hammerDraft = btScalar(0);
+				setTimeStep = 0.017;
+				variableTimeStep = false;
+				break;
 			}
 		}
 
@@ -581,6 +586,12 @@ public:
 		Gwen::Controls::CheckBox* cb =
 			static_cast<Gwen::Controls::CheckBox*>(control);
 		limitIfNeeded = cb->IsChecked();
+		restartHandler(control);
+	}
+	void setVariableTimeStep(Gwen::Controls::Base* control){
+		Gwen::Controls::CheckBox* cb =
+			static_cast<Gwen::Controls::CheckBox*>(control);
+		variableTimeStep = cb->IsChecked();
 		restartHandler(control);
 	}
 	void setUiTimeStep(Gwen::Controls::Base* control){
@@ -795,6 +806,15 @@ public:
 		gy += gyInc;
 		gc->onCheckChanged.Add(pPage, &CharpyDemo::setLimitIfNeeded);
 	}
+	void addVariableTimeStep(){
+		Gwen::Controls::Label* label = addLabel("variableTimeStep");
+		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
+		gc->SetToolTip("Automatically tune time step");
+		gc->SetPos(gxi, gy);
+		gc->SetChecked(variableTimeStep);
+		gy += gyInc;
+		gc->onCheckChanged.Add(pPage, &CharpyDemo::setVariableTimeStep);
+	}
 	void addTimeStep(){
 		addLabel("timeStep [ms]");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
@@ -880,6 +900,7 @@ public:
 			addLimitIfNeeded();
 		}
 		addTimeStep();
+		addVariableTimeStep();
 		addDisplayWait();
 		if (solverType != BT_MLCP_SOLVER){
 			addNumIterations();
