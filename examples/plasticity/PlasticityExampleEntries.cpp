@@ -72,6 +72,10 @@ cutting case",
 	ExampleEntry(2, "sidestep",
 	"single object does sidestep",
 		CharpyDemoCreateFunc, 50001),
+		ExampleEntry(2, "big and soft",
+		"4 objects using 6DofElasticPlastic2Constraint, \
+cutting case, large objects, very low fu",
+		CharpyDemoCreateFunc, 60208),
 
 };
 struct ExampleEntriesInternalData

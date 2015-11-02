@@ -148,6 +148,7 @@ char rbdfn[B_LEN];
 int initialSolverType = 1;
 int lemkeSolverType = 4;
 int solverType = initialSolverType;
+btClock rtClock;
 btConstraintSolverType solverTypes[] = {
 	BT_SEQUENTIAL_IMPULSE_SOLVER,
 	BT_SEQUENTIAL_IMPULSE_SOLVER,
@@ -455,16 +456,28 @@ public:
 			case 2:
 				hammerThickness = btScalar(0);
 				break;
-			case 3:
+			case 3: // slender
 				l = btScalar(4.1);
 				spaceBetweenAnvils = btScalar(4.0);
 				break;
-			case 4:
+			case 4: // cutting
 				hammerDraft = btScalar(0);
 				fu = btScalar(250e6);
 				spaceBetweenAnvils = btScalar(0.022);
 				break;
-			case 5:
+			case 5: // sidestep
+				hammerDraft = btScalar(0);
+				setTimeStep = 0.017;
+				variableTimeStep = false;
+				break;
+			case 6: // big and soft
+				hammerDraft = btScalar(0);
+				fu = btScalar(15e3);
+				w = 0.2;
+				h = 0.2;
+				l = 0.4;
+				hammerThickness = 0.2;
+				spaceBetweenAnvils = btScalar(0.3);
 				hammerDraft = btScalar(0);
 				setTimeStep = 0.017;
 				variableTimeStep = false;
@@ -691,7 +704,7 @@ public:
 	void addFu(){
 		addLabel("fu [MPa]");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = uif(fu / 1e6,"%.0f");
+		string text = uif(fu / 1e6,"%.3f");
 		gc->SetText(text);
 		gc->SetToolTip("Ultimate strength");
 		gc->SetPos(gxi, gy);
@@ -1683,7 +1696,7 @@ public:
 		// up so that center of hammer is about y=0.2
 		const btVector3 armPivot(btZero,
 			btScalar(1), btZero);
-		btVector3 cPos(btZero, btScalar(1.2), btZero);
+		btVector3 cPos(btZero, btScalar(1.2+w/2), btZero);
 		btScalar xPos;
 		// tune for cases where angle is negative and hammer hits from
 		// opposite (negative) side
@@ -1872,6 +1885,7 @@ void	CharpyDemo::initPhysics()
 	resetCcdMotionThreshHold();
 	updateEnergy();
 	currentTime=0;
+	rtClock.reset();
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
 }
 
@@ -2110,8 +2124,8 @@ void CharpyDemo::showMessage()
 		sprintf_s(buf, B_LEN, "Enable writing plasticity log data to file with ^p");
 	}
 	infoMsg(buf);
-	sprintf_s(buf, B_LEN, "currentTime=%3.5f s, currentAngle=%1.4f",
-		currentTime, getHammerAngle());
+	sprintf_s(buf, B_LEN, "currentTime=%3.5f s, realTime=%3.1f currentAngle=%1.4f",
+		currentTime, rtClock.getTimeSeconds(), getHammerAngle());
 	infoMsg(buf);
 	PlasticityData::setData(&pData);
 }
