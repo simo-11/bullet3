@@ -1166,6 +1166,9 @@ public:
 			}
 			tuneDisplayWait();
 		}
+		else{
+			displayWait = setDisplayWait;
+		}
 	}
 	/* Just for making breaking possible.
 	This calculation has no known scientific background.
@@ -2026,7 +2029,7 @@ void CharpyDemo::showMessage()
 	sprintf_s(buf,B_LEN, "minCollisionDistance: simulation/step % 1.3f/% 1.3f",
 		minCollisionDistance, minCurrentCollisionDistance);
 	infoMsg(buf);
-	sprintf_s(buf,B_LEN, "{/} to change displayWait, now=%3ld/%3ld ms", setDisplayWait,displayWait);
+	sprintf_s(buf,B_LEN, "{/} to change displayWait(%3ld ms), now=%3ld ms", setDisplayWait,displayWait);
 	infoMsg(buf);
 	if (m_mode == 5){
 		sprintf_s(buf,B_LEN, "hingeAngle=% 2.3f",
