@@ -76,6 +76,10 @@ cutting case",
 		"4 objects using 6DofElasticPlastic2Constraint, \
 cutting case, large objects, very low fu",
 		CharpyDemoCreateFunc, 60208),
+		ExampleEntry(2, "integration instability",
+		"2 objects using SpringConstraint, \
+very stiff constraints cause instability",
+		CharpyDemoCreateFunc, 70102),
 
 };
 struct ExampleEntriesInternalData

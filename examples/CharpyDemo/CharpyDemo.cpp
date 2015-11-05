@@ -482,6 +482,8 @@ public:
 				setTimeStep = 0.017;
 				variableTimeStep = false;
 				break;
+			case 7: // Integration instability
+				fu = btScalar(800e6);
 			}
 		}
 
