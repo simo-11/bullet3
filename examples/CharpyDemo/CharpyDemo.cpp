@@ -559,7 +559,7 @@ public:
 		btScalar tv(fu / 1e6);
 		setScalar(control, &tv);
 		fu = tv*1e6;
-		restartHandler(control);
+restartHandler(control);
 	}
 	void setL(Gwen::Controls::Base* control){
 		setScalar(control, &l);
@@ -612,7 +612,7 @@ public:
 	void setUiTimeStep(Gwen::Controls::Base* control){
 		btScalar tv(setTimeStep*1e3);
 		setScalar(control, &tv);
-		setTimeStep = tv/1e3;
+		setTimeStep = tv / 1e3;
 		dropFocus = true;
 	}
 	void setUiDisplayWait(Gwen::Controls::Base* control){
@@ -635,27 +635,38 @@ public:
 		gc->SetPos(gx, gy);
 		return gc;
 	}
+	Gwen::Controls::Button* pauseButton;
 	void addPauseSimulationButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
+		pauseButton = gc;
 		gc->SetText(L"Pause");
 		gc->SetPos(gx, gy);
-		gc->SetSize(wxi-4,gyInc-4);
+		gc->SetSize(wxi - 4, gyInc - 4);
 		gc->onPress.Add(pPage, &CharpyDemo::handlePauseSimulation);
 	}
 	void addRestartButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
 		gc->SetText(L"Restart");
-		gc->SetPos(gx+wxi, gy);
+		gc->SetPos(gx + wxi, gy);
 		gc->SetSize(wxi - 4, gyInc - 4);
 		gc->onPress.Add(pPage, &CharpyDemo::restartHandler);
 	}
 	void addResetButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
 		gc->SetText(L"Reset");
-		gc->SetPos(gx+2*wxi, gy);
+		gc->SetPos(gx + 2 * wxi, gy);
 		gc->SetSize(wxi - 4, gyInc - 4);
 		gy += gyInc;
 		gc->onPress.Add(pPage, &CharpyDemo::resetHandler);
+	}
+	void updatePauseButtonText(){
+		bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
+		if (pauseSimulation){
+			pauseButton->SetText(L"Continue");
+		}
+		else{
+			pauseButton->SetText(L"Pause");
+		}
 	}
 	void handlePauseSimulation(Gwen::Controls::Base* control){
 		Gwen::Controls::Button* gc =
@@ -663,12 +674,6 @@ public:
 		bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
 		pauseSimulation=!pauseSimulation;
 		PlasticityExampleBrowser::setPauseSimulation(pauseSimulation);
-		if (pauseSimulation){
-			gc->SetText(L"Continue");
-		}
-		else{
-			gc->SetText(L"Pause");
-		}
 	}
 
 	void addSCount(){
@@ -1971,7 +1976,7 @@ void CharpyDemo::renderScene(){
 		Sleep(displayWait);
 	}
 #endif
-
+	updatePauseButtonText();
 }
 
 void CharpyDemo::stepSimulation(float deltaTime){
