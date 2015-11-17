@@ -31,7 +31,7 @@ target is to break objects using plasticity.
 #include "../plasticity/PlasticityStatistics.h"
 #include "../plasticity/PlasticityExampleBrowser.h"
 #include "../plasticity/BulletKeyToGwen.h"
-#include "../exampleBrowser/GwenGUISupport/gwenUserInterface.h"
+#include "../ExampleBrowser/GwenGUISupport/gwenUserInterface.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenInternalData.h"
 
 #include <stdio.h> 

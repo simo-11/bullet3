@@ -4,6 +4,7 @@
 
 #include "LinearMath/btAlignedObjectArray.h"
 #include "../CharpyDemo/CharpyDemo.h"
+#include "../CharpyDemo/DemolisherDemo.h"
 #include "../ExampleBrowser/ExampleEntries.h"
 
 #ifdef ENABLE_LUA
@@ -35,35 +36,35 @@ option is decoded in CharpyDemo constructor
 static ExampleEntry gDefaultExamples[]=
 {
 	ExampleEntry(0, "Charpy Impact"),
-	ExampleEntry(1,"F1",
+	ExampleEntry(1, "F1",
 	"single rigid object",
-	CharpyDemoCreateFunc,1),
+	CharpyDemoCreateFunc, 1),
 	ExampleEntry(1, "F2",
 	"two objects and springConstraints",
-	CharpyDemoCreateFunc,2),
+	CharpyDemoCreateFunc, 2),
 	ExampleEntry(1, "F3",
 	"two objects and constraints with zero limits",
-	CharpyDemoCreateFunc,3),
+	CharpyDemoCreateFunc, 3),
 	ExampleEntry(1, "F4",
 	"two objects and spring2Constraints",
-	CharpyDemoCreateFunc,4),
+	CharpyDemoCreateFunc, 4),
 	ExampleEntry(1, "F5",
 	"two objects and hingeConstraint",
-	CharpyDemoCreateFunc,5),
+	CharpyDemoCreateFunc, 5),
 	ExampleEntry(1, "F6",
 	"two objects and plasticHingeConstraint",
-	CharpyDemoCreateFunc,6),
+	CharpyDemoCreateFunc, 6),
 	ExampleEntry(1, "F7",
 	"two objects and 6DofElasticPlasticConstraint",
-	CharpyDemoCreateFunc,7),
+	CharpyDemoCreateFunc, 7),
 	ExampleEntry(2, "F8",
 	"two objects and 6DofElasticPlastic2Constraint",
 	CharpyDemoCreateFunc, 8),
 	ExampleEntry(2, "elastic",
 	"10 objects using 6DofElasticPlastic2Constraint, \
-MLCP solver, \
-no hammer, \
-elastic deflection, l=4 m",
+	MLCP solver, \
+	no hammer, \
+	elastic deflection, l=4 m",
 	CharpyDemoCreateFunc, 102030508),
 	ExampleEntry(2, "cutting case",
 	"4 objects using 6DofElasticPlastic2Constraint, \
@@ -71,16 +72,19 @@ cutting case",
 	CharpyDemoCreateFunc, 40208),
 	ExampleEntry(2, "sidestep",
 	"single object does sidestep",
-		CharpyDemoCreateFunc, 50001),
-		ExampleEntry(2, "big and soft",
-		"4 objects using 6DofElasticPlastic2Constraint, \
+	CharpyDemoCreateFunc, 50001),
+	ExampleEntry(2, "big and soft",
+	"4 objects using 6DofElasticPlastic2Constraint, \
 cutting case, large objects, very low fu",
-		CharpyDemoCreateFunc, 60208),
-		ExampleEntry(2, "integration instability",
-		"2 objects using SpringConstraint, \
+	CharpyDemoCreateFunc, 60208),
+	ExampleEntry(2, "integration instability",
+	"2 objects using SpringConstraint, \
 very stiff constraints cause instability",
-		CharpyDemoCreateFunc, 70102),
-
+	CharpyDemoCreateFunc, 70102),
+	ExampleEntry(0, "Demolisher"),
+	ExampleEntry(1, "Basic case",
+	"Vehicle and single fence",
+	DemolisherDemoCreateFunc, 1),
 };
 struct ExampleEntriesInternalData
 {
