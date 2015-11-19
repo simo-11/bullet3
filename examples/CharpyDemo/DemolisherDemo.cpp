@@ -17,10 +17,12 @@ subject to the following restrictions:
 Based on ForkLiftDemo by Simo Nikula 2015-
 */
 #include "DemolisherDemo.h"
+#include "LinearMath/btQuickprof.h"
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include "btBulletDynamicsCommon.h"
 #include "BulletCollision/CollisionShapes/btHeightfieldTerrainShape.h"
-
-
 #include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
 #include "BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h"
 #include "BulletDynamics/MLCPSolvers/btMLCPSolver.h"
@@ -40,6 +42,9 @@ class btCollisionShape;
 #include "../CommonInterfaces/CommonRenderInterface.h"
 #include "../CommonInterfaces/CommonWindowInterface.h"
 #include "../CommonInterfaces/CommonGraphicsAppInterface.h"
+
+const char * PROFILE_DEMOLISHER_SLEEP = "DemolisherDemo::Sleep";
+
 class DemolisherDemo : public CommonRigidBodyBase
 {
 	public:
@@ -56,19 +61,8 @@ class DemolisherDemo : public CommonRigidBodyBase
 	int m_wheelInstances[4];
 
 //----------------------------
-	btRigidBody* m_liftBody;
-	btVector3	m_liftStartPos;
-	btHingeConstraint* m_liftHinge;
-
-	btRigidBody* m_forkBody;
-	btVector3	m_forkStartPos;
-	btSliderConstraint* m_forkSlider;
-
 	btRigidBody* m_loadBody;
 	btVector3	m_loadStartPos;
-
-	void lockLiftHinge(void);
-	void lockForkSlider(void);
 
 	bool m_useDefaultCamera;
 //----------------------------
@@ -105,7 +99,7 @@ class DemolisherDemo : public CommonRigidBodyBase
 
 	virtual void stepSimulation(float deltaTime);
 	
-	virtual void	resetForklift();
+	virtual void	resetDemolisher();
 		
 	virtual void clientResetScene();
 
@@ -143,7 +137,20 @@ class DemolisherDemo : public CommonRigidBodyBase
 		float targetPos[3]={-0.33,-0.72,4.5};
 		m_guiHelper->resetCamera(dist,pitch,yaw,targetPos[0],targetPos[1],targetPos[2]);
 	}
-
+	/** new and delete redefined due to
+	warning C4316: ... : object allocated on the heap may not be aligned 16
+	should be available at least in gcc
+	*/
+	void* operator new(size_t i)
+	{
+		return _mm_malloc(i, 16);
+	}
+		void operator delete(void* p)
+	{
+		_mm_free(p);
+	}
+	btClock idleClock;
+	long displayWait = 50;
 };
 
 
@@ -216,8 +223,6 @@ DemolisherDemo::DemolisherDemo(CommonExampleOptions & options)
 	:CommonRigidBodyBase(options.m_guiHelper),
 	m_guiHelper(options.m_guiHelper),
 m_carChassis(0),
-m_liftBody(0),
-m_forkBody(0),
 m_loadBody(0),
 m_indexVertexArrays(0),
 m_vertices(0),
@@ -358,14 +363,6 @@ tr.setOrigin(btVector3(0,-3,0));
 	//localTrans effectively shifts the center of mass with respect to the chassis
 	localTrans.setOrigin(btVector3(0,1,0));
 	compound->addChildShape(localTrans,chassisShape);
-	{
-		btCollisionShape* suppShape = new btBoxShape(btVector3(0.5f,0.1f,0.5f));
-		btTransform suppLocalTrans;
-		suppLocalTrans.setIdentity();
-		//localTrans effectively shifts the center of mass with respect to the chassis
-		suppLocalTrans.setOrigin(btVector3(0,1.0,2.5));
-		compound->addChildShape(suppLocalTrans, suppShape);
-	}
 	tr.setOrigin(btVector3(0,0.f,0));
 
 	m_carChassis = localCreateRigidBody(800,tr,compound);//chassisShape);
@@ -390,68 +387,6 @@ tr.setOrigin(btVector3(0,-3,0));
 
 
 	{
-		btCollisionShape* liftShape = new btBoxShape(btVector3(0.5f,2.0f,0.05f));
-		m_collisionShapes.push_back(liftShape);
-		btTransform liftTrans;
-		m_liftStartPos = btVector3(0.0f, 2.5f, 3.05f);
-		liftTrans.setIdentity();
-		liftTrans.setOrigin(m_liftStartPos);
-		m_liftBody = localCreateRigidBody(10,liftTrans, liftShape);
-
-		btTransform localA, localB;
-		localA.setIdentity();
-		localB.setIdentity();
-		localA.getBasis().setEulerZYX(0, M_PI_2, 0);
-		localA.setOrigin(btVector3(0.0, 1.0, 3.05));
-		localB.getBasis().setEulerZYX(0, M_PI_2, 0);
-		localB.setOrigin(btVector3(0.0, -1.5, -0.05));
-		m_liftHinge = new btHingeConstraint(*m_carChassis,*m_liftBody, localA, localB);
-//		m_liftHinge->setLimit(-LIFT_EPS, LIFT_EPS);
-		m_liftHinge->setLimit(0.0f, 0.0f);
-		m_dynamicsWorld->addConstraint(m_liftHinge, true);
-
-		btCollisionShape* forkShapeA = new btBoxShape(btVector3(1.0f,0.1f,0.1f));
-		m_collisionShapes.push_back(forkShapeA);
-		btCompoundShape* forkCompound = new btCompoundShape();
-		m_collisionShapes.push_back(forkCompound);
-		btTransform forkLocalTrans;
-		forkLocalTrans.setIdentity();
-		forkCompound->addChildShape(forkLocalTrans, forkShapeA);
-
-		btCollisionShape* forkShapeB = new btBoxShape(btVector3(0.1f,0.02f,0.6f));
-		m_collisionShapes.push_back(forkShapeB);
-		forkLocalTrans.setIdentity();
-		forkLocalTrans.setOrigin(btVector3(-0.9f, -0.08f, 0.7f));
-		forkCompound->addChildShape(forkLocalTrans, forkShapeB);
-
-		btCollisionShape* forkShapeC = new btBoxShape(btVector3(0.1f,0.02f,0.6f));
-		m_collisionShapes.push_back(forkShapeC);
-		forkLocalTrans.setIdentity();
-		forkLocalTrans.setOrigin(btVector3(0.9f, -0.08f, 0.7f));
-		forkCompound->addChildShape(forkLocalTrans, forkShapeC);
-
-		btTransform forkTrans;
-		m_forkStartPos = btVector3(0.0f, 0.6f, 3.2f);
-		forkTrans.setIdentity();
-		forkTrans.setOrigin(m_forkStartPos);
-		m_forkBody = localCreateRigidBody(5, forkTrans, forkCompound);
-
-		localA.setIdentity();
-		localB.setIdentity();
-		localA.getBasis().setEulerZYX(0, 0, M_PI_2);
-		localA.setOrigin(btVector3(0.0f, -1.9f, 0.05f));
-		localB.getBasis().setEulerZYX(0, 0, M_PI_2);
-		localB.setOrigin(btVector3(0.0, 0.0, -0.1));
-		m_forkSlider = new btSliderConstraint(*m_liftBody, *m_forkBody, localA, localB, true);
-		m_forkSlider->setLowerLinLimit(0.1f);
-		m_forkSlider->setUpperLinLimit(0.1f);
-//		m_forkSlider->setLowerAngLimit(-LIFT_EPS);
-//		m_forkSlider->setUpperAngLimit(LIFT_EPS);
-		m_forkSlider->setLowerAngLimit(0.0f);
-		m_forkSlider->setUpperAngLimit(0.0f);
-		m_dynamicsWorld->addConstraint(m_forkSlider, true);
-
-
 		btCompoundShape* loadCompound = new btCompoundShape();
 		m_collisionShapes.push_back(loadCompound);
 		btCollisionShape* loadShapeA = new btBoxShape(btVector3(2.0f,0.5f,0.5f));
@@ -522,11 +457,7 @@ tr.setOrigin(btVector3(0,-3,0));
 			wheel.m_rollInfluence = rollInfluence;
 		}
 	}
-
-	resetForklift();
-	
-//	setCameraDistance(26.f);
-
+	resetDemolisher();
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
 }
 
@@ -539,7 +470,6 @@ void DemolisherDemo::physicsDebugDraw(int debugFlags)
 	}
 }
 
-//to be implemented by the demo
 void DemolisherDemo::renderScene()
 {
 	m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
@@ -571,6 +501,14 @@ void DemolisherDemo::renderScene()
 		//draw wheels (cylinders)
 		m_vehicle->getWheelInfo(i).m_worldTransform.getOpenGLMatrix(m);
 //		m_shapeDrawer->drawOpenGL(m,m_wheelShape,wheelColor,getDebugMode(),worldBoundsMin,worldBoundsMax);
+	}
+	if (idleClock.getTimeSeconds() > 1){
+#ifdef _WIN32
+		if (displayWait>0){
+			BT_PROFILE(PROFILE_DEMOLISHER_SLEEP);
+			Sleep(displayWait);
+		}
+#endif
 	}
 }
 
@@ -616,24 +554,6 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 			}
 			sol->setNumFallbacks(0);
 		}
-
-
-//#define VERBOSE_FEEDBACK
-#ifdef VERBOSE_FEEDBACK
-				if (!numSimSteps)
-			printf("Interpolated transforms\n");
-		else
-		{
-			if (numSimSteps > maxSimSubSteps)
-			{
-				//detect dropping frames
-				printf("Dropped (%i) simulation steps out of %i\n",numSimSteps - maxSimSubSteps,numSimSteps);
-			} else
-			{
-				printf("Simulated (%i) steps\n",numSimSteps);
-			}
-		}
-#endif //VERBOSE_FEEDBACK
 	}
 }
 
@@ -652,7 +572,7 @@ void DemolisherDemo::clientResetScene()
 	initPhysics();
 }
 
-void DemolisherDemo::resetForklift()
+void DemolisherDemo::resetDemolisher()
 {
 	gVehicleSteering = 0.f;
 	gBreakingForce = defaultBreakingForce;
@@ -673,31 +593,6 @@ void DemolisherDemo::resetForklift()
 			m_vehicle->updateWheelTransform(i,true);
 		}
 	}
-	btTransform liftTrans;
-	liftTrans.setIdentity();
-	liftTrans.setOrigin(m_liftStartPos);
-	m_liftBody->activate();
-	m_liftBody->setCenterOfMassTransform(liftTrans);
-	m_liftBody->setLinearVelocity(btVector3(0,0,0));
-	m_liftBody->setAngularVelocity(btVector3(0,0,0));
-
-	btTransform forkTrans;
-	forkTrans.setIdentity();
-	forkTrans.setOrigin(m_forkStartPos);
-	m_forkBody->activate();
-	m_forkBody->setCenterOfMassTransform(forkTrans);
-	m_forkBody->setLinearVelocity(btVector3(0,0,0));
-	m_forkBody->setAngularVelocity(btVector3(0,0,0));
-
-//	m_liftHinge->setLimit(-LIFT_EPS, LIFT_EPS);
-	m_liftHinge->setLimit(0.0f, 0.0f);
-	m_liftHinge->enableAngularMotor(false, 0, 0);
-
-	
-	m_forkSlider->setLowerLinLimit(0.1f);
-	m_forkSlider->setUpperLinLimit(0.1f);
-	m_forkSlider->setPoweredLinMotor(false);
-
 	btTransform loadTrans;
 	loadTrans.setIdentity();
 	loadTrans.setOrigin(m_loadStartPos);
@@ -713,7 +608,7 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 {
 	bool handled = false;
 	bool isShiftPressed = m_guiHelper->getAppInterface()->m_window->isModifierKeyPressed(B3G_SHIFT);
-
+	idleClock.reset();
 	if (state)
 	{
 	if (isShiftPressed) 
@@ -722,37 +617,21 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 			{
 			case B3G_LEFT_ARROW : 
 				{
-				
-					m_liftHinge->setLimit(-M_PI/16.0f, M_PI/8.0f);
-					m_liftHinge->enableAngularMotor(true, -0.1, maxMotorImpulse);
 					handled = true;
 					break;
 				}
 			case B3G_RIGHT_ARROW : 
 				{
-					
-					m_liftHinge->setLimit(-M_PI/16.0f, M_PI/8.0f);
-					m_liftHinge->enableAngularMotor(true, 0.1, maxMotorImpulse);
 					handled = true;
 					break;
 				}
 			case B3G_UP_ARROW :
 				{
-					m_forkSlider->setLowerLinLimit(0.1f);
-					m_forkSlider->setUpperLinLimit(3.9f);
-					m_forkSlider->setPoweredLinMotor(true);
-					m_forkSlider->setMaxLinMotorForce(maxMotorImpulse);
-					m_forkSlider->setTargetLinMotorVelocity(1.0);
 					handled = true;
 					break;
 				}
 			case B3G_DOWN_ARROW :
 				{
-					m_forkSlider->setLowerLinLimit(0.1f);
-					m_forkSlider->setUpperLinLimit(3.9f);
-					m_forkSlider->setPoweredLinMotor(true);
-					m_forkSlider->setMaxLinMotorForce(maxMotorImpulse);
-					m_forkSlider->setTargetLinMotorVelocity(-1.0);
 					handled = true;
 					break;
 				}
@@ -823,10 +702,6 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 					}
 
 					m_dynamicsWorld->setConstraintSolver(m_constraintSolver);
-
-
-					//exitPhysics();
-					//initPhysics();
 					break;
 				}
 
@@ -845,7 +720,6 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 		{
 		case B3G_UP_ARROW:
 			{
-				lockForkSlider();
 				gEngineForce = 0.f;
 				gBreakingForce = defaultBreakingForce; 
 				handled=true;
@@ -853,7 +727,6 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 			}
 		case B3G_DOWN_ARROW:
 			{
-				lockForkSlider();
 				gEngineForce = 0.f;
 				gBreakingForce = defaultBreakingForce;
 				handled=true;
@@ -862,7 +735,6 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 		case B3G_LEFT_ARROW:
 		case B3G_RIGHT_ARROW:
 			{
-				lockLiftHinge();
 				handled=true;
 				break;
 			}
@@ -887,53 +759,6 @@ void DemolisherDemo::specialKeyboard(int key, int x, int y)
 }
 
 
-void DemolisherDemo::lockLiftHinge(void)
-{
-	btScalar hingeAngle = m_liftHinge->getHingeAngle();
-	btScalar lowLim = m_liftHinge->getLowerLimit();
-	btScalar hiLim = m_liftHinge->getUpperLimit();
-	m_liftHinge->enableAngularMotor(false, 0, 0);
-	if(hingeAngle < lowLim)
-	{
-//		m_liftHinge->setLimit(lowLim, lowLim + LIFT_EPS);
-		m_liftHinge->setLimit(lowLim, lowLim);
-	}
-	else if(hingeAngle > hiLim)
-	{
-//		m_liftHinge->setLimit(hiLim - LIFT_EPS, hiLim);
-		m_liftHinge->setLimit(hiLim, hiLim);
-	}
-	else
-	{
-//		m_liftHinge->setLimit(hingeAngle - LIFT_EPS, hingeAngle + LIFT_EPS);
-		m_liftHinge->setLimit(hingeAngle, hingeAngle);
-	}
-	return;
-} // DemolisherDemo::lockLiftHinge()
-
-void DemolisherDemo::lockForkSlider(void)
-{
-	btScalar linDepth = m_forkSlider->getLinearPos();
-	btScalar lowLim = m_forkSlider->getLowerLinLimit();
-	btScalar hiLim = m_forkSlider->getUpperLinLimit();
-	m_forkSlider->setPoweredLinMotor(false);
-	if(linDepth <= lowLim)
-	{
-		m_forkSlider->setLowerLinLimit(lowLim);
-		m_forkSlider->setUpperLinLimit(lowLim);
-	}
-	else if(linDepth > hiLim)
-	{
-		m_forkSlider->setLowerLinLimit(hiLim);
-		m_forkSlider->setUpperLinLimit(hiLim);
-	}
-	else
-	{
-		m_forkSlider->setLowerLinLimit(linDepth);
-		m_forkSlider->setUpperLinLimit(linDepth);
-	}
-	return;
-} // DemolisherDemo::lockForkSlider()
 
 btRigidBody* DemolisherDemo::localCreateRigidBody(btScalar mass, 
 	const btTransform& startTransform, btCollisionShape* shape)

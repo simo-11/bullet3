@@ -51,6 +51,10 @@ public:
 		list<PlasticityData>::iterator psIterator;
 		string txt;
 		list<PlasticityData> *pData = PlasticityData::getData();
+		if (!pData){
+			pStat->Hide();
+			return;
+		}
 		int y = 10;
 		unsigned labelIndex = 0;
 		for (psIterator = pData->begin(); psIterator != pData->end(); psIterator++, labelIndex++)
