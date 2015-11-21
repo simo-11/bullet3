@@ -26,6 +26,7 @@ Based on ForkLiftDemo by Simo Nikula 2015-
 #include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
 #include "BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h"
 #include "BulletDynamics/MLCPSolvers/btMLCPSolver.h"
+#include "../plasticity/PlasticityExampleBrowser.h"
 
 class btVehicleTuning;
 struct btVehicleRaycaster;
@@ -48,7 +49,6 @@ const char * PROFILE_DEMOLISHER_SLEEP = "DemolisherDemo::Sleep";
 class DemolisherDemo : public CommonRigidBodyBase
 {
 	public:
-	btVector3 m_cameraPosition;
 	class btDiscreteDynamicsWorld* m_dynamicsWorld;
 	btDiscreteDynamicsWorld* getDynamicsWorld()
 	{
@@ -151,6 +151,24 @@ class DemolisherDemo : public CommonRigidBodyBase
 	}
 	btClock idleClock;
 	long displayWait = 50;
+	int m_viewMode = 1;
+	void setViewMode(int mode){
+		m_viewMode = mode;
+	}
+	btVector3 lastLocation=btVector3(0,0,0);
+	bool isMoving(){
+		btVector3 location = m_carChassis->getCenterOfMassPosition();
+		btScalar d2 = lastLocation.distance2(location);
+		lastLocation = location;
+		bool isMoving = d2>1e-4;
+		return isMoving;
+	}
+	void updateView(){
+		btVector3 comp = m_carChassis->getCenterOfMassPosition();
+		CommonCameraInterface* camera = PlasticityExampleBrowser::getRenderer()->getActiveCamera();
+		camera->setCameraTargetPosition(comp.x(), comp.y(), comp.z());
+	}
+
 };
 
 
@@ -233,7 +251,6 @@ m_maxCameraDistance(10.f)
 	options.m_guiHelper->setUpAxis(1);
 	m_vehicle = 0;
 	m_wheelShape = 0;
-	m_cameraPosition = btVector3(30,30,30);
 	m_useDefaultCamera = false;
 //	setTexturing(true);
 //	setShadows(true);
@@ -502,7 +519,8 @@ void DemolisherDemo::renderScene()
 		m_vehicle->getWheelInfo(i).m_worldTransform.getOpenGLMatrix(m);
 //		m_shapeDrawer->drawOpenGL(m,m_wheelShape,wheelColor,getDebugMode(),worldBoundsMin,worldBoundsMax);
 	}
-	if (idleClock.getTimeSeconds() > 1){
+	btScalar idleTime = idleClock.getTimeSeconds();
+	if ( idleTime> 10 && !isMoving()){
 #ifdef _WIN32
 		if (displayWait>0){
 			BT_PROFILE(PROFILE_DEMOLISHER_SLEEP);
@@ -554,6 +572,7 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 			}
 			sol->setNumFallbacks(0);
 		}
+		updateView();
 	}
 }
 
@@ -673,7 +692,18 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 					gBreakingForce = 0.f;
 					break;
 				}
-
+			case B3G_F1:
+			{
+				handled = true;
+				setViewMode(1);
+				break;
+			}
+			case B3G_F2:
+			{
+				handled = true;
+				setViewMode(2);
+				break;
+			}
 			case B3G_F7:
 				{
 					handled = true;
