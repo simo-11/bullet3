@@ -62,9 +62,9 @@ static ExampleEntry gDefaultExamples[]=
 	CharpyDemoCreateFunc, 8),
 	ExampleEntry(2, "elastic",
 	"10 objects using 6DofElasticPlastic2Constraint, \
-	MLCP solver, \
-	no hammer, \
-	elastic deflection, l=4 m",
+MLCP solver, \
+no hammer, \
+elastic deflection, l=4 m",
 	CharpyDemoCreateFunc, 102030508),
 	ExampleEntry(2, "cutting case",
 	"4 objects using 6DofElasticPlastic2Constraint, \
@@ -82,9 +82,21 @@ cutting case, large objects, very low fu",
 very stiff constraints cause instability",
 	CharpyDemoCreateFunc, 70102),
 	ExampleEntry(0, "Demolisher"),
-	ExampleEntry(1, "Basic case",
-	"Vehicle and single fence",
+	ExampleEntry(1, "None",
+	"Only mass resistance",
+	DemolisherDemoCreateFunc, 0),
+	ExampleEntry(1, "Rigid",
+	"Not moveable",
 	DemolisherDemoCreateFunc, 1),
+	ExampleEntry(1, "Impulse",
+	"Constrains breaks based on impulse",
+	DemolisherDemoCreateFunc, 2),
+	ExampleEntry(1, "Tree",
+	"Constraint falls like tree",
+	DemolisherDemoCreateFunc, 3),
+	ExampleEntry(1, "Plastic",
+	"Plastic constraint which breaks based on work",
+	DemolisherDemoCreateFunc, 4),
 };
 struct ExampleEntriesInternalData
 {

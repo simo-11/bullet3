@@ -43,10 +43,12 @@ class btCollisionShape;
 #include "../CommonInterfaces/CommonRenderInterface.h"
 #include "../CommonInterfaces/CommonWindowInterface.h"
 #include "../CommonInterfaces/CommonGraphicsAppInterface.h"
+#include "../ExampleBrowser/GwenGUISupport/gwenUserInterface.h"
+#include "../ExampleBrowser/GwenGUISupport/gwenInternalData.h"
 
 const char * PROFILE_DEMOLISHER_SLEEP = "DemolisherDemo::Sleep";
 
-class DemolisherDemo : public CommonRigidBodyBase
+class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 {
 	public:
 	class btDiscreteDynamicsWorld* m_dynamicsWorld;
@@ -81,8 +83,19 @@ class DemolisherDemo : public CommonRigidBodyBase
 	class btTriangleIndexVertexArray*	m_indexVertexArrays;
 
 	btVector3*	m_vertices;
-
-	
+	int gx = 10; // for labels
+	int gxi = 120; // for inputs elements
+	int wxi = 60; // width
+	int gy;
+	int gyInc = 25;
+	bool restartRequested;
+	bool dropFocus = false;
+	GwenUserInterface* gui;
+	Gwen::Controls::Canvas* canvas;
+	CommonWindowInterface* window;
+	int m_option;
+	enum Constraint {None=0,Rigid=1,Impulse=2,Tree=3,Plastic=4};
+	Constraint constraintType;
 	btRaycastVehicle::btVehicleTuning	m_tuning;
 	btVehicleRaycaster*	m_vehicleRayCaster;
 	btRaycastVehicle*	m_vehicle;
@@ -136,6 +149,10 @@ class DemolisherDemo : public CommonRigidBodyBase
 		float yaw = 32;
 		float targetPos[3]={-0.33,-0.72,4.5};
 		m_guiHelper->resetCamera(dist,pitch,yaw,targetPos[0],targetPos[1],targetPos[2]);
+		CommonCameraInterface* camera =
+			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
+		camera->setFrustumZNear(0.01);
+		camera->setFrustumZFar(1000);
 	}
 	/** new and delete redefined due to
 	warning C4316: ... : object allocated on the heap may not be aligned 16
@@ -155,22 +172,115 @@ class DemolisherDemo : public CommonRigidBodyBase
 	void setViewMode(int mode){
 		m_viewMode = mode;
 	}
+	/** Gwen controls handling.
+	Just flag changes to avoid need to specify all parent references
+	if calls come from Gwen
+	*/
+	void restartHandler(Gwen::Controls::Base* control);
+	void reinit();
+	void resetHandler(Gwen::Controls::Base* control); 
 	btVector3 lastLocation=btVector3(0,0,0);
+	btVector3 currentLocation = btVector3(0, 0, 0);
 	bool isMoving(){
-		btVector3 location = m_carChassis->getCenterOfMassPosition();
-		btScalar d2 = lastLocation.distance2(location);
-		lastLocation = location;
+		btScalar d2 = currentLocation.distance2(lastLocation);
 		bool isMoving = d2>1e-4;
 		return isMoving;
 	}
 	void updateView(){
-		btVector3 comp = m_carChassis->getCenterOfMassPosition();
-		CommonCameraInterface* camera = PlasticityExampleBrowser::getRenderer()->getActiveCamera();
-		camera->setCameraTargetPosition(comp.x(), comp.y(), comp.z());
+		lastLocation = currentLocation;
+		currentLocation = m_carChassis->getCenterOfMassPosition();
+		btVector3 loc = (lastLocation + currentLocation)/2;
+		CommonCameraInterface* camera = 
+			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
+		camera->setCameraTargetPosition(loc.x(), loc.y(), loc.z());
+	}
+	Gwen::Controls::Base* pPage;
+	Gwen::Controls::Button* pauseButton;
+	void addPauseSimulationButton(){
+		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
+		pauseButton = gc;
+		gc->SetText(L"Pause");
+		gc->SetPos(gx, gy);
+		gc->SetSize(wxi - 4, gyInc - 4);
+		gc->onPress.Add(pPage, &DemolisherDemo::handlePauseSimulation);
+	}
+	void addRestartButton(){
+		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
+		gc->SetText(L"Restart");
+		gc->SetPos(gx + wxi, gy);
+		gc->SetSize(wxi - 4, gyInc - 4);
+		gc->onPress.Add(pPage, &DemolisherDemo::restartHandler);
+	}
+	void addResetButton(){
+		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
+		gc->SetText(L"Reset");
+		gc->SetPos(gx + 2 * wxi, gy);
+		gc->SetSize(wxi - 4, gyInc - 4);
+		gy += gyInc;
+		gc->onPress.Add(pPage, &DemolisherDemo::resetHandler);
+	}
+	void DemolisherDemo::updatePauseButtonText(){
+		bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
+		if (pauseSimulation){
+			pauseButton->SetText(L"Continue");
+		}
+		else{
+			pauseButton->SetText(L"Pause");
+		}
+	}
+	void handlePauseSimulation(Gwen::Controls::Base* control){
+		Gwen::Controls::Button* gc =
+			static_cast<Gwen::Controls::Button*>(control);
+		bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
+		pauseSimulation = !pauseSimulation;
+		PlasticityExampleBrowser::setPauseSimulation(pauseSimulation);
+	}
+	void initOptions(){
+		resetCamera();
+		int option = m_option;
+		reinit();
+		constraintType = (Constraint)(option % 100);
+		option /= 100;
+		while ((option /= 100) > 0){
+			switch (option % 100){
+			case 1:
+				break;
+			case 2:
+				break;
+			case 3:
+				break;
+			}
+		}
+
+	}
+	void initParameterUi(){
+		gui = PlasticityExampleBrowser::getGui();
+		window = PlasticityExampleBrowser::getWindow();
+		canvas = gui->getInternalData()->pCanvas;
+		pPage = gui->getInternalData()->m_demoPage->GetPage();
+		gy = 5;
+		addPauseSimulationButton();
+		addRestartButton();
+		addResetButton();
+	}
+	void clearParameterUi(){
+		if (pPage){
+			pPage->RemoveAllChildren();
+			pPage = 0;
+		}
+		Gwen::KeyboardFocus = NULL;
+	}
+	void restart()
+	{
+		clearParameterUi();
+		exitPhysics();
+		PlasticityExampleBrowser::getRenderer()->removeAllInstances();
+		initParameterUi();
+		initPhysics();
 	}
 
 };
-
+DemolisherDemo *demo = 0;
 
 btScalar maxMotorImpulse = 4000.f;
 
@@ -237,8 +347,20 @@ btScalar suspensionRestLength(0.6);
 
 #define CUBE_HALF_EXTENTS 1
 
+void DemolisherDemo::restartHandler(Gwen::Controls::Base* control){
+	demo->restartRequested = true;
+}
+void DemolisherDemo::reinit(){
+}
+void DemolisherDemo::resetHandler(Gwen::Controls::Base* control){
+	reinit();
+	restartHandler(control);
+}
+
+
 DemolisherDemo::DemolisherDemo(CommonExampleOptions & options)
 	:CommonRigidBodyBase(options.m_guiHelper),
+	Gwen::Event::Handler(),
 	m_guiHelper(options.m_guiHelper),
 m_carChassis(0),
 m_loadBody(0),
@@ -249,12 +371,12 @@ m_minCameraDistance(3.f),
 m_maxCameraDistance(10.f)
 {
 	options.m_guiHelper->setUpAxis(1);
+	m_option = options.m_option;
 	m_vehicle = 0;
 	m_wheelShape = 0;
 	m_useDefaultCamera = false;
-//	setTexturing(true);
-//	setShadows(true);
-
+	initOptions();
+	initParameterUi();
 }
 
 
@@ -329,6 +451,7 @@ void DemolisherDemo::exitPhysics()
 
 DemolisherDemo::~DemolisherDemo()
 {
+	clearParameterUi();
 }
 
 void DemolisherDemo::initPhysics()
@@ -406,25 +529,19 @@ tr.setOrigin(btVector3(0,-3,0));
 	{
 		btCompoundShape* loadCompound = new btCompoundShape();
 		m_collisionShapes.push_back(loadCompound);
-		btCollisionShape* loadShapeA = new btBoxShape(btVector3(2.0f,0.5f,0.5f));
+		btCollisionShape* loadShapeA = new btBoxShape(btVector3(2,1,1));
 		m_collisionShapes.push_back(loadShapeA);
 		btTransform loadTrans;
 		loadTrans.setIdentity();
 		loadCompound->addChildShape(loadTrans, loadShapeA);
-		btCollisionShape* loadShapeB = new btBoxShape(btVector3(0.1f,1.0f,1.0f));
-		m_collisionShapes.push_back(loadShapeB);
-		loadTrans.setIdentity();
-		loadTrans.setOrigin(btVector3(2.1f, 0.0f, 0.0f));
-		loadCompound->addChildShape(loadTrans, loadShapeB);
-		btCollisionShape* loadShapeC = new btBoxShape(btVector3(0.1f,1.0f,1.0f));
-		m_collisionShapes.push_back(loadShapeC);
-		loadTrans.setIdentity();
-		loadTrans.setOrigin(btVector3(-2.1f, 0.0f, 0.0f));
-		loadCompound->addChildShape(loadTrans, loadShapeC);
-		loadTrans.setIdentity();
-		m_loadStartPos = btVector3(0.0f, 3.5f, 7.0f);
+		m_loadStartPos = btVector3(0, 2, 5);
 		loadTrans.setOrigin(m_loadStartPos);
-		m_loadBody  = localCreateRigidBody(loadMass, loadTrans, loadCompound);
+		btScalar mass=loadMass;
+		switch (constraintType){
+		case Rigid:
+			mass = 0;
+		}
+		m_loadBody  = localCreateRigidBody(mass, loadTrans, loadCompound);
 	}
 	/// create vehicle
 	{
@@ -528,10 +645,15 @@ void DemolisherDemo::renderScene()
 		}
 #endif
 	}
+	updatePauseButtonText();
 }
 
 void DemolisherDemo::stepSimulation(float deltaTime)
 {
+	if (DemolisherDemo::restartRequested){
+		restart();
+		DemolisherDemo::restartRequested = false;
+	}
 	{			
 		int wheelIndex = 2;
 		m_vehicle->applyEngineForce(gEngineForce,wheelIndex);
@@ -822,7 +944,6 @@ btRigidBody* DemolisherDemo::localCreateRigidBody(btScalar mass,
 	m_dynamicsWorld->addRigidBody(body);
 	return body;
 }
-DemolisherDemo *demo = 0;
 CommonExampleInterface*    DemolisherDemoCreateFunc(struct CommonExampleOptions& options)
 {
 	demo = new DemolisherDemo(options);
