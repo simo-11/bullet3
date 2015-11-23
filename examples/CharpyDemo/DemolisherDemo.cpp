@@ -18,6 +18,8 @@ Based on ForkLiftDemo by Simo Nikula 2015-
 */
 #include "DemolisherDemo.h"
 #include "LinearMath/btQuickprof.h"
+#include <stdio.h> 
+#include <string>
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -83,6 +85,10 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	class btTriangleIndexVertexArray*	m_indexVertexArrays;
 
 	btVector3*	m_vertices;
+	float	maxEngineForce = 1000.f;//this should be engine/velocity dependent
+	float	maxBreakingForce = 100.f;
+	btScalar	wheelFriction=1000;
+	btScalar lsx, lsy, lsz;
 	int gx = 10; // for labels
 	int gxi = 120; // for inputs elements
 	int wxi = 60; // width
@@ -194,8 +200,65 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
 		camera->setCameraTargetPosition(loc.x(), loc.y(), loc.z());
 	}
+	std::string getText(Gwen::Controls::Base* control){
+		Gwen::Controls::TextBoxNumeric* box =
+			static_cast<Gwen::Controls::TextBoxNumeric*>(control);
+		if (!box)	{
+			return "";
+		}
+		return Gwen::Utility::UnicodeToString(box->GetText());
+	}
+	void setScalar(Gwen::Controls::Base* control, btScalar * vp){
+		std::string text = getText(control);
+		if (text.length() == 0)	{
+			return;
+		}
+#if defined(BT_USE_DOUBLE_PRECISION)
+		double fv = std::stod(text);
+#else
+		float fv = std::stof(text);
+#endif
+		*vp = fv;
+	}
+	void setLong(Gwen::Controls::Base* control, long * vp){
+		std::string text = getText(control);
+		if (text.length() == 0)	{
+			return;
+		}
+		long fv = std::stol(text);
+		*vp = fv;
+	}
+	void setInt(Gwen::Controls::Base* control, int * vp){
+		std::string text = getText(control);
+		if (text.length() == 0)	{
+			return;
+		}
+		int fv = std::stoi(text);
+		*vp = fv;
+	}
+	/*
+	Limited formatter
+	*/
+#define UIF_SIZE 10
+	std::string uif(btScalar value, const char* fmt = "%.4f")
+	{
+		char buffer[UIF_SIZE];
+		sprintf_s(buffer, UIF_SIZE, fmt, value);
+		return std::string(buffer);
+	}
+	void setWheelFriction(Gwen::Controls::Base* control);
+	void setLsx(Gwen::Controls::Base* control);
+	void setLsy(Gwen::Controls::Base* control);
+	void setLsz(Gwen::Controls::Base* control);
 	Gwen::Controls::Base* pPage;
 	Gwen::Controls::Button* pauseButton;
+	Gwen::Controls::Label* addLabel(std::string txt){
+		Gwen::Controls::Label* gc = new Gwen::Controls::Label(pPage);
+		gc->SetText(txt);
+		gc->SizeToContents();
+		gc->SetPos(gx, gy);
+		return gc;
+	}
 	void addPauseSimulationButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
 		pauseButton = gc;
@@ -219,6 +282,47 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		gy += gyInc;
 		gc->onPress.Add(pPage, &DemolisherDemo::resetHandler);
 	}
+	void place(Gwen::Controls::Base* gc){
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
+		gy += gyInc;
+	}
+	void addWheelFriction(){
+		addLabel("wheel friction");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(wheelFriction, "%.2f");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setWheelFriction);
+	}
+	void addLsx(){
+		addLabel("lsx");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(lsx, "%.2f");
+		gc->SetToolTip("Load size in x-direction");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setLsx);
+	}
+	void addLsy(){
+		addLabel("lsy");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(lsy, "%.2f");
+		gc->SetToolTip("Load size in y-direction");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setLsy);
+	}
+	void addLsz(){
+		addLabel("lsz");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(lsz, "%.2f");
+		gc->SetToolTip("Load size in z-direction");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setLsz);
+	}
+
 	void DemolisherDemo::updatePauseButtonText(){
 		bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
 		if (pauseSimulation){
@@ -259,6 +363,10 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		canvas = gui->getInternalData()->pCanvas;
 		pPage = gui->getInternalData()->m_demoPage->GetPage();
 		gy = 5;
+		addLsx();
+		addLsy();
+		addLsz();
+		addWheelFriction();
 		addPauseSimulationButton();
 		addRestartButton();
 		addResetButton();
@@ -328,15 +436,12 @@ float	gEngineForce = 0.f;
 float	defaultBreakingForce = 10.f;
 float	gBreakingForce = 100.f;
 
-float	maxEngineForce = 1000.f;//this should be engine/velocity dependent
-float	maxBreakingForce = 100.f;
 
 float	gVehicleSteering = 0.f;
 float	steeringIncrement = 0.04f;
 float	steeringClamp = 0.3f;
 float	wheelRadius = 0.5f;
 float	wheelWidth = 0.4f;
-float	wheelFriction = 1000;//BT_LARGE_FLOAT;
 float	suspensionStiffness = 20.f;
 float	suspensionDamping = 2.3f;
 float	suspensionCompression = 4.4f;
@@ -346,14 +451,36 @@ float	rollInfluence = 0.1f;//1.0f;
 btScalar suspensionRestLength(0.6);
 
 #define CUBE_HALF_EXTENTS 1
+void DemolisherDemo::setWheelFriction(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->wheelFriction));
+	restartHandler(control);
+}
+void DemolisherDemo::setLsx(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->lsx));
+	restartHandler(control);
+}
+void DemolisherDemo::setLsy(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->lsy));
+	restartHandler(control);
+}
+void DemolisherDemo::setLsz(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->lsz));
+	restartHandler(control);
+}
 
 void DemolisherDemo::restartHandler(Gwen::Controls::Base* control){
 	demo->restartRequested = true;
 }
 void DemolisherDemo::reinit(){
+	maxEngineForce = 1000;
+	maxBreakingForce = 100;
+	wheelFriction = 1000;
+	lsx = 4;
+	lsy = 2;
+	lsz = 2;
 }
 void DemolisherDemo::resetHandler(Gwen::Controls::Base* control){
-	reinit();
+	demo->reinit();
 	restartHandler(control);
 }
 
@@ -529,12 +656,12 @@ tr.setOrigin(btVector3(0,-3,0));
 	{
 		btCompoundShape* loadCompound = new btCompoundShape();
 		m_collisionShapes.push_back(loadCompound);
-		btCollisionShape* loadShapeA = new btBoxShape(btVector3(2,1,1));
+		btCollisionShape* loadShapeA = new btBoxShape(btVector3(lsx/2,lsy/2,lsz/2));
 		m_collisionShapes.push_back(loadShapeA);
 		btTransform loadTrans;
 		loadTrans.setIdentity();
 		loadCompound->addChildShape(loadTrans, loadShapeA);
-		m_loadStartPos = btVector3(0, 2, 5);
+		m_loadStartPos = btVector3(0, lsy/2, 5);
 		loadTrans.setOrigin(m_loadStartPos);
 		btScalar mass=loadMass;
 		switch (constraintType){
@@ -650,9 +777,9 @@ void DemolisherDemo::renderScene()
 
 void DemolisherDemo::stepSimulation(float deltaTime)
 {
-	if (DemolisherDemo::restartRequested){
+	if (restartRequested){
 		restart();
-		DemolisherDemo::restartRequested = false;
+		restartRequested = false;
 	}
 	{			
 		int wheelIndex = 2;
@@ -689,8 +816,8 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 			{
 				static int totalFailures = 0;
 				totalFailures+=numFallbacks;
-				printf("MLCP solver failed %d times,\
- falling back to btSequentialImpulseSolver (SI)\n",totalFailures);
+				printf("MLCP solver failed %d times, \
+falling back to btSequentialImpulseSolver (SI), totalFailures=%d\n", numFallbacks, totalFailures);
 			}
 			sol->setNumFallbacks(0);
 		}
