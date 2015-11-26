@@ -492,18 +492,7 @@ public:
 	{
 		clearParameterUi();
 	}
-	/** new and delete redefined due to 
-	warning C4316: ... : object allocated on the heap may not be aligned 16
-	should be available at least in gcc
-	*/
-	void* operator new(size_t i)
-	{
-		return _mm_malloc(i, 16);
-	}
-	void operator delete(void* p)
-	{
-		_mm_free(p);
-	}
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 	virtual void	initPhysics();
 	virtual void	exitPhysics();
 	virtual void	stepSimulation(float deltaTime);
