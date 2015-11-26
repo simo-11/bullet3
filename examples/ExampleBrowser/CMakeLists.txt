@@ -23,8 +23,21 @@ SET(App_ExampleBrowser_SRCS
 	../SharedMemory/PhysicsClientExample.cpp
 	../SharedMemory/PosixSharedMemory.cpp
 	../SharedMemory/Win32SharedMemory.cpp
+	../SharedMemory/PhysicsServerSharedMemory.cpp
+	../SharedMemory/PhysicsDirect.cpp
+	../SharedMemory/PhysicsDirect.h
+	../SharedMemory/PhysicsDirectC_API.cpp
+	../SharedMemory/PhysicsDirectC_API.h
+	../SharedMemory/PhysicsLoopBack.cpp
+	../SharedMemory/PhysicsLoopBack.h
+	../SharedMemory/PhysicsLoopBackC_API.cpp
+	../SharedMemory/PhysicsLoopBackC_API.h
+	../SharedMemory/PhysicsServerCommandProcessor.cpp
+	../SharedMemory/PhysicsServerCommandProcessor.h
 	../BasicDemo/BasicExample.cpp
 	../BasicDemo/BasicExample.h
+	../InverseDynamics/InverseDynamicsExample.cpp
+	../InverseDynamics/InverseDynamicsExample.h
 	../ForkLift/ForkLiftDemo.cpp
 	../ForkLift/ForkLiftDemo.h
 	../Tutorial/Tutorial.cpp
@@ -180,7 +193,7 @@ SET(App_ExampleBrowser_SRCS
 )
 
 LINK_LIBRARIES(
-        Bullet3Common BulletSoftBody BulletDynamics BulletCollision LinearMath OpenGLWindow gwen ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY}
+        Bullet3Common BulletSoftBody BulletDynamics BulletCollision BulletInverseDynamicsUtils BulletInverseDynamics LinearMath OpenGLWindow gwen ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY}
 )
 
 IF (WIN32)
