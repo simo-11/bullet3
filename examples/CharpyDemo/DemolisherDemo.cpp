@@ -162,6 +162,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	}
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 	btClock idleClock;
+	btClock driveClock;
 	long displayWait = 50;
 	int m_viewMode = 1;
 	void setViewMode(int mode){
@@ -176,18 +177,39 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	void resetHandler(Gwen::Controls::Base* control); 
 	btVector3 lastLocation=btVector3(0,0,0);
 	btVector3 currentLocation = btVector3(0, 0, 0);
+	float lastClock=0;
+	float currentClock=0;
 	bool isMoving(){
 		btScalar d2 = currentLocation.distance2(lastLocation);
 		bool isMoving = d2>1e-4;
 		return isMoving;
 	}
+	/** update fps and kmph after interval seconds have passed */
+	float speedometerUpdated;
+	btVector3 speedometerLocation=lastLocation;
+	float updateInterval = 0.3;
+	int updateViewCount = 0;
 	void updateView(){
+		updateViewCount++;
+		float now = driveClock.getTimeSeconds();
+		float timeDelta = now - lastClock;
+		lastClock = currentClock;
+		currentClock = now;
 		lastLocation = currentLocation;
 		currentLocation = m_carChassis->getCenterOfMassPosition();
 		btVector3 loc = (lastLocation + currentLocation)/2;
 		CommonCameraInterface* camera = 
 			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
 		camera->setCameraTargetPosition(loc.x(), loc.y(), loc.z());
+		timeDelta = now - speedometerUpdated;
+		if (timeDelta < updateInterval){
+			return;
+		}
+		kmph = (int)(3.6*currentLocation.distance(speedometerLocation) / timeDelta);
+		fps = updateViewCount / timeDelta;
+		speedometerLocation = currentLocation;
+		speedometerUpdated = now;
+		updateViewCount = 0;
 	}
 	std::string getText(Gwen::Controls::Base* control){
 		Gwen::Controls::TextBoxNumeric* box =
@@ -228,7 +250,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	/*
 	Limited formatter
 	*/
-#define UIF_SIZE 10
+#define UIF_SIZE 20
 	std::string uif(btScalar value, const char* fmt = "%.4f")
 	{
 		char buffer[UIF_SIZE];
@@ -241,6 +263,21 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	void setLsz(Gwen::Controls::Base* control);
 	Gwen::Controls::Base* pPage;
 	Gwen::Controls::Button* pauseButton;
+	Gwen::Controls::Label* dashboard;
+	int fps=0;
+	int kmph=0;
+	void updateDashboard(){
+		char buffer[UIF_SIZE];
+		sprintf_s(buffer, UIF_SIZE, "%3d fps %3d km/h ", fps,kmph);
+		std::string str=std::string(buffer);
+		dashboard->SetText(str);
+	}
+	void addDashboard(){
+		dashboard = new Gwen::Controls::Label(pPage);
+		updateDashboard();
+		dashboard->SizeToContents();
+		dashboard->SetPos(gx, gy);
+	}
 	Gwen::Controls::Label* addLabel(std::string txt){
 		Gwen::Controls::Label* gc = new Gwen::Controls::Label(pPage);
 		gc->SetText(txt);
@@ -359,6 +396,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		addPauseSimulationButton();
 		addRestartButton();
 		addResetButton();
+		addDashboard();
 	}
 	void clearParameterUi(){
 		if (pPage){
@@ -752,6 +790,8 @@ void DemolisherDemo::renderScene()
 		m_vehicle->getWheelInfo(i).m_worldTransform.getOpenGLMatrix(m);
 //		m_shapeDrawer->drawOpenGL(m,m_wheelShape,wheelColor,getDebugMode(),worldBoundsMin,worldBoundsMax);
 	}
+	updatePauseButtonText();
+	updateDashboard();
 	btScalar idleTime = idleClock.getTimeSeconds();
 	if ( idleTime> 10 && !isMoving()){
 #ifdef _WIN32
@@ -761,7 +801,6 @@ void DemolisherDemo::renderScene()
 		}
 #endif
 	}
-	updatePauseButtonText();
 }
 
 void DemolisherDemo::stepSimulation(float deltaTime)
@@ -811,6 +850,9 @@ falling back to btSequentialImpulseSolver (SI), totalFailures=%d\n", numFallback
 			sol->setNumFallbacks(0);
 		}
 		updateView();
+	}
+	else{
+		kmph = 0;
 	}
 }
 
