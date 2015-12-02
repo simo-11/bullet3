@@ -85,10 +85,15 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	class btTriangleIndexVertexArray*	m_indexVertexArrays;
 
 	btVector3*	m_vertices;
-	float	maxEngineForce = 1000.f;//this should be engine/velocity dependent
-	float	maxBreakingForce = 100.f;
-	btScalar	wheelFriction=1000;
+	btScalar	maxEngineForce;//this should be engine/velocity dependent
+	btScalar	maxBreakingForce;
+	btScalar	wheelFriction;
 	btScalar lsx, lsy, lsz;
+	btScalar density;
+	btScalar carMass;
+	float	defaultBreakingForce = 10.f;
+	float	gEngineForce = 0.f;
+	float	gBreakingForce = 100.f;
 	int gx = 10; // for labels
 	int gxi = 120; // for inputs elements
 	int wxi = 60; // width
@@ -250,7 +255,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	/*
 	Limited formatter
 	*/
-#define UIF_SIZE 20
+#define UIF_SIZE 50
 	std::string uif(btScalar value, const char* fmt = "%.4f")
 	{
 		char buffer[UIF_SIZE];
@@ -261,6 +266,10 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	void setLsx(Gwen::Controls::Base* control);
 	void setLsy(Gwen::Controls::Base* control);
 	void setLsz(Gwen::Controls::Base* control);
+	void setDensity(Gwen::Controls::Base* control);
+	void setCarMass(Gwen::Controls::Base* control);
+	void setMaxBreakingForce(Gwen::Controls::Base* control);
+	void setMaxEngineForce(Gwen::Controls::Base* control);
 	Gwen::Controls::Base* pPage;
 	Gwen::Controls::Button* pauseButton;
 	Gwen::Controls::Label* dashboard;
@@ -268,7 +277,8 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	int kmph=0;
 	void updateDashboard(){
 		char buffer[UIF_SIZE];
-		sprintf_s(buffer, UIF_SIZE, "%3d fps %3d km/h ", fps,kmph);
+		sprintf_s(buffer, UIF_SIZE, "%3d fps %3d km/h %+5.0f/%+5.0f", 
+			fps,kmph,gEngineForce,gBreakingForce);
 		std::string str=std::string(buffer);
 		dashboard->SetText(str);
 	}
@@ -348,6 +358,42 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setLsz);
 	}
+	void addDensity(){
+		addLabel("density");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(density, "%.2f");
+		gc->SetToolTip("Load density [kg/m3]");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setDensity);
+	}
+	void addCarMass(){
+		addLabel("car mass");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(carMass, "%.0f");
+		gc->SetToolTip("car mass [kg]");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setCarMass);
+	}
+	void addMaxEngineForce(){
+		addLabel("max engine force");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(maxEngineForce, "%.2f");
+		gc->SetToolTip("impulse");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setMaxEngineForce);
+	}
+	void addMaxBreakingForce(){
+		addLabel("max breaking force");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(maxBreakingForce, "%.2f");
+		gc->SetToolTip("impulse");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setMaxEngineForce);
+	}
 
 	void DemolisherDemo::updatePauseButtonText(){
 		bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
@@ -392,6 +438,10 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		addLsx();
 		addLsy();
 		addLsz();
+		addDensity();
+		addCarMass();
+		addMaxEngineForce();
+		addMaxBreakingForce();
 		addWheelFriction();
 		addPauseSimulationButton();
 		addRestartButton();
@@ -418,30 +468,11 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 DemolisherDemo *demo = 0;
 
 btScalar maxMotorImpulse = 4000.f;
-
-//the sequential impulse solver has difficulties dealing with large mass ratios (differences),
-// between loadMass and the fork parts
-btScalar loadMass = 350.f;//
-//btScalar loadMass = 10.f;//this should work fine for the SI solver
-
-
-#ifndef M_PI
-#define M_PI       3.14159265358979323846
-#endif
-
-#ifndef M_PI_2
-#define M_PI_2     1.57079632679489661923
-#endif
-
-#ifndef M_PI_4
-#define M_PI_4     0.785398163397448309616
-#endif
-
-		int rightIndex = 0;
-		int upIndex = 1;
-		int forwardIndex = 2;
-		btVector3 wheelDirectionCS0(0,-1,0);
-		btVector3 wheelAxleCS(-1,0,0);
+int rightIndex = 0;
+int upIndex = 1;
+int forwardIndex = 2;
+btVector3 wheelDirectionCS0(0,-1,0);
+btVector3 wheelAxleCS(-1,0,0);
 
 bool useMCLPSolver = true;
 
@@ -458,10 +489,6 @@ const int maxOverlap = 65535;
 ///btRaycastVehicle is the interface for the constraint that implements the raycast vehicle
 ///notice that for higher-quality slow-moving vehicles, another approach might be better
 ///implementing explicit hinged-wheel constraints with cylinder collision, rather then raycasts
-float	gEngineForce = 0.f;
-
-float	defaultBreakingForce = 10.f;
-float	gBreakingForce = 100.f;
 
 
 float	gVehicleSteering = 0.f;
@@ -494,17 +521,35 @@ void DemolisherDemo::setLsz(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->lsz));
 	restartHandler(control);
 }
+void DemolisherDemo::setDensity(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->density));
+	restartHandler(control);
+}
+void DemolisherDemo::setCarMass(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->carMass));
+	restartHandler(control);
+}
+void DemolisherDemo::setMaxEngineForce(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->maxEngineForce));
+	restartHandler(control);
+}
+void DemolisherDemo::setMaxBreakingForce(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->maxBreakingForce));
+	restartHandler(control);
+}
 
 void DemolisherDemo::restartHandler(Gwen::Controls::Base* control){
 	demo->restartRequested = true;
 }
 void DemolisherDemo::reinit(){
-	maxEngineForce = 1000;
-	maxBreakingForce = 100;
+	maxEngineForce = 10000;
+	maxBreakingForce = 1000;
 	wheelFriction = 1000;
 	lsx = 4;
 	lsy = 2;
 	lsz = 2;
+	density = 1000;
+	carMass = 30000;
 }
 void DemolisherDemo::resetHandler(Gwen::Controls::Base* control){
 	demo->reinit();
@@ -659,7 +704,7 @@ tr.setOrigin(btVector3(0,-3,0));
 	compound->addChildShape(localTrans,chassisShape);
 	tr.setOrigin(btVector3(0,0.f,0));
 
-	m_carChassis = localCreateRigidBody(800,tr,compound);//chassisShape);
+	m_carChassis = localCreateRigidBody(carMass,tr,compound);//chassisShape);
 	//m_carChassis->setDamping(0.2,0.2);
 	
 	m_wheelShape = new btCylinderShapeX(btVector3(wheelWidth,wheelRadius,wheelRadius));
@@ -690,7 +735,7 @@ tr.setOrigin(btVector3(0,-3,0));
 		loadCompound->addChildShape(loadTrans, loadShapeA);
 		m_loadStartPos = btVector3(0, lsy/2, 5);
 		loadTrans.setOrigin(m_loadStartPos);
-		btScalar mass=loadMass;
+		btScalar mass=lsx*lsy*lsz*density;
 		switch (constraintType){
 		case Rigid:
 			mass = 0;
