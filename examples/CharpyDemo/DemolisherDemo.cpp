@@ -91,6 +91,10 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	btScalar lsx, lsy, lsz;
 	btScalar density;
 	btScalar carMass;
+	btScalar suspensionStiffness;
+	btScalar suspensionDamping;
+	btScalar suspensionCompression;
+	btScalar suspensionRestLength;
 	float	defaultBreakingForce = 10.f;
 	float	gEngineForce = 0.f;
 	float	gBreakingForce = 100.f;
@@ -270,6 +274,10 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	void setCarMass(Gwen::Controls::Base* control);
 	void setMaxBreakingForce(Gwen::Controls::Base* control);
 	void setMaxEngineForce(Gwen::Controls::Base* control);
+	void setSuspensionStiffness(Gwen::Controls::Base* control);
+	void setSuspensionDamping(Gwen::Controls::Base* control);
+	void setSuspensionCompression(Gwen::Controls::Base* control);
+	void setSuspensionRestLength(Gwen::Controls::Base* control);
 	Gwen::Controls::Base* pPage;
 	Gwen::Controls::Button* pauseButton;
 	Gwen::Controls::Label* dashboard;
@@ -376,6 +384,42 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setCarMass);
 	}
+	void addSuspensionStiffness(){
+		addLabel("suspensionStiffness");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(suspensionStiffness, "%.1f");
+		gc->SetToolTip("Suspension Stiffness [N/m]");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setSuspensionStiffness);
+	}
+	void addSuspensionDamping(){
+		addLabel("suspensionDamping");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(suspensionDamping, "%.1f");
+		gc->SetToolTip("Suspension Damping");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setSuspensionDamping);
+	}
+	void addSuspensionCompression(){
+		addLabel("suspensionCompression");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(suspensionCompression, "%.1f");
+		gc->SetToolTip("Suspension Compression");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setSuspensionCompression);
+	}
+	void addSuspensionRestLength(){
+		addLabel("suspensionRestLength");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(suspensionRestLength, "%.2f");
+		gc->SetToolTip("Suspension RestLength [kg]");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setSuspensionRestLength);
+	}
 	void addMaxEngineForce(){
 		addLabel("max engine force");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
@@ -440,6 +484,10 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		addLsz();
 		addDensity();
 		addCarMass();
+		addSuspensionStiffness();
+		addSuspensionDamping();
+		addSuspensionCompression();
+		addSuspensionRestLength();
 		addMaxEngineForce();
 		addMaxBreakingForce();
 		addWheelFriction();
@@ -467,7 +515,6 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 };
 DemolisherDemo *demo = 0;
 
-btScalar maxMotorImpulse = 4000.f;
 int rightIndex = 0;
 int upIndex = 1;
 int forwardIndex = 2;
@@ -496,13 +543,9 @@ float	steeringIncrement = 0.04f;
 float	steeringClamp = 0.3f;
 float	wheelRadius = 0.5f;
 float	wheelWidth = 0.4f;
-float	suspensionStiffness = 20.f;
-float	suspensionDamping = 2.3f;
-float	suspensionCompression = 4.4f;
 float	rollInfluence = 0.1f;//1.0f;
 
 
-btScalar suspensionRestLength(0.6);
 
 #define CUBE_HALF_EXTENTS 1
 void DemolisherDemo::setWheelFriction(Gwen::Controls::Base* control){
@@ -529,6 +572,22 @@ void DemolisherDemo::setCarMass(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->carMass));
 	restartHandler(control);
 }
+void DemolisherDemo::setSuspensionStiffness(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->suspensionStiffness));
+	restartHandler(control);
+}
+void DemolisherDemo::setSuspensionDamping(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->suspensionDamping));
+	restartHandler(control);
+}
+void DemolisherDemo::setSuspensionCompression(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->suspensionCompression));
+	restartHandler(control);
+}
+void DemolisherDemo::setSuspensionRestLength(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->suspensionRestLength));
+	restartHandler(control);
+}
 void DemolisherDemo::setMaxEngineForce(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->maxEngineForce));
 	restartHandler(control);
@@ -548,8 +607,12 @@ void DemolisherDemo::reinit(){
 	lsx = 4;
 	lsy = 2;
 	lsz = 2;
-	density = 1000;
-	carMass = 30000;
+	density = 50;
+	carMass = 400;
+	suspensionStiffness=20;
+	suspensionDamping=2;
+	suspensionCompression=4;
+	suspensionRestLength=0.5;
 }
 void DemolisherDemo::resetHandler(Gwen::Controls::Base* control){
 	demo->reinit();
@@ -700,13 +763,10 @@ tr.setOrigin(btVector3(0,-3,0));
 	btTransform localTrans;
 	localTrans.setIdentity();
 	//localTrans effectively shifts the center of mass with respect to the chassis
-	localTrans.setOrigin(btVector3(0,1,0));
+	localTrans.setOrigin(btVector3(0,suspensionRestLength+wheelRadius,0));
 	compound->addChildShape(localTrans,chassisShape);
 	tr.setOrigin(btVector3(0,0.f,0));
-
-	m_carChassis = localCreateRigidBody(carMass,tr,compound);//chassisShape);
-	//m_carChassis->setDamping(0.2,0.2);
-	
+	m_carChassis = localCreateRigidBody(carMass,tr,compound);//chassisShape);	
 	m_wheelShape = new btCylinderShapeX(btVector3(wheelWidth,wheelRadius,wheelRadius));
 
 	m_guiHelper->createCollisionShapeGraphicsObject(m_wheelShape);
@@ -889,8 +949,8 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 			{
 				static int totalFailures = 0;
 				totalFailures+=numFallbacks;
-				printf("MLCP solver failed %d times, \
-falling back to btSequentialImpulseSolver (SI), totalFailures=%d\n", numFallbacks, totalFailures);
+				printf("MLCP solver failed %d times, falling back to SI, totalFailures=%d\n", 
+					numFallbacks, totalFailures);
 			}
 			sol->setNumFallbacks(0);
 		}
