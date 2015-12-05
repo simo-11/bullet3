@@ -220,6 +220,24 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		speedometerUpdated = now;
 		updateViewCount = 0;
 	}
+	/**
+	https://en.wikipedia.org/wiki/Drag_(physics)
+	ro is about 1 kg/m3
+	area is about 2 m2
+	Cd is about 1
+	so we use speed2
+	*/
+	btVector3 drag;
+	btScalar dragForce=0;
+	void updateDrag(){
+		btVector3 vel = m_carChassis->getLinearVelocity();
+		dragForce=-vel.length2();
+		btVector3 norm;
+		if (dragForce < -0.000001){
+			drag = vel.normalized()*dragForce;
+		}
+		drag = btVector3(0,0,0);
+	}
 	std::string getText(Gwen::Controls::Base* control){
 		Gwen::Controls::TextBoxNumeric* box =
 			static_cast<Gwen::Controls::TextBoxNumeric*>(control);
@@ -280,21 +298,30 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	void setSuspensionRestLength(Gwen::Controls::Base* control);
 	Gwen::Controls::Base* pPage;
 	Gwen::Controls::Button* pauseButton;
-	Gwen::Controls::Label* dashboard;
-	int fps=0;
+	Gwen::Controls::Label* dashboard1;
+	Gwen::Controls::Label* dashboard2;
+	int fps = 0;
 	int kmph=0;
-	void updateDashboard(){
+	void updateDashboards(){
 		char buffer[UIF_SIZE];
-		sprintf_s(buffer, UIF_SIZE, "%3d fps %3d km/h %+5.0f/%+5.0f", 
+		sprintf_s(buffer, UIF_SIZE, "%-3d fps %-3d km/h ", 
 			fps,kmph,gEngineForce,gBreakingForce);
 		std::string str=std::string(buffer);
-		dashboard->SetText(str);
+		dashboard1->SetText(str);
+		sprintf_s(buffer, UIF_SIZE, "%-+7.0f/%-+7.0f/%-7.0f ",
+			gEngineForce, gBreakingForce,-dragForce);
+		str = std::string(buffer);
+		dashboard2->SetText(str);
 	}
 	void addDashboard(){
-		dashboard = new Gwen::Controls::Label(pPage);
-		updateDashboard();
-		dashboard->SizeToContents();
-		dashboard->SetPos(gx, gy);
+		dashboard1 = new Gwen::Controls::Label(pPage);
+		dashboard2 = new Gwen::Controls::Label(pPage);
+		updateDashboards();
+		dashboard1->SizeToContents();
+		dashboard1->SetPos(gx, gy);
+		gy += gyInc;
+		dashboard2->SizeToContents();
+		dashboard2->SetPos(gx, gy);
 	}
 	Gwen::Controls::Label* addLabel(std::string txt){
 		Gwen::Controls::Label* gc = new Gwen::Controls::Label(pPage);
@@ -613,6 +640,8 @@ void DemolisherDemo::reinit(){
 	suspensionDamping=2;
 	suspensionCompression=4;
 	suspensionRestLength=0.5;
+	driveClock.reset();
+	speedometerUpdated = 0;
 }
 void DemolisherDemo::resetHandler(Gwen::Controls::Base* control){
 	demo->reinit();
@@ -896,7 +925,7 @@ void DemolisherDemo::renderScene()
 //		m_shapeDrawer->drawOpenGL(m,m_wheelShape,wheelColor,getDebugMode(),worldBoundsMin,worldBoundsMax);
 	}
 	updatePauseButtonText();
-	updateDashboard();
+	updateDashboards();
 	btScalar idleTime = idleClock.getTimeSeconds();
 	if ( idleTime> 10 && !isMoving()){
 #ifdef _WIN32
@@ -914,7 +943,7 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 		restart();
 		restartRequested = false;
 	}
-	{			
+	{
 		int wheelIndex = 2;
 		m_vehicle->applyEngineForce(gEngineForce,wheelIndex);
 		m_vehicle->setBrake(gBreakingForce,wheelIndex);
@@ -925,11 +954,16 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 
 		wheelIndex = 0;
 		m_vehicle->setSteeringValue(gVehicleSteering,wheelIndex);
+		m_vehicle->setBrake(gBreakingForce, wheelIndex);
 		wheelIndex = 1;
 		m_vehicle->setSteeringValue(gVehicleSteering,wheelIndex);
+		m_vehicle->setBrake(gBreakingForce, wheelIndex);
 
 	}
-
+	{
+		updateDrag();
+		m_carChassis->applyCentralForce(drag);
+	}
 
 	float dt = deltaTime;
 	
