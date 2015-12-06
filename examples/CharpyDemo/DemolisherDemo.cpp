@@ -91,7 +91,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	btScalar lsx, lsy, lsz;
 	btScalar density;
 	btScalar carMass;
-	btScalar suspensionStiffness;
+	btScalar suspensionStiffness,suspensionMaxForce;
 	btScalar suspensionDamping;
 	btScalar suspensionCompression;
 	btScalar suspensionRestLength;
@@ -295,6 +295,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	void setMaxBreakingForce(Gwen::Controls::Base* control);
 	void setMaxEngineForce(Gwen::Controls::Base* control);
 	void setSuspensionStiffness(Gwen::Controls::Base* control);
+	void setSuspensionMaxForce(Gwen::Controls::Base* control);
 	void setSuspensionDamping(Gwen::Controls::Base* control);
 	void setSuspensionCompression(Gwen::Controls::Base* control);
 	void setSuspensionRestLength(Gwen::Controls::Base* control);
@@ -312,13 +313,13 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		sprintf_s(buffer, UIF_SIZE, "%-3d ", kmph);
 		str = std::string(buffer);
 		db13->SetText(str);
-		sprintf_s(buffer, UIF_SIZE, "%-+7.0f ", gEngineForce);
+		sprintf_s(buffer, UIF_SIZE, "%-+9.0f ", gEngineForce);
 		str = std::string(buffer);
 		db21->SetText(str);
-		sprintf_s(buffer, UIF_SIZE, "%-+7.0f ",gBreakingForce);
+		sprintf_s(buffer, UIF_SIZE, "%9.0f ",-gBreakingForce);
 		str = std::string(buffer);
 		db22->SetText(str);
-		sprintf_s(buffer, UIF_SIZE, "%-7.0f ",-dragForce);
+		sprintf_s(buffer, UIF_SIZE, "%9.0f ",-dragForce);
 		str = std::string(buffer);
 		db23->SetText(str);
 	}
@@ -446,6 +447,15 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setSuspensionStiffness);
 	}
+	void addSuspensionMaxForce(){
+		addLabel("suspensionMaxForce");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(suspensionMaxForce, "%.0f");
+		gc->SetToolTip("Suspension Maximum Force [N]");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setSuspensionMaxForce);
+	}
 	void addSuspensionDamping(){
 		addLabel("suspensionDamping");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
@@ -476,7 +486,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	void addMaxEngineForce(){
 		addLabel("max engine force");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(maxEngineForce, "%.2f");
+		std::string text = uif(maxEngineForce, "%.0f");
 		gc->SetToolTip("impulse");
 		gc->SetText(text);
 		place(gc);
@@ -538,6 +548,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		addDensity();
 		addCarMass();
 		addSuspensionStiffness();
+		addSuspensionMaxForce();
 		addSuspensionDamping();
 		addSuspensionCompression();
 		addSuspensionRestLength();
@@ -629,6 +640,10 @@ void DemolisherDemo::setSuspensionStiffness(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->suspensionStiffness));
 	restartHandler(control);
 }
+void DemolisherDemo::setSuspensionMaxForce(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->suspensionMaxForce));
+	restartHandler(control);
+}
 void DemolisherDemo::setSuspensionDamping(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->suspensionDamping));
 	restartHandler(control);
@@ -663,7 +678,8 @@ void DemolisherDemo::reinit(){
 	density = 50;
 	carMass = 1400;
 	suspensionStiffness=10;
-	suspensionDamping=.5;
+	suspensionMaxForce = 2000000; // allows static load of 800 tons
+	suspensionDamping = .5;
 	suspensionCompression=3;
 	suspensionRestLength=1;
 	driveClock.reset();
@@ -903,6 +919,7 @@ tr.setOrigin(btVector3(0,-3,0));
 			wheel.m_wheelsDampingCompression = suspensionCompression;
 			wheel.m_frictionSlip = wheelFriction;
 			wheel.m_rollInfluence = rollInfluence;
+			wheel.m_maxSuspensionForce = suspensionMaxForce;
 		}
 	}
 	resetDemolisher();
