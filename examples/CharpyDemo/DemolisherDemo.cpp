@@ -656,16 +656,16 @@ void DemolisherDemo::restartHandler(Gwen::Controls::Base* control){
 void DemolisherDemo::reinit(){
 	maxEngineForce = 10000;
 	maxBreakingForce = 1000;
-	wheelFriction = 1000;
+	wheelFriction = 0.8;
 	lsx = 4;
 	lsy = 2;
 	lsz = 2;
 	density = 50;
-	carMass = 400;
-	suspensionStiffness=20;
-	suspensionDamping=2;
-	suspensionCompression=4;
-	suspensionRestLength=0.5;
+	carMass = 1400;
+	suspensionStiffness=10;
+	suspensionDamping=.5;
+	suspensionCompression=3;
+	suspensionRestLength=1;
 	driveClock.reset();
 	speedometerUpdated = 0;
 }
