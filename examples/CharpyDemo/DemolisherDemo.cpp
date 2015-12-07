@@ -64,14 +64,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	GUIHelperInterface* m_guiHelper;
 	int m_wheelInstances[4];
 
-//----------------------------
-	btRigidBody* m_loadBody;
-	btVector3	m_loadStartPos;
-
 	bool m_useDefaultCamera;
-//----------------------------
-
-
 	btAlignedObjectArray<btCollisionShape*> m_collisionShapes;
 
 	class btBroadphaseInterface*	m_overlappingPairCache;
@@ -89,6 +82,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	btScalar	maxBreakingForce;
 	btScalar	wheelFriction;
 	btScalar lsx, lsy, lsz;
+	int lpc=1;
 	btScalar density;
 	btScalar carMass;
 	btScalar suspensionStiffness,suspensionMaxForce;
@@ -287,6 +281,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		return std::string(buffer);
 	}
 	void setWheelFriction(Gwen::Controls::Base* control);
+	void setLpc(Gwen::Controls::Base* control);
 	void setLsx(Gwen::Controls::Base* control);
 	void setLsy(Gwen::Controls::Base* control);
 	void setLsz(Gwen::Controls::Base* control);
@@ -392,6 +387,15 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		gc->SetText(text);
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setWheelFriction);
+	}
+	void addLpc(){
+		addLabel("lpc");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = std::to_string(lpc);
+		gc->SetToolTip("Load parts in x-direction");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setLpc);
 	}
 	void addLsx(){
 		addLabel("lsx");
@@ -542,6 +546,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		canvas = gui->getInternalData()->pCanvas;
 		pPage = gui->getInternalData()->m_demoPage->GetPage();
 		gy = 5;
+		addLpc();
 		addLsx();
 		addLsy();
 		addLsz();
@@ -616,6 +621,10 @@ void DemolisherDemo::setWheelFriction(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->wheelFriction));
 	restartHandler(control);
 }
+void DemolisherDemo::setLpc(Gwen::Controls::Base* control){
+	setInt(control, &(demo->lpc));
+	restartHandler(control);
+}
 void DemolisherDemo::setLsx(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->lsx));
 	restartHandler(control);
@@ -672,6 +681,7 @@ void DemolisherDemo::reinit(){
 	maxEngineForce = 10000;
 	maxBreakingForce = 1000;
 	wheelFriction = 0.8;
+	lpc = 1;
 	lsx = 4;
 	lsy = 2;
 	lsz = 2;
@@ -696,7 +706,6 @@ DemolisherDemo::DemolisherDemo(CommonExampleOptions & options)
 	Gwen::Event::Handler(),
 	m_guiHelper(options.m_guiHelper),
 m_carChassis(0),
-m_loadBody(0),
 m_indexVertexArrays(0),
 m_vertices(0),
 m_cameraHeight(4.f),
@@ -854,24 +863,30 @@ tr.setOrigin(btVector3(0,-3,0));
 			(wheelGraphicsIndex, position, quaternion, color, scaling);
 	}
 
-
-
+	/// create load parts
 	{
-		btCompoundShape* loadCompound = new btCompoundShape();
-		m_collisionShapes.push_back(loadCompound);
-		btCollisionShape* loadShapeA = new btBoxShape(btVector3(lsx/2,lsy/2,lsz/2));
-		m_collisionShapes.push_back(loadShapeA);
-		btTransform loadTrans;
-		loadTrans.setIdentity();
-		loadCompound->addChildShape(loadTrans, loadShapeA);
-		m_loadStartPos = btVector3(0, lsy/2, 5);
-		loadTrans.setOrigin(m_loadStartPos);
-		btScalar mass=lsx*lsy*lsz*density;
+		btAlignedObjectArray<btRigidBody*> ha;
+		btScalar xlen = lsx / lpc;
+		btCollisionShape* loadShape = new btBoxShape(btVector3(xlen/2, lsy / 2, lsz / 2));
+		btScalar mass;
 		switch (constraintType){
 		case Rigid:
 			mass = 0;
+			break;
+		default:
+			mass = lsx*lsy*lsz*density / lpc;
+			break;
 		}
-		m_loadBody  = localCreateRigidBody(mass, loadTrans, loadCompound);
+		m_collisionShapes.push_back(loadShape);
+		btScalar xloc = (xlen-lsx)/2;
+		for (int i = 0; i < lpc; i++){
+			btTransform loadTrans;
+			loadTrans.setIdentity();
+			btVector3 pos = btVector3(xloc, lsy / 2, 5);
+			loadTrans.setOrigin(pos);
+			ha.push_back(localCreateRigidBody(mass, loadTrans, loadShape));
+			xloc += xlen;
+		}
 	}
 	/// create vehicle
 	{
@@ -1074,14 +1089,6 @@ void DemolisherDemo::resetDemolisher()
 			m_vehicle->updateWheelTransform(i,true);
 		}
 	}
-	btTransform loadTrans;
-	loadTrans.setIdentity();
-	loadTrans.setOrigin(m_loadStartPos);
-	m_loadBody->activate();
-	m_loadBody->setCenterOfMassTransform(loadTrans);
-	m_loadBody->setLinearVelocity(btVector3(0,0,0));
-	m_loadBody->setAngularVelocity(btVector3(0,0,0));
-
 }
 
 
