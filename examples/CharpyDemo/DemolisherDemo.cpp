@@ -214,6 +214,28 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		speedometerUpdated = now;
 		updateViewCount = 0;
 	}
+	void updatePitch(float delta){
+		CommonCameraInterface* camera =
+			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
+		float current = camera->getCameraPitch();
+		current += delta;
+		if (current > 360){
+			current -= 360;
+		}
+		else if (current < 0){
+			current += 360;
+		}
+		camera->setCameraPitch(current);
+	}
+	void updateYaw(float delta){
+		CommonCameraInterface* camera =
+			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
+		float current = camera->getCameraYaw();
+		current += delta;
+		if (current >= 0 && current < 90){
+			camera->setCameraYaw(current);
+		}
+	}
 	/**
 	https://en.wikipedia.org/wiki/Drag_(physics)
 	ro is about 1 kg/m3
@@ -1095,7 +1117,9 @@ void DemolisherDemo::resetDemolisher()
 bool	DemolisherDemo::keyboardCallback(int key, int state)
 {
 	bool handled = false;
-	bool isShiftPressed = m_guiHelper->getAppInterface()->m_window->isModifierKeyPressed(B3G_SHIFT);
+	CommonWindowInterface * win=m_guiHelper->getAppInterface()->m_window;
+	bool isShiftPressed = win->isModifierKeyPressed(B3G_SHIFT);
+	bool isControlPressed = win->isModifierKeyPressed(B3G_CONTROL);
 	idleClock.reset();
 	if (state)
 	{
@@ -1104,22 +1128,34 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 		switch (key) 
 			{
 			case B3G_LEFT_ARROW : 
-				{
+				{	
+					float increment = 1;
+					if (isControlPressed){
+						increment *= 5;
+					}
+					updatePitch(increment);
 					handled = true;
 					break;
 				}
 			case B3G_RIGHT_ARROW : 
 				{
+					float increment = -1;
+					if (isControlPressed){
+						increment *= 5;
+					}
+					updatePitch(increment);
 					handled = true;
 					break;
 				}
 			case B3G_UP_ARROW :
 				{
+					updateYaw(1);
 					handled = true;
 					break;
 				}
 			case B3G_DOWN_ARROW :
 				{
+					updateYaw(-1);
 					handled = true;
 					break;
 				}
