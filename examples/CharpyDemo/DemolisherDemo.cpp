@@ -82,7 +82,8 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	btScalar	maxBreakingForce;
 	btScalar	wheelFriction;
 	btScalar lsx, lsy, lsz;
-	int lpc=1;
+	int lpc;
+	btScalar breakingImpulseThreshold;
 	btScalar density;
 	btScalar carMass;
 	btScalar suspensionStiffness,suspensionMaxForce;
@@ -103,7 +104,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	Gwen::Controls::Canvas* canvas;
 	CommonWindowInterface* window;
 	int m_option;
-	enum Constraint {None=0,Rigid=1,Impulse=2,Tree=3,Plastic=4};
+	enum Constraint {None=0,Rigid=1,Impulse=2,Plastic=3};
 	Constraint constraintType;
 	btRaycastVehicle::btVehicleTuning	m_tuning;
 	btVehicleRaycaster*	m_vehicleRayCaster;
@@ -308,6 +309,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	void setLsy(Gwen::Controls::Base* control);
 	void setLsz(Gwen::Controls::Base* control);
 	void setDensity(Gwen::Controls::Base* control);
+	void setBreakingImpulseThreshold(Gwen::Controls::Base* control);
 	void setCarMass(Gwen::Controls::Base* control);
 	void setMaxBreakingForce(Gwen::Controls::Base* control);
 	void setMaxEngineForce(Gwen::Controls::Base* control);
@@ -455,6 +457,15 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setDensity);
 	}
+	void addBreakingImpulseThreshold(){
+		addLabel("breakingImpulse");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(breakingImpulseThreshold, "%.0f");
+		gc->SetToolTip("breakingImpulseThreshold for load parts [Ns]");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setBreakingImpulseThreshold);
+	}
 	void addCarMass(){
 		addLabel("car mass");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
@@ -573,6 +584,11 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		addLsy();
 		addLsz();
 		addDensity();
+		switch (constraintType){
+		case Impulse:
+			addBreakingImpulseThreshold();
+			break;
+		}
 		addCarMass();
 		addSuspensionStiffness();
 		addSuspensionMaxForce();
@@ -602,7 +618,27 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		initParameterUi();
 		initPhysics();
 	}
-
+	void addFixedConstraint(btAlignedObjectArray<btRigidBody*> ha){
+		int loopSize = ha.size() - 1;
+		btScalar halfLength = lsx/lpc/2;
+		btTransform tra;
+		btTransform trb;
+		tra.setIdentity();
+		trb.setIdentity();
+		btVector3 cpos(halfLength, 0, 0);
+		tra.setOrigin(cpos);
+		trb.setOrigin(-cpos);
+		for (int i = 0; i < loopSize; i++){
+			btGeneric6DofConstraint *sc =
+				new btGeneric6DofConstraint(*ha[i], *ha[i + 1],
+				tra, trb, true);
+			sc->setBreakingImpulseThreshold(breakingImpulseThreshold);
+			m_dynamicsWorld->addConstraint(sc, true);
+			for (int i = 0; i < 6; i++){
+				sc->setLimit(i, 0, 0); // make fixed
+			}
+		}
+	}
 };
 DemolisherDemo *demo = 0;
 
@@ -663,6 +699,10 @@ void DemolisherDemo::setDensity(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->density));
 	restartHandler(control);
 }
+void DemolisherDemo::setBreakingImpulseThreshold(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->breakingImpulseThreshold));
+	restartHandler(control);
+}
 void DemolisherDemo::setCarMass(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->carMass));
 	restartHandler(control);
@@ -703,11 +743,12 @@ void DemolisherDemo::reinit(){
 	maxEngineForce = 10000;
 	maxBreakingForce = 1000;
 	wheelFriction = 0.8;
-	lpc = 1;
-	lsx = 4;
+	lpc = 5;
+	lsx = 10;
 	lsy = 2;
 	lsz = 2;
 	density = 50;
+	breakingImpulseThreshold = 5000;
 	carMass = 1400;
 	suspensionStiffness=10;
 	suspensionMaxForce = 2000000; // allows static load of 800 tons
@@ -822,7 +863,7 @@ void DemolisherDemo::initPhysics()
 {
 	int upAxis = 1;	
 	m_guiHelper->setUpAxis(upAxis);
-	btVector3 groundExtents(50,50,50);
+	btVector3 groundExtents(200,200,200);
 	groundExtents[upAxis]=3;
 	btCollisionShape* groundShape = new btBoxShape(groundExtents);
 	m_collisionShapes.push_back(groundShape);
@@ -908,6 +949,11 @@ tr.setOrigin(btVector3(0,-3,0));
 			loadTrans.setOrigin(pos);
 			ha.push_back(localCreateRigidBody(mass, loadTrans, loadShape));
 			xloc += xlen;
+		}
+		switch (constraintType){
+		case Impulse:
+			addFixedConstraint(ha);
+			break;
 		}
 	}
 	/// create vehicle
