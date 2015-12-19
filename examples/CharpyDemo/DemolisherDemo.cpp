@@ -93,6 +93,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	float	defaultBreakingForce = 10.f;
 	float	gEngineForce = 0.f;
 	float	gBreakingForce = 100.f;
+	bool gameBindings=true;
 	int gx = 10; // for labels
 	int gxi = 120; // for inputs elements
 	int wxi = 60; // width
@@ -215,11 +216,37 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		speedometerUpdated = now;
 		updateViewCount = 0;
 	}
-	void updatePitch(float delta){
+	float gVehicleSteering = 0.f;
+	float steeringIncrement = 0.04f;
+	float steeringClamp = 0.3f;
+	float steeringDelta = 0.f;
+	void setSteeringDelta(float delta){
+		steeringDelta = delta;
+	}
+	void updateSteering(){
+		if (steeringDelta == 0.f){
+			return;
+		}
+		gVehicleSteering += steeringDelta;
+		if (gVehicleSteering > steeringClamp){
+			gVehicleSteering = steeringClamp;
+		}
+		else if (gVehicleSteering < -steeringClamp){
+			gVehicleSteering = -steeringClamp;
+		}
+	}
+	float pitchDelta = 0;
+	void setPitchDelta(float delta){
+		pitchDelta = delta;
+	}
+	void updatePitch(){
+		if (pitchDelta == 0.f){
+			return;
+		}
 		CommonCameraInterface* camera =
 			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
 		float current = camera->getCameraPitch();
-		current += delta;
+		current += pitchDelta;
 		if (current > 360){
 			current -= 360;
 		}
@@ -228,14 +255,24 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		}
 		camera->setCameraPitch(current);
 	}
-	void updateYaw(float delta){
+	float yawDelta = 0;
+	void setYawDelta(float delta){
+		yawDelta = delta;
+	}
+	void updateYaw(){
+		if (yawDelta == 0.f){
+			return;
+		}
 		CommonCameraInterface* camera =
 			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
 		float current = camera->getCameraYaw();
-		current += delta;
+		current += yawDelta;
 		if (current >= 0 && current < 90){
 			camera->setCameraYaw(current);
 		}
+	}
+	void updateEngineForce(float scale){
+		gEngineForce += scale*maxEngineForce;
 	}
 	/**
 	https://en.wikipedia.org/wiki/Drag_(physics)
@@ -318,6 +355,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	void setSuspensionDamping(Gwen::Controls::Base* control);
 	void setSuspensionCompression(Gwen::Controls::Base* control);
 	void setSuspensionRestLength(Gwen::Controls::Base* control);
+	void setGameBindings(Gwen::Controls::Base* control);
 	Gwen::Controls::Base* pPage;
 	Gwen::Controls::Button* pauseButton;
 	Gwen::Controls::Label *db11,*db12,*db13,*db14;
@@ -342,6 +380,16 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		str = std::string(buffer);
 		db23->SetText(str);
 	}
+	void addGameBindings(){
+		Gwen::Controls::Label* label = addLabel("gameBindings");
+		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
+		gc->SetToolTip("set game style keyboard bindings for e.g. asdw");
+		gc->SetPos(gxi, gy);
+		gc->SetChecked(gameBindings);
+		gy += gyInc;
+		gc->onCheckChanged.Add(pPage, &DemolisherDemo::setGameBindings);
+	}
+
 	void addDashboard(){
 		db11 = new Gwen::Controls::Label(pPage);
 		db12 = new Gwen::Controls::Label(pPage);
@@ -598,6 +646,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		addMaxEngineForce();
 		addMaxBreakingForce();
 		addWheelFriction();
+		addGameBindings();
 		addPauseSimulationButton();
 		addRestartButton();
 		addResetButton();
@@ -665,9 +714,6 @@ const int maxOverlap = 65535;
 ///implementing explicit hinged-wheel constraints with cylinder collision, rather then raycasts
 
 
-float	gVehicleSteering = 0.f;
-float	steeringIncrement = 0.04f;
-float	steeringClamp = 0.3f;
 float	wheelRadius = 0.5f;
 float	wheelWidth = 0.4f;
 float	rollInfluence = 0.1f;//1.0f;
@@ -675,6 +721,11 @@ float	rollInfluence = 0.1f;//1.0f;
 
 
 #define CUBE_HALF_EXTENTS 1
+void DemolisherDemo::setGameBindings(Gwen::Controls::Base* control){
+	Gwen::Controls::CheckBox* cb =
+		static_cast<Gwen::Controls::CheckBox*>(control);
+	demo->gameBindings = cb->IsChecked();
+}
 void DemolisherDemo::setWheelFriction(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->wheelFriction));
 	restartHandler(control);
@@ -757,6 +808,7 @@ void DemolisherDemo::reinit(){
 	suspensionRestLength=1;
 	driveClock.reset();
 	speedometerUpdated = 0;
+	gameBindings = true;
 }
 void DemolisherDemo::resetHandler(Gwen::Controls::Base* control){
 	demo->reinit();
@@ -1036,6 +1088,8 @@ void DemolisherDemo::renderScene()
 			renderer->writeSingleInstanceTransformToCPU(pos,orn,m_wheelInstances[i]);
 		}
 	}	
+	updatePitch();
+	updateYaw();
 	m_guiHelper->render(m_dynamicsWorld);
 	ATTRIBUTE_ALIGNED16(btScalar) m[16];
 	int i;
@@ -1169,7 +1223,7 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 	idleClock.reset();
 	if (state)
 	{
-	if (isShiftPressed) 
+	if (isShiftPressed||gameBindings)
 	{
 		switch (key) 
 			{
@@ -1179,7 +1233,7 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 					if (isControlPressed){
 						increment *= 5;
 					}
-					updatePitch(increment);
+					setPitchDelta(increment);
 					handled = true;
 					break;
 				}
@@ -1189,141 +1243,182 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 					if (isControlPressed){
 						increment *= 5;
 					}
-					updatePitch(increment);
+					setPitchDelta(increment);
 					handled = true;
 					break;
 				}
 			case B3G_UP_ARROW :
 				{
-					updateYaw(1);
+					setYawDelta(1);
 					handled = true;
 					break;
 				}
 			case B3G_DOWN_ARROW :
 				{
-					updateYaw(-1);
+					setYawDelta(-1);
 					handled = true;
 					break;
 				}
 			}
 
-	} else
-	{
-			switch (key) 
-			{
-			case B3G_LEFT_ARROW : 
-				{
-					handled = true;
-					gVehicleSteering += steeringIncrement;
-					if (	gVehicleSteering > steeringClamp)
-						gVehicleSteering = steeringClamp;
-
-					break;
-				}
-			case B3G_RIGHT_ARROW : 
-				{
-					handled = true;
-					gVehicleSteering -= steeringIncrement;
-					if (	gVehicleSteering < -steeringClamp)
-						gVehicleSteering = -steeringClamp;
-
-					break;
-				}
-			case B3G_UP_ARROW :
-				{
-					handled = true;
-					gEngineForce = maxEngineForce;
-					gBreakingForce = 0.f;
-					break;
-				}
-			case B3G_DOWN_ARROW :
-				{
-					handled = true;
-					gEngineForce = -maxEngineForce;
-					gBreakingForce = 0.f;
-					break;
-				}
-			case B3G_F1:
-			{
-				handled = true;
-				setViewMode(1);
-				break;
-			}
-			case B3G_F2:
-			{
-				handled = true;
-				setViewMode(2);
-				break;
-			}
-			case B3G_F7:
-				{
-					handled = true;
-					btDiscreteDynamicsWorld* world = (btDiscreteDynamicsWorld*)m_dynamicsWorld;
-					world->setLatencyMotionStateInterpolation(!world->getLatencyMotionStateInterpolation());
-					printf("world latencyMotionStateInterpolation = %d\n", world->getLatencyMotionStateInterpolation());
-					break;
-				}
-			case B3G_F6:
-				{
-					handled = true;
-					//switch solver (needs demo restart)
-					useMCLPSolver = !useMCLPSolver;
-					printf("switching to useMLCPSolver = %d\n", useMCLPSolver);
-
-					delete m_constraintSolver;
-					if (useMCLPSolver)
-					{
-						btDantzigSolver* mlcp = new btDantzigSolver();
-						//btSolveProjectedGaussSeidel* mlcp = new btSolveProjectedGaussSeidel;
-						btMLCPSolver* sol = new btMLCPSolver(mlcp);
-						m_constraintSolver = sol;
-					} else
-					{
-						m_constraintSolver = new btSequentialImpulseConstraintSolver();
-					}
-
-					m_dynamicsWorld->setConstraintSolver(m_constraintSolver);
-					break;
-				}
-
-			case B3G_F5:
-			handled = true;
-				m_useDefaultCamera = !m_useDefaultCamera;
-				break;
-			default:
-				break;
-			}
-	}
-
-	} else
+	} 
+	if (!handled)
 	{
 		switch (key) 
 		{
-		case B3G_UP_ARROW:
+		case 'a':if (!gameBindings){break;}
+		case B3G_LEFT_ARROW :
 			{
-				gEngineForce = 0.f;
-				gBreakingForce = defaultBreakingForce; 
-				handled=true;
-			break;
-			}
-		case B3G_DOWN_ARROW:
-			{
-				gEngineForce = 0.f;
-				gBreakingForce = defaultBreakingForce;
-				handled=true;
-			break;
-			}
-		case B3G_LEFT_ARROW:
-		case B3G_RIGHT_ARROW:
-			{
-				handled=true;
+				setSteeringDelta(steeringIncrement);
+				handled = true;
 				break;
 			}
+		case 'd':if (!gameBindings){ break; }
+		case B3G_RIGHT_ARROW:
+			{
+				setSteeringDelta(-steeringIncrement);
+				handled = true;
+				break;
+			}
+		case 'w':if (!gameBindings){ break; }
+		case B3G_UP_ARROW:
+			{
+				handled = true;
+				gEngineForce = maxEngineForce;
+				gBreakingForce = 0.f;
+				break;
+			}
+		case 's':if (!gameBindings){ break; }
+		case B3G_DOWN_ARROW:
+			{
+				handled = true;
+				gEngineForce = -maxEngineForce;
+				gBreakingForce = 0.f;
+				break;
+			}
+		case 'r':
+		{
+			handled = true;
+			updateEngineForce(0.1);
+			break;
+		}
+		case 'f':
+		{
+			handled = true;
+			updateEngineForce(-0.1);
+			break;
+		}
+		case B3G_F1:
+		{
+			handled = true;
+			setViewMode(1);
+			break;
+		}
+		case B3G_F2:
+		{
+			handled = true;
+			setViewMode(2);
+			break;
+		}
+		case B3G_F7:
+			{
+				handled = true;
+				btDiscreteDynamicsWorld* world = (btDiscreteDynamicsWorld*)m_dynamicsWorld;
+				world->setLatencyMotionStateInterpolation(!world->getLatencyMotionStateInterpolation());
+				printf("world latencyMotionStateInterpolation = %d\n", world->getLatencyMotionStateInterpolation());
+				break;
+			}
+		case B3G_F6:
+			{
+				handled = true;
+				//switch solver (needs demo restart)
+				useMCLPSolver = !useMCLPSolver;
+				printf("switching to useMLCPSolver = %d\n", useMCLPSolver);
+
+				delete m_constraintSolver;
+				if (useMCLPSolver)
+				{
+					btDantzigSolver* mlcp = new btDantzigSolver();
+					//btSolveProjectedGaussSeidel* mlcp = new btSolveProjectedGaussSeidel;
+					btMLCPSolver* sol = new btMLCPSolver(mlcp);
+					m_constraintSolver = sol;
+				} else
+				{
+					m_constraintSolver = new btSequentialImpulseConstraintSolver();
+				}
+				m_dynamicsWorld->setConstraintSolver(m_constraintSolver);
+				break;
+			}
+		case B3G_F5:
+			handled = true;
+			m_useDefaultCamera = !m_useDefaultCamera;
+			break;
 		default:
-			
 			break;
 		}
 	}
+
+	} else /* handling of releases of arrow keys and game bound keys */
+	{
+		bool isArrow = false;
+		switch (key){
+			case B3G_UP_ARROW:
+			case B3G_DOWN_ARROW:
+			case B3G_LEFT_ARROW:
+			case B3G_RIGHT_ARROW:
+				isArrow = true;
+				break;
+		}
+		bool isCommon = !(gameBindings&&isArrow);
+		if (gameBindings || isArrow){
+			switch (key)
+			{
+			case 'w':
+			case B3G_UP_ARROW:
+			{
+				if (isArrow){
+					setYawDelta(0.f);
+				}
+				if (isCommon){
+					gEngineForce = 0.f;
+					gBreakingForce = defaultBreakingForce;
+				}
+				handled = true;
+				break;
+			}
+			case 's':
+			case B3G_DOWN_ARROW:
+			{
+				if (isArrow){
+					setYawDelta(0.f);
+				}
+				if (isCommon){
+					gEngineForce = 0.f;
+					gBreakingForce = defaultBreakingForce;
+				}
+				handled = true;
+				break;
+			}
+			case 'a':
+			case 'd':
+			case B3G_LEFT_ARROW:
+			case B3G_RIGHT_ARROW:
+			{
+				if (isArrow){
+					setPitchDelta(0.f);
+				}
+				if (isCommon){
+					setSteeringDelta(0.f);
+				}
+				handled = true;
+				break;
+			}
+			default:
+				break;
+			}
+		}
+	}
+	updateSteering();
 	return handled;
 }
 
