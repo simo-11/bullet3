@@ -806,17 +806,19 @@ void PlasticityExampleBrowser::update(float deltaTime)
 		}
 
 		{
-			
-			if (s_guiHelper && s_guiHelper->getRenderInterface() && s_guiHelper->getRenderInterface()->getActiveCamera())
+			if (s_guiHelper && s_guiHelper->getRenderInterface() && 
+				s_guiHelper->getRenderInterface()->getActiveCamera())
 			{
 				char msg[BLEN];
-				float camDist = s_guiHelper->getRenderInterface()->getActiveCamera()->getCameraDistance();
-				float pitch = s_guiHelper->getRenderInterface()->getActiveCamera()->getCameraPitch();
-				float yaw = s_guiHelper->getRenderInterface()->getActiveCamera()->getCameraYaw();
+				CommonCameraInterface *cam = s_guiHelper->getRenderInterface()->getActiveCamera();
+				float camDist = cam->getCameraDistance();
+				float pitch = cam->getCameraPitch();
+				float yaw = cam->getCameraYaw();
 				float camTarget[3];
-				s_guiHelper->getRenderInterface()->getActiveCamera()->getCameraTargetPosition(camTarget);
+				cam->getCameraTargetPosition(camTarget);
 				sprintf_s(msg,BLEN,
-					"dist=%f, pitch=%f, yaw=%f,target=%f,%f,%f", camDist,pitch,yaw,camTarget[0],camTarget[1],camTarget[2]);
+					"dist=%.2f, pitch=%.2f, yaw=%.2f, target=%.2f, %.2f, %.2f", 
+					camDist,pitch,yaw,camTarget[0],camTarget[1],camTarget[2]);
 				gui->setStatusBarMessage(msg, true);	
 			}
 			
