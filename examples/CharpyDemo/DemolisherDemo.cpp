@@ -52,7 +52,7 @@ const char * PROFILE_DEMOLISHER_SLEEP = "DemolisherDemo::Sleep";
 
 class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 {
-	public:
+public:
 	class btDiscreteDynamicsWorld* m_dynamicsWorld;
 	btDiscreteDynamicsWorld* getDynamicsWorld()
 	{
@@ -86,14 +86,16 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	btScalar breakingImpulseThreshold;
 	btScalar density;
 	btScalar carMass;
-	btScalar suspensionStiffness,suspensionMaxForce;
+	btScalar suspensionStiffness, suspensionMaxForce;
 	btScalar suspensionDamping;
 	btScalar suspensionCompression;
 	btScalar suspensionRestLength;
 	float	defaultBreakingForce = 10.f;
 	float	gEngineForce = 0.f;
 	float	gBreakingForce = 100.f;
-	bool gameBindings=true;
+	bool gameBindings = true;
+	bool dumpPng = false;
+	char *logDir = _strdup("d:/wrk");
 	int gx = 10; // for labels
 	int gxi = 120; // for inputs elements
 	int wxi = 60; // width
@@ -105,7 +107,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	Gwen::Controls::Canvas* canvas;
 	CommonWindowInterface* window;
 	int m_option;
-	enum Constraint {None=0,Rigid=1,Impulse=2,Plastic=3};
+	enum Constraint { None = 0, Rigid = 1, Impulse = 2, Plastic = 3 };
 	Constraint constraintType;
 	btRaycastVehicle::btVehicleTuning	m_tuning;
 	btVehicleRaycaster*	m_vehicleRayCaster;
@@ -122,18 +124,18 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	virtual ~DemolisherDemo();
 
 	virtual void stepSimulation(float deltaTime);
-	
+
 	virtual void	resetDemolisher();
-		
+
 	virtual void clientResetScene();
 
 	virtual void displayCallback();
-	
+
 	virtual void specialKeyboard(int key, int x, int y);
 
 	virtual void specialKeyboardUp(int key, int x, int y);
 
-	virtual bool	mouseMoveCallback(float x,float y)
+	virtual bool	mouseMoveCallback(float x, float y)
 	{
 		return false;
 	}
@@ -148,7 +150,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	virtual void renderScene();
 
 	virtual void physicsDebugDraw(int debugFlags);
-	
+
 
 	void initPhysics();
 	void exitPhysics();
@@ -158,8 +160,8 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		float dist = 8;
 		float pitch = -45;
 		float yaw = 32;
-		float targetPos[3]={-0.33,-0.72,4.5};
-		m_guiHelper->resetCamera(dist,pitch,yaw,targetPos[0],targetPos[1],targetPos[2]);
+		float targetPos[3] = { -0.33, -0.72, 4.5 };
+		m_guiHelper->resetCamera(dist, pitch, yaw, targetPos[0], targetPos[1], targetPos[2]);
 		CommonCameraInterface* camera =
 			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
 		camera->setFrustumZNear(0.01);
@@ -179,19 +181,19 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	*/
 	void restartHandler(Gwen::Controls::Base* control);
 	void reinit();
-	void resetHandler(Gwen::Controls::Base* control); 
-	btVector3 lastLocation=btVector3(0,0,0);
+	void resetHandler(Gwen::Controls::Base* control);
+	btVector3 lastLocation = btVector3(0, 0, 0);
 	btVector3 currentLocation = btVector3(0, 0, 0);
-	float lastClock=0;
-	float currentClock=0;
+	float lastClock = 0;
+	float currentClock = 0;
 	bool isMoving(){
 		btScalar d2 = currentLocation.distance2(lastLocation);
-		bool isMoving = d2>1e-4;
+		bool isMoving = d2 > 1e-4;
 		return isMoving;
 	}
 	/** update fps and kmph after interval seconds have passed */
 	float speedometerUpdated;
-	btVector3 speedometerLocation=lastLocation;
+	btVector3 speedometerLocation = lastLocation;
 	float updateInterval = 0.3;
 	int updateViewCount = 0;
 	void updateView(){
@@ -202,8 +204,8 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		currentClock = now;
 		lastLocation = currentLocation;
 		currentLocation = m_carChassis->getCenterOfMassPosition();
-		btVector3 loc = (lastLocation + currentLocation)/2;
-		CommonCameraInterface* camera = 
+		btVector3 loc = (lastLocation + currentLocation) / 2;
+		CommonCameraInterface* camera =
 			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
 		camera->setCameraTargetPosition(loc.x(), loc.y(), loc.z());
 		timeDelta = now - speedometerUpdated;
@@ -282,10 +284,10 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	so we use speed2
 	*/
 	btVector3 drag;
-	btScalar dragForce=0;
+	btScalar dragForce = 0;
 	void updateDrag(){
 		btVector3 vel = m_carChassis->getLinearVelocity();
-		dragForce=-vel.length2();
+		dragForce = -vel.length2();
 		btVector3 norm;
 		if (dragForce < -0.01){
 			drag = vel.normalized()*dragForce;
@@ -301,6 +303,23 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 			return "";
 		}
 		return Gwen::Utility::UnicodeToString(box->GetText());
+	}
+#define FN_SIZE 512
+	char* getChar(Gwen::UnicodeString s){
+		const wchar_t * wcs = s.c_str();
+		size_t count = wcstombs(NULL, wcs, FN_SIZE);
+		if (count < 1){
+			return NULL;
+		}
+		char * cp = (char*)malloc(count);
+		size_t retValue = wcstombs(cp, wcs, count);
+		if (retValue > 0){
+			return cp;
+		}
+		else{
+			free(cp);
+			return NULL;
+		}
 	}
 	void setScalar(Gwen::Controls::Base* control, btScalar * vp){
 		std::string text = getText(control);
@@ -356,16 +375,18 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	void setSuspensionCompression(Gwen::Controls::Base* control);
 	void setSuspensionRestLength(Gwen::Controls::Base* control);
 	void setGameBindings(Gwen::Controls::Base* control);
+	void setLogDir(Gwen::Controls::Base* control);
+	void setDumpPng(Gwen::Controls::Base* control);
 	Gwen::Controls::Base* pPage;
 	Gwen::Controls::Button* pauseButton;
-	Gwen::Controls::Label *db11,*db12,*db13,*db14;
-	Gwen::Controls::Label *db21,*db22,*db23;
+	Gwen::Controls::Label *db11, *db12, *db13, *db14;
+	Gwen::Controls::Label *db21, *db22, *db23;
 	int fps = 0;
-	int kmph=0;
+	int kmph = 0;
 	void updateDashboards(){
 		char buffer[UIF_SIZE];
-		sprintf_s(buffer, UIF_SIZE, "%-3d ",fps);
-		std::string str=std::string(buffer);
+		sprintf_s(buffer, UIF_SIZE, "%-3d ", fps);
+		std::string str = std::string(buffer);
 		db11->SetText(str);
 		sprintf_s(buffer, UIF_SIZE, "%-3d ", kmph);
 		str = std::string(buffer);
@@ -373,10 +394,10 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		sprintf_s(buffer, UIF_SIZE, "%-+9.0f ", gEngineForce);
 		str = std::string(buffer);
 		db21->SetText(str);
-		sprintf_s(buffer, UIF_SIZE, "%9.0f ",-gBreakingForce);
+		sprintf_s(buffer, UIF_SIZE, "%9.0f ", -gBreakingForce);
 		str = std::string(buffer);
 		db22->SetText(str);
-		sprintf_s(buffer, UIF_SIZE, "%9.0f ",-dragForce);
+		sprintf_s(buffer, UIF_SIZE, "%9.0f ", -dragForce);
 		str = std::string(buffer);
 		db23->SetText(str);
 	}
@@ -389,7 +410,24 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		gy += gyInc;
 		gc->onCheckChanged.Add(pPage, &DemolisherDemo::setGameBindings);
 	}
-
+	Gwen::Controls::CheckBox* dumpPngGc;
+	void addDumpPng(){
+		Gwen::Controls::Label* label = addLabel("dumpPng");
+		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
+		gc->SetPos(gxi, gy);
+		gc->SetChecked(dumpPng);
+		dumpPngGc = gc;
+		gy += gyInc;
+		gc->onCheckChanged.Add(pPage, &DemolisherDemo::setDumpPng);
+	}
+	void addLogDir(){
+		Gwen::Controls::Label* label = addLabel("logDir");
+		Gwen::Controls::TextBox* gc = new Gwen::Controls::TextBox(pPage);
+		gc->SetPos(gxi, gy);
+		gc->SetText(logDir);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setLogDir);
+	}
 	void addDashboard(){
 		db11 = new Gwen::Controls::Label(pPage);
 		db12 = new Gwen::Controls::Label(pPage);
@@ -403,19 +441,19 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		db11->SetPos(gx, gy);
 		db12->SetText(" fps ");
 		db12->SizeToContents();
-		db12->SetPos(gx+wxi/2, gy);
+		db12->SetPos(gx + wxi / 2, gy);
 		db13->SizeToContents();
-		db13->SetPos(gx+wxi, gy);
+		db13->SetPos(gx + wxi, gy);
 		db14->SetText(" km/h ");
 		db14->SizeToContents();
-		db14->SetPos(gx+3*wxi/2, gy);
+		db14->SetPos(gx + 3 * wxi / 2, gy);
 		gy += gyInc;
 		db21->SizeToContents();
 		db21->SetPos(gx, gy);
 		db22->SizeToContents();
-		db22->SetPos(gx+wxi, gy);
+		db22->SetPos(gx + wxi, gy);
 		db23->SizeToContents();
-		db23->SetPos(gx+2*wxi, gy);
+		db23->SetPos(gx + 2 * wxi, gy);
 	}
 	Gwen::Controls::Label* addLabel(std::string txt){
 		Gwen::Controls::Label* gc = new Gwen::Controls::Label(pPage);
@@ -647,6 +685,8 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 		addMaxBreakingForce();
 		addWheelFriction();
 		addGameBindings();
+		addDumpPng();
+		addLogDir();
 		addPauseSimulationButton();
 		addRestartButton();
 		addResetButton();
@@ -669,7 +709,7 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	}
 	void addFixedConstraint(btAlignedObjectArray<btRigidBody*> ha){
 		int loopSize = ha.size() - 1;
-		btScalar halfLength = lsx/lpc/2;
+		btScalar halfLength = lsx / lpc / 2;
 		btTransform tra;
 		btTransform trb;
 		tra.setIdentity();
@@ -688,6 +728,20 @@ class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 			}
 		}
 	}
+	int pngNro = 0;
+	char dumpFilename[FN_SIZE];
+	void setDumpFilename(){
+		CommonGraphicsApp * app = PlasticityExampleBrowser::getApp();
+		if (dumpPng){
+			pngNro++;
+			sprintf_s(dumpFilename, FN_SIZE, "%s/demolisher-%d.png", logDir, pngNro);
+			dumpPngGc->SetToolTip(dumpFilename);
+			app->dumpNextFrameToPng(dumpFilename);
+		}
+		else{
+			app->dumpNextFrameToPng(NULL);
+		}
+    }
 };
 DemolisherDemo *demo = 0;
 
@@ -725,6 +779,22 @@ void DemolisherDemo::setGameBindings(Gwen::Controls::Base* control){
 	Gwen::Controls::CheckBox* cb =
 		static_cast<Gwen::Controls::CheckBox*>(control);
 	demo->gameBindings = cb->IsChecked();
+}
+void DemolisherDemo::setLogDir(Gwen::Controls::Base* control){
+	Gwen::Controls::TextBox* cb =
+		static_cast<Gwen::Controls::TextBox*>(control);
+	char *cp=getChar(cb->GetText());
+	if (cp != NULL){
+		if (NULL != demo->logDir){
+			free(demo->logDir);
+		}
+		demo->logDir = cp;
+	}
+}
+void DemolisherDemo::setDumpPng(Gwen::Controls::Base* control){
+	Gwen::Controls::CheckBox* cb =
+		static_cast<Gwen::Controls::CheckBox*>(control);
+	demo->dumpPng = cb->IsChecked();
 }
 void DemolisherDemo::setWheelFriction(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->wheelFriction));
@@ -1090,6 +1160,9 @@ void DemolisherDemo::renderScene()
 	}	
 	updatePitch();
 	updateYaw();
+	updatePauseButtonText();
+	updateDashboards();
+	setDumpFilename();
 	m_guiHelper->render(m_dynamicsWorld);
 	ATTRIBUTE_ALIGNED16(btScalar) m[16];
 	int i;
@@ -1104,8 +1177,6 @@ void DemolisherDemo::renderScene()
 		m_vehicle->getWheelInfo(i).m_worldTransform.getOpenGLMatrix(m);
 //		m_shapeDrawer->drawOpenGL(m,m_wheelShape,wheelColor,getDebugMode(),worldBoundsMin,worldBoundsMax);
 	}
-	updatePauseButtonText();
-	updateDashboards();
 	btScalar idleTime = idleClock.getTimeSeconds();
 	if ( idleTime> 10 && !isMoving()){
 #ifdef _WIN32
