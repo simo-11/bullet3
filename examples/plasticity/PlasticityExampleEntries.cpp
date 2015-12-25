@@ -91,8 +91,8 @@ very stiff constraints cause instability",
 	ExampleEntry(1, "Impulse",
 	"Constrains breaks based on impulse",
 	DemolisherDemoCreateFunc, 2),
-	ExampleEntry(1, "Plastic",
-	"Plastic constraint which breaks based on work",
+	ExampleEntry(1, "ElasticPlastic",
+	"ElasticPlastic constraint which breaks based on work",
 	DemolisherDemoCreateFunc, 3),
 };
 struct ExampleEntriesInternalData

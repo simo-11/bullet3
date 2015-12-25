@@ -28,6 +28,7 @@ Based on ForkLiftDemo by Simo Nikula 2015-
 #include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
 #include "BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h"
 #include "BulletDynamics/MLCPSolvers/btMLCPSolver.h"
+#include "bt6DofElasticPlastic2Constraint.h"
 #include "../plasticity/PlasticityExampleBrowser.h"
 
 class btVehicleTuning;
@@ -107,7 +108,7 @@ public:
 	Gwen::Controls::Canvas* canvas;
 	CommonWindowInterface* window;
 	int m_option;
-	enum Constraint { None = 0, Rigid = 1, Impulse = 2, Plastic = 3 };
+	enum Constraint { None = 0, Rigid = 1, Impulse = 2, ElasticPlastic = 3 };
 	Constraint constraintType;
 	btRaycastVehicle::btVehicleTuning	m_tuning;
 	btVehicleRaycaster*	m_vehicleRayCaster;
@@ -212,6 +213,7 @@ public:
 		if (timeDelta < updateInterval){
 			return;
 		}
+		mps = (int)(currentLocation.distance(speedometerLocation) / timeDelta);
 		kmph = (int)(3.6*currentLocation.distance(speedometerLocation) / timeDelta);
 		fps = updateViewCount / timeDelta;
 		speedometerLocation = currentLocation;
@@ -379,10 +381,11 @@ public:
 	void setDumpPng(Gwen::Controls::Base* control);
 	Gwen::Controls::Base* pPage;
 	Gwen::Controls::Button* pauseButton;
-	Gwen::Controls::Label *db11, *db12, *db13, *db14;
+	Gwen::Controls::Label *db11, *db12, *db13, *db14, *db15, *db16;
 	Gwen::Controls::Label *db21, *db22, *db23;
 	int fps = 0;
 	int kmph = 0;
+	int mps = 0;
 	void updateDashboards(){
 		char buffer[UIF_SIZE];
 		sprintf_s(buffer, UIF_SIZE, "%-3d ", fps);
@@ -391,6 +394,9 @@ public:
 		sprintf_s(buffer, UIF_SIZE, "%-3d ", kmph);
 		str = std::string(buffer);
 		db13->SetText(str);
+		sprintf_s(buffer, UIF_SIZE, "%-3d ", mps);
+		str = std::string(buffer);
+		db15->SetText(str);
 		sprintf_s(buffer, UIF_SIZE, "%-+9.0f ", gEngineForce);
 		str = std::string(buffer);
 		db21->SetText(str);
@@ -433,20 +439,27 @@ public:
 		db12 = new Gwen::Controls::Label(pPage);
 		db13 = new Gwen::Controls::Label(pPage);
 		db14 = new Gwen::Controls::Label(pPage);
+		db15 = new Gwen::Controls::Label(pPage);
+		db16 = new Gwen::Controls::Label(pPage);
 		db21 = new Gwen::Controls::Label(pPage);
 		db22 = new Gwen::Controls::Label(pPage);
 		db23 = new Gwen::Controls::Label(pPage);
 		updateDashboards();
 		db11->SizeToContents();
 		db11->SetPos(gx, gy);
-		db12->SetText(" fps ");
+		db12->SetText("fps");
 		db12->SizeToContents();
 		db12->SetPos(gx + wxi / 2, gy);
 		db13->SizeToContents();
 		db13->SetPos(gx + wxi, gy);
-		db14->SetText(" km/h ");
+		db14->SetText("km/h");
 		db14->SizeToContents();
-		db14->SetPos(gx + 3 * wxi / 2, gy);
+		db14->SetPos(gx + 14 * wxi / 10, gy);
+		db15->SizeToContents();
+		db15->SetPos(gx + 2*wxi, gy);
+		db16->SetText("m/s");
+		db16->SizeToContents();
+		db16->SetPos(gx + 24 * wxi / 10, gy);
 		gy += gyInc;
 		db21->SizeToContents();
 		db21->SetPos(gx, gy);
@@ -726,6 +739,62 @@ public:
 			for (int i = 0; i < 6; i++){
 				sc->setLimit(i, 0, 0); // make fixed
 			}
+		}
+	}
+	void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha){
+		int loopSize = ha.size() - 1;
+		btScalar E(200E9);
+		btScalar G(80E9);
+		btScalar fu(200E6);
+		btScalar A(0.01*0.01);
+		btScalar maxPlasticRotation(1);
+		btScalar maxPlasticStrain(0.01);
+		bool limitIfNeeded = true;
+		btScalar damping(0.1);
+		btScalar l4s = lsx / lpc;
+		btScalar halfLength = l4s / 2;
+		btTransform tra;
+		btTransform trb;
+		tra.setIdentity();
+		trb.setIdentity();
+		btVector3 cpos(halfLength, 0, 0);
+		tra.setOrigin(cpos);
+		trb.setOrigin(-cpos);
+		btScalar k0(4*E*A / 0.2); 
+		btScalar k1(E*A*lsy/2);
+		btScalar k2(E*A*lsz/2);
+		btScalar m(fu / E);
+		btScalar w0(k0*m);
+		btScalar w1(k1*fu/E);
+		btScalar w2(k2*fu/E);
+		for (int i = 0; i < loopSize; i++){
+			bt6DofElasticPlastic2Constraint *sc =
+				new bt6DofElasticPlastic2Constraint(*ha[i], *ha[i + 1],
+				tra, trb);
+			sc->setMaxPlasticRotation(maxPlasticRotation);
+			sc->setMaxPlasticStrain(maxPlasticStrain);
+			sc->setStiffness(2, k0, limitIfNeeded);
+			sc->setMaxForce(2, w0);
+			sc->setStiffness(0, k1, limitIfNeeded);
+			sc->setMaxForce(0, w0/2);
+			sc->setStiffness(1, k2, limitIfNeeded);
+			sc->setMaxForce(1, w0/2);
+			sc->setStiffness(5, k0); 
+			sc->setMaxForce(5, w0); 
+			sc->setStiffness(4, k1); 
+			sc->setMaxForce(4, w1);
+			sc->setStiffness(3, k2, limitIfNeeded); 
+			sc->setMaxForce(3, w2);
+			m_dynamicsWorld->addConstraint(sc, true);
+			for (int i = 0; i<6; i++)
+			{
+				sc->enableSpring(i, true);
+			}
+			for (int i = 0; i<6; i++)
+			{
+				sc->setDamping(i, damping);
+			}
+			sc->setEquilibriumPoint();
 		}
 	}
 	int pngNro = 0;
@@ -1076,6 +1145,9 @@ tr.setOrigin(btVector3(0,-3,0));
 		case Impulse:
 			addFixedConstraint(ha);
 			break;
+		case ElasticPlastic:
+			addElasticPlasticConstraint(ha);
+			break;
 		}
 	}
 	/// create vehicle
@@ -1086,7 +1158,7 @@ tr.setOrigin(btVector3(0,-3,0));
 		///never deactivate the vehicle
 		m_carChassis->setActivationState(DISABLE_DEACTIVATION);
 
-		m_dynamicsWorld->addVehicle(m_vehicle);
+		m_dynamicsWorld->addAction(m_vehicle);
 
 		float connectionHeight = 1.2f;
 
@@ -1234,8 +1306,7 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 			{
 				static int totalFailures = 0;
 				totalFailures+=numFallbacks;
-				printf("MLCP solver failed %d times, falling back to SI, totalFailures=%d\n", 
-					numFallbacks, totalFailures);
+				printf(".%s", (totalFailures%50==0?"\n":""));
 			}
 			sol->setNumFallbacks(0);
 		}
@@ -1243,6 +1314,7 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 	}
 	else{
 		kmph = 0;
+		mps = 0;
 	}
 }
 
