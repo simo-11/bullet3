@@ -60,7 +60,7 @@ bt6DofElasticPlastic2Constraint::bt6DofElasticPlastic2Constraint(btRigidBody& rb
 
 
 bt6DofElasticPlastic2Constraint::bt6DofElasticPlastic2Constraint(btRigidBody& rbB, const btTransform& frameInB, RotateOrder rotOrder)
-	: btTypedConstraint(D6_SPRING_2_CONSTRAINT_TYPE, getFixedBody(), rbB)
+	: btTypedConstraint(D6_SPRING_2_CONSTRAINT_TYPE, btTypedConstraint::getFixedBody(), rbB)
 	, m_frameInB(frameInB)
 	, m_rotateOrder(rotOrder)
 	, m_flags(0)
@@ -82,6 +82,7 @@ void bt6DofElasticPlastic2Constraint::initPlasticity()
 		m_maxPlasticRotation = btScalar(0.f);
 		m_currentPlasticRotation = btScalar(0.f);
 	}
+	setJointFeedback(&jointFeedback);
 }
 
 
@@ -1255,6 +1256,10 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 		setEnabled(false);
 	}
 }
+void bt6DofElasticPlastic2Constraint::debugDraw(btIDebugDraw* debugDrawer)
+{
+}
+
 
 
 

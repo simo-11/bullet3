@@ -91,6 +91,9 @@ public:
 	btScalar suspensionDamping;
 	btScalar suspensionCompression;
 	btScalar suspensionRestLength;
+	btScalar steelArea;
+	btScalar maxPlasticRotation;
+	btScalar maxPlasticStrain;
 	float	defaultBreakingForce = 10.f;
 	float	gEngineForce = 0.f;
 	float	gBreakingForce = 100.f;
@@ -376,6 +379,9 @@ public:
 	void setSuspensionDamping(Gwen::Controls::Base* control);
 	void setSuspensionCompression(Gwen::Controls::Base* control);
 	void setSuspensionRestLength(Gwen::Controls::Base* control);
+	void setSteelArea(Gwen::Controls::Base* control);
+	void setMaxPlasticStrain(Gwen::Controls::Base* control);
+	void setMaxPlasticRotation(Gwen::Controls::Base* control);
 	void setGameBindings(Gwen::Controls::Base* control);
 	void setLogDir(Gwen::Controls::Base* control);
 	void setDumpPng(Gwen::Controls::Base* control);
@@ -565,6 +571,33 @@ public:
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setBreakingImpulseThreshold);
 	}
+	void addMaxPlasticStrain(){
+		addLabel("maxPlasticStrain");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(maxPlasticStrain, "%.2f");
+		gc->SetToolTip("maxPlasticStrain");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setMaxPlasticStrain);
+	}
+	void addMaxPlasticRotation(){
+		addLabel("maxPlasticRotation");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(maxPlasticRotation, "%.1f");
+		gc->SetToolTip("maxPlasticRotation");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setMaxPlasticRotation);
+	}
+	void addSteelArea(){
+		addLabel("steelArea");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(steelArea, "%.5f");
+		gc->SetToolTip("Area of enforcement steel [m2]");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setSteelArea);
+	}
 	void addCarMass(){
 		addLabel("car mass");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
@@ -687,6 +720,11 @@ public:
 		case Impulse:
 			addBreakingImpulseThreshold();
 			break;
+		case ElasticPlastic:
+			addMaxPlasticRotation();
+			addMaxPlasticStrain();
+			addSteelArea();
+			break;
 		}
 		addCarMass();
 		addSuspensionStiffness();
@@ -746,9 +784,6 @@ public:
 		btScalar E(200E9);
 		btScalar G(80E9);
 		btScalar fu(200E6);
-		btScalar A(0.01*0.01);
-		btScalar maxPlasticRotation(1);
-		btScalar maxPlasticStrain(0.01);
 		bool limitIfNeeded = true;
 		btScalar damping(0.1);
 		btScalar l4s = lsx / lpc;
@@ -760,9 +795,9 @@ public:
 		btVector3 cpos(halfLength, 0, 0);
 		tra.setOrigin(cpos);
 		trb.setOrigin(-cpos);
-		btScalar k0(4*E*A / 0.2); 
-		btScalar k1(E*A*lsy/2);
-		btScalar k2(E*A*lsz/2);
+		btScalar k0(E*steelArea/ 0.2); 
+		btScalar k1(E*steelArea*lsy/2.5);
+		btScalar k2(E*steelArea*lsz/2.5);
 		btScalar m(fu / E);
 		btScalar w0(k0*m);
 		btScalar w1(k1*fu/E);
@@ -795,6 +830,7 @@ public:
 				sc->setDamping(i, damping);
 			}
 			sc->setEquilibriumPoint();
+			m_dynamicsWorld->addAction(sc);
 		}
 	}
 	int pngNro = 0;
@@ -925,6 +961,18 @@ void DemolisherDemo::setMaxBreakingForce(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->maxBreakingForce));
 	restartHandler(control);
 }
+void DemolisherDemo::setSteelArea(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->steelArea));
+	restartHandler(control);
+}
+void DemolisherDemo::setMaxPlasticStrain(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->maxPlasticStrain));
+	restartHandler(control);
+}
+void DemolisherDemo::setMaxPlasticRotation(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->maxPlasticRotation));
+	restartHandler(control);
+}
 
 void DemolisherDemo::restartHandler(Gwen::Controls::Base* control){
 	demo->restartRequested = true;
@@ -945,6 +993,9 @@ void DemolisherDemo::reinit(){
 	suspensionDamping = .5;
 	suspensionCompression=3;
 	suspensionRestLength=1;
+	steelArea = 0.0001;
+	maxPlasticStrain = 0.1;
+	maxPlasticRotation = 1;
 	driveClock.reset();
 	speedometerUpdated = 0;
 	gameBindings = true;

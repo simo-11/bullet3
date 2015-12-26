@@ -45,6 +45,8 @@ http://gimpact.sf.net
 #include "BulletDynamics/ConstraintSolver/btJacobianEntry.h"
 #include "BulletDynamics/ConstraintSolver/btTypedConstraint.h"
 #include "BulletDynamics/ConstraintSolver/btGeneric6DofSpring2Constraint.h"
+#include "BulletDynamics/Dynamics/btActionInterface.h"
+#include "BulletDynamics/Dynamics/btRigidBody.h"
 class btRigidBody;
 
 
@@ -56,7 +58,7 @@ class btRigidBody;
 #define bt6DofElasticPlastic2ConstraintDataName	"bt6DofElasticPlastic2ConstraintData"
 #endif //BT_USE_DOUBLE_PRECISION
 
-ATTRIBUTE_ALIGNED16(class) bt6DofElasticPlastic2Constraint : public btTypedConstraint
+ATTRIBUTE_ALIGNED16(class) bt6DofElasticPlastic2Constraint : public btTypedConstraint, public btActionInterface
 {
 protected:
 
@@ -279,6 +281,7 @@ public:
 	btScalar    m_maxPlasticStrain;
 	btScalar    m_maxPlasticRotation = 3;
 	btScalar    m_currentPlasticRotation = 0;
+	btJointFeedback jointFeedback;
 	void setMaxForce(int index, btScalar value);
 	void setMaxPlasticStrain(btScalar value);
 	void setMaxPlasticRotation(btScalar value);
@@ -289,6 +292,15 @@ public:
 	btScalar getCurrentPlasticRotation();
 	void initPlasticity();
 	void updatePlasticity(btJointFeedback& forces);
+	///btActionInterface interface
+	virtual void updateAction(btCollisionWorld* collisionWorld, btScalar step)
+	{
+		(void)collisionWorld;
+		updatePlasticity(jointFeedback);
+	}
+	///btActionInterface interface
+	void	debugDraw(btIDebugDraw* debugDrawer);
+
 	// bcc
 };
 
