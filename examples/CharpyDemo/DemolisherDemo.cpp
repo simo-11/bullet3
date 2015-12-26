@@ -80,7 +80,7 @@ public:
 
 	btVector3*	m_vertices;
 	btScalar	maxEngineForce;//this should be engine/velocity dependent
-	btScalar	maxBreakingForce;
+	btScalar	defaultBreakingForce;
 	btScalar	wheelFriction;
 	btScalar lsx, lsy, lsz;
 	int lpc;
@@ -94,7 +94,6 @@ public:
 	btScalar steelArea;
 	btScalar maxPlasticRotation;
 	btScalar maxPlasticStrain;
-	float	defaultBreakingForce = 10.f;
 	float	gEngineForce = 0.f;
 	float	gBreakingForce = 100.f;
 	bool gameBindings = true;
@@ -161,7 +160,7 @@ public:
 
 	virtual void resetCamera()
 	{
-		float dist = 8;
+		float dist = 16;
 		float pitch = -45;
 		float yaw = 32;
 		float targetPos[3] = { -0.33, -0.72, 4.5 };
@@ -280,6 +279,7 @@ public:
 	}
 	void updateEngineForce(float scale){
 		gEngineForce += scale*maxEngineForce;
+		gBreakingForce = 0.f;
 	}
 	/**
 	https://en.wikipedia.org/wiki/Drag_(physics)
@@ -372,7 +372,7 @@ public:
 	void setDensity(Gwen::Controls::Base* control);
 	void setBreakingImpulseThreshold(Gwen::Controls::Base* control);
 	void setCarMass(Gwen::Controls::Base* control);
-	void setMaxBreakingForce(Gwen::Controls::Base* control);
+	void setDefaultBreakingForce(Gwen::Controls::Base* control);
 	void setMaxEngineForce(Gwen::Controls::Base* control);
 	void setSuspensionStiffness(Gwen::Controls::Base* control);
 	void setSuspensionMaxForce(Gwen::Controls::Base* control);
@@ -661,14 +661,14 @@ public:
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setMaxEngineForce);
 	}
-	void addMaxBreakingForce(){
-		addLabel("max breaking force");
+	void addDefaultBreakingForce(){
+		addLabel("default breaking force");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(maxBreakingForce, "%.2f");
+		std::string text = uif(defaultBreakingForce, "%.2f");
 		gc->SetToolTip("impulse");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setMaxEngineForce);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setDefaultBreakingForce);
 	}
 
 	void DemolisherDemo::updatePauseButtonText(){
@@ -733,7 +733,7 @@ public:
 		addSuspensionCompression();
 		addSuspensionRestLength();
 		addMaxEngineForce();
-		addMaxBreakingForce();
+		addDefaultBreakingForce();
 		addWheelFriction();
 		addGameBindings();
 		addDumpPng();
@@ -879,7 +879,6 @@ float	rollInfluence = 0.1f;//1.0f;
 
 
 
-#define CUBE_HALF_EXTENTS 1
 void DemolisherDemo::setGameBindings(Gwen::Controls::Base* control){
 	Gwen::Controls::CheckBox* cb =
 		static_cast<Gwen::Controls::CheckBox*>(control);
@@ -957,8 +956,8 @@ void DemolisherDemo::setMaxEngineForce(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->maxEngineForce));
 	restartHandler(control);
 }
-void DemolisherDemo::setMaxBreakingForce(Gwen::Controls::Base* control){
-	setScalar(control, &(demo->maxBreakingForce));
+void DemolisherDemo::setDefaultBreakingForce(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->defaultBreakingForce));
 	restartHandler(control);
 }
 void DemolisherDemo::setSteelArea(Gwen::Controls::Base* control){
@@ -978,22 +977,22 @@ void DemolisherDemo::restartHandler(Gwen::Controls::Base* control){
 	demo->restartRequested = true;
 }
 void DemolisherDemo::reinit(){
-	maxEngineForce = 10000;
-	maxBreakingForce = 1000;
+	maxEngineForce = 100000;
+	defaultBreakingForce = 1000;
 	wheelFriction = 0.8;
 	lpc = 5;
 	lsx = 10;
-	lsy = 2;
+	lsy = 3;
 	lsz = 2;
-	density = 50;
-	breakingImpulseThreshold = 5000;
-	carMass = 1400;
-	suspensionStiffness=10;
+	density = 2000;
+	breakingImpulseThreshold = 50000;
+	carMass = 50000;
+	suspensionStiffness=30;
 	suspensionMaxForce = 2000000; // allows static load of 800 tons
 	suspensionDamping = .5;
-	suspensionCompression=3;
-	suspensionRestLength=1;
-	steelArea = 0.0001;
+	suspensionCompression=0.3;
+	suspensionRestLength=0.8;
+	steelArea = 0.001;
 	maxPlasticStrain = 0.1;
 	maxPlasticRotation = 1;
 	driveClock.reset();
@@ -1139,8 +1138,8 @@ tr.setIdentity();
 tr.setOrigin(btVector3(0,-3,0));
 	//create ground object
 	localCreateRigidBody(0,tr,groundShape);
-
-	btCollisionShape* chassisShape = new btBoxShape(btVector3(1.f,0.5f,2.f));
+	float xhl = 1.66, yhl = 1., zhl = 3.37;
+	btCollisionShape* chassisShape = new btBoxShape(btVector3(xhl,yhl,zhl));
 	m_collisionShapes.push_back(chassisShape);
 
 	btCompoundShape* compound = new btCompoundShape();
@@ -1148,7 +1147,7 @@ tr.setOrigin(btVector3(0,-3,0));
 	btTransform localTrans;
 	localTrans.setIdentity();
 	//localTrans effectively shifts the center of mass with respect to the chassis
-	localTrans.setOrigin(btVector3(0,suspensionRestLength+wheelRadius,0));
+	localTrans.setOrigin(btVector3(0,suspensionRestLength+yhl,0));
 	compound->addChildShape(localTrans,chassisShape);
 	tr.setOrigin(btVector3(0,0.f,0));
 	m_carChassis = localCreateRigidBody(carMass,tr,compound);//chassisShape);	
@@ -1219,23 +1218,23 @@ tr.setOrigin(btVector3(0,-3,0));
 		//choose coordinate system
 		m_vehicle->setCoordinateSystem(rightIndex,upIndex,forwardIndex);
 
-		btVector3 connectionPointCS0(CUBE_HALF_EXTENTS-(0.3*wheelWidth),
-			connectionHeight,2*CUBE_HALF_EXTENTS-wheelRadius);
+		btVector3 connectionPointCS0(xhl-(0.3*wheelWidth),
+			connectionHeight,zhl-wheelRadius);
 
 		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
 			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
-		connectionPointCS0 = btVector3(-CUBE_HALF_EXTENTS+(0.3*wheelWidth),
-			connectionHeight,2*CUBE_HALF_EXTENTS-wheelRadius);
+		connectionPointCS0 = btVector3(-xhl+(0.3*wheelWidth),
+			connectionHeight,zhl-wheelRadius);
 
 		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
 			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
-		connectionPointCS0 = btVector3(-CUBE_HALF_EXTENTS+(0.3*wheelWidth),
-			connectionHeight,-2*CUBE_HALF_EXTENTS+wheelRadius);
+		connectionPointCS0 = btVector3(-xhl+(0.3*wheelWidth),
+			connectionHeight,-zhl+wheelRadius);
 		isFrontWheel = false;
 		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
 			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
-		connectionPointCS0 = btVector3(CUBE_HALF_EXTENTS-(0.3*wheelWidth),
-			connectionHeight,-2*CUBE_HALF_EXTENTS+wheelRadius);
+		connectionPointCS0 = btVector3(xhl-(0.3*wheelWidth),
+			connectionHeight,-zhl+wheelRadius);
 		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
 			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
 		
@@ -1343,24 +1342,9 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 	
 	if (m_dynamicsWorld)
 	{
-		//during idle mode, just run 1 simulation step maximum
-		int maxSimSubSteps =  2;
-		
+		int maxSimSubSteps =  2;		
 		int numSimSteps;
         numSimSteps = m_dynamicsWorld->stepSimulation(dt,maxSimSubSteps);
-
-		if (m_dynamicsWorld->getConstraintSolver()->getSolverType()==BT_MLCP_SOLVER)
-		{
-			btMLCPSolver* sol = (btMLCPSolver*) m_dynamicsWorld->getConstraintSolver();
-			int numFallbacks = sol->getNumFallbacks();
-			if (numFallbacks)
-			{
-				static int totalFailures = 0;
-				totalFailures+=numFallbacks;
-				printf(".%s", (totalFailures%50==0?"\n":""));
-			}
-			sol->setNumFallbacks(0);
-		}
 		updateView();
 	}
 	else{
@@ -1423,9 +1407,9 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 			{
 			case B3G_LEFT_ARROW : 
 				{	
-					float increment = 1;
+					float increment = 2;
 					if (isControlPressed){
-						increment *= 5;
+						increment = 6;
 					}
 					setPitchDelta(increment);
 					handled = true;
@@ -1433,9 +1417,9 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 				}
 			case B3G_RIGHT_ARROW : 
 				{
-					float increment = -1;
+					float increment = -2;
 					if (isControlPressed){
-						increment *= 5;
+						increment = 6;
 					}
 					setPitchDelta(increment);
 					handled = true;
