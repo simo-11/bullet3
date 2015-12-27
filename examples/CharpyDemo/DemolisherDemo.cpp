@@ -194,6 +194,35 @@ public:
 		bool isMoving = d2 > 1e-4;
 		return isMoving;
 	}
+#define CAM_SMOOTH_SIZE 10
+	btVector3 cla[CAM_SMOOTH_SIZE];
+	btVector3 scl; // smoothed camera location
+	int clai = 0;
+	int clas = 0;
+	void updateCameraLocation(){
+		if (clas > 0){
+			scl = scl + currentLocation / clas;
+		}
+		else{
+			scl = currentLocation;
+		}
+		clas++;
+		if (clas > CAM_SMOOTH_SIZE){
+			scl = scl - cla[clai] / CAM_SMOOTH_SIZE;
+			cla[clai] = currentLocation;
+			clai++;
+			if (clai >= CAM_SMOOTH_SIZE){
+				clai = 0;
+			}
+			clas = CAM_SMOOTH_SIZE;
+		}
+		else{ // initial fill
+			cla[clas-1] = currentLocation;
+		}
+		CommonCameraInterface* camera =
+			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
+		camera->setCameraTargetPosition(scl.x(), scl.y(), scl.z());
+	}
 	/** update fps and kmph after interval seconds have passed */
 	float speedometerUpdated;
 	btVector3 speedometerLocation = lastLocation;
@@ -207,10 +236,7 @@ public:
 		currentClock = now;
 		lastLocation = currentLocation;
 		currentLocation = m_carChassis->getCenterOfMassPosition();
-		btVector3 loc = (lastLocation + currentLocation) / 2;
-		CommonCameraInterface* camera =
-			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
-		camera->setCameraTargetPosition(loc.x(), loc.y(), loc.z());
+		updateCameraLocation();
 		timeDelta = now - speedometerUpdated;
 		if (timeDelta < updateInterval){
 			return;
@@ -290,6 +316,7 @@ public:
 	*/
 	btVector3 drag;
 	btScalar dragForce = 0;
+	btScalar halfAreaForDrag;
 	void updateDrag(){
 		btVector3 vel = m_carChassis->getLinearVelocity();
 		dragForce = -vel.length2();
@@ -850,12 +877,6 @@ public:
 };
 DemolisherDemo *demo = 0;
 
-int rightIndex = 0;
-int upIndex = 1;
-int forwardIndex = 2;
-btVector3 wheelDirectionCS0(0,-1,0);
-btVector3 wheelAxleCS(-1,0,0);
-
 bool useMCLPSolver = true;
 
 
@@ -1139,6 +1160,7 @@ tr.setOrigin(btVector3(0,-3,0));
 	//create ground object
 	localCreateRigidBody(0,tr,groundShape);
 	float xhl = 1.66, yhl = 1., zhl = 3.37;
+	halfAreaForDrag = xhl*yhl * 2;
 	btCollisionShape* chassisShape = new btBoxShape(btVector3(xhl,yhl,zhl));
 	m_collisionShapes.push_back(chassisShape);
 
@@ -1216,25 +1238,40 @@ tr.setOrigin(btVector3(0,-3,0));
 		bool isFrontWheel=true;
 
 		//choose coordinate system
-		m_vehicle->setCoordinateSystem(rightIndex,upIndex,forwardIndex);
+		int rightIndex = 0;
+		int upIndex = 1;
+		int forwardIndex = 2;
+		m_vehicle->setCoordinateSystem(rightIndex, upIndex, forwardIndex);
 
 		btVector3 connectionPointCS0(xhl-(0.3*wheelWidth),
 			connectionHeight,zhl-wheelRadius);
-
+		btScalar caster = 0.05;
+		btScalar camber = 0.05;
+		btVector3 wheelDirectionCS0(camber, -1, caster);
+		btVector3 wheelAxleCS(-1, 0, 0);
+		// left front
 		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
 			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
+
 		connectionPointCS0 = btVector3(-xhl+(0.3*wheelWidth),
 			connectionHeight,zhl-wheelRadius);
-
+		wheelDirectionCS0 = btVector3(-camber, -1, caster);
+		// right front
 		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
 			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
+
 		connectionPointCS0 = btVector3(-xhl+(0.3*wheelWidth),
 			connectionHeight,-zhl+wheelRadius);
+		wheelDirectionCS0 = btVector3(-camber, -1, -caster);
 		isFrontWheel = false;
+		// right rear
 		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
 			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
+
 		connectionPointCS0 = btVector3(xhl-(0.3*wheelWidth),
 			connectionHeight,-zhl+wheelRadius);
+		wheelDirectionCS0 = btVector3(camber, -1, -caster);
+		// leaft rear
 		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
 			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
 		
@@ -1373,7 +1410,8 @@ void DemolisherDemo::resetDemolisher()
 	gVehicleSteering = 0.f;
 	gBreakingForce = defaultBreakingForce;
 	gEngineForce = 0.f;
-
+	clas = 0;
+	clai = 0;
 	m_carChassis->setCenterOfMassTransform(btTransform::getIdentity());
 	m_carChassis->setLinearVelocity(btVector3(0,0,0));
 	m_carChassis->setAngularVelocity(btVector3(0,0,0));
