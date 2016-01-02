@@ -1,0 +1,93 @@
+% Simo.Nikula@gmail.com
+% based on latex template at http://www.lut.fi/web/en/library/dissertations1 
+\def\mytitle{Handling of plasticity in physics engine}
+\def\myisbn{978-952-265-XXX-X}
+\def\mypdfisbn{978-952-265-XXX-X}
+\def\myyear{2017}
+\def\mymonth{May}
+\def\myname{Simo Nikula}
+\documentclass[a4paper,twoside,12pt,notitlepage,openright]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{natbib}
+\usepackage{lastpage}   % page count
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[english]{babel}
+\usepackage[intoc]{nomencl} % including table of content
+\usepackage{ifthen}
+\usepackage[hmargin=3.0cm,vmargin=3.6cm]{geometry} % setting marginals
+\usepackage{fancyhdr,extramarks}  % header ja footer manipulation
+\usepackage{times}  % to change font to times
+\usepackage{setspace} % for linespacing
+
+\newcommand{\nomunit}[1]{\renewcommand{\nomentryend}{\hspace*{\fill}#1}} % Inserts units on the right at symbol list
+\renewcommand{\nomgroup}[1]{%
+ \ifthenelse{\equal{#1}{C}}{\item[\textbf{Latin alphabet}]\item}{%
+ \ifthenelse{\equal{#1}{G}}{\item\item[\textbf{Greek alphabet}]\item}{}}{%
+ \ifthenelse{\equal{#1}{L}}{\item\item[\textbf{Subscripts}]\item}{}}{%
+ \ifthenelse{\equal{#1}{H}}{\item\item[\textbf{Superscripts}]\item}{}}{%
+ \ifthenelse{\equal{#1}{W}}{\item\item[\textbf{Abbreviations}]\item}{}}{}}
+
+\singlespacing
+
+\pagestyle{fancy}
+\fancyhf{}% clearing the header and footer
+\fancyhead[LE,RO]{\bfseries\thepage}    % page number to header
+\fancyhead[LO]{\nouppercase{\bfseries\rightmark}}     %
+\fancyhead[RE]{\nouppercase{\bfseries\leftmark}}%
+
+\renewcommand\sectionmark[1]
+ {\markboth{\thesection\ #1}{}}         % section name to header
+\renewcommand\subsectionmark[1]
+ {\markright{\thesubsection\ #1}}       % subsection name to header
+\renewcommand{\headrulewidth}{0.5pt}    % ruler thickness between head and body
+\renewcommand{\footrulewidth}{0pt}      % no ruler between body and footer
+
+\setlength{\nomitemsep}{-\parsep}   % removing default extra skip between entries at nomenclature
+
+\numberwithin{equation}{section}    % equation numbers with section numbers
+\numberwithin{table}{section}       % table numbers with section numbers
+\numberwithin{figure}{section}      % figure numbers with section numbers
+
+% makeindex command needs to run at command prompt to create nomenclature list file
+\makenomenclature % makeindex main_v2.nlo -s nomencl.ist -o main_v2.nls
+%\bibpunct{(}{)}{;}{a}{,}{,}%
+
+\begin{document}
+
+\pagestyle{empty}
+\include{nimio}
+\include{abstract}
+\addtocontents{toc}{\contentsline {section}{Abstract}{}}
+
+\include{acknowledgments}
+\addtocontents{toc}{\contentsline {section}{Acknowledgments}{}}%
+\input{preface}
+\cleardoublepage%
+\thispagestyle{empty}%
+\addtocontents{toc}{\contentsline{section}{Contents}{}}%
+
+\tableofcontents%
+\thispagestyle{empty}%
+\cleardoublepage%
+\pagestyle{fancy}%
+
+\cleardoublepage%
+\printnomenclature[2.0cm]%
+
+\include{introduction}
+
+%\def\refname{what ever}% to change References title
+\addcontentsline{toc}{section}{References}%
+
+\fancyhead[LO]{\nouppercase{\bfseries\firstleftxmark}}%
+\fancyhead[RE]{\nouppercase{\bfseries\lastrightxmark}}%
+\extramarks{}{References}   % this will remove the "References" to be appearing at the header at first page of bibliography
+\extramarks{References}{References}
+\bibliography{ref}%
+\bibliographystyle{LUTapa}%
+
+%\cleardoublepage %
+
+\end{document}
