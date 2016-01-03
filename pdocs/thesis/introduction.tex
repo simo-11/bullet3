@@ -1,12 +1,50 @@
 \section{Introduction}
 
-\subsection{Physics Engines}
 
-\cite{Obrien:1999:GMA}. 
+
+\subsection{Physics engines}
+
+Physics engines is active research area on many research and industry areas.
+Especially gaming and movie industry are powerful drivers.
+Robotics and solid mechanics are typical research areas that use physics engines.
+
+\cite{erleben.thesis} provides extensive introduction to physics engines. 
+He uses term Physics-based Animation and does detailed analysis on many areas like
+\begin{itemize}
+\item preferring fast solutions rather than exact solutions
+\item various methods for solving differential equations
+\item processing of constraints
+\end{itemize}
+
+\subsection{Structural analysis}
+
+Physics engines are not commonly used in structural analysis but using structural analysis in physics engines is not rare.  
+
+Structural analysis for advanced structures is nowadays typically done using finite element method and 
+analysis time is typically hours. Finite element method is already used in physics engines and usage will come 
+more widespread in future as more computing capacity and memory will be available.
+
+E.g. \cite{Obrien:1999:GMA} used finite element model to analyze crack initiation and propagation.
 
 \subsection{Motivation and objectives of the study}
 
+Target of this work is to find out suitable methods for handling of plasticity in bulletphysics, \cite{bulletphysics}. 
+Handling of plasticity basically means that objects involved may absorb kinetic energy and break. 
+
+There are two major areas of applications for these new features.
+
+Possibility to provide simulated demostrations and verifications of new theories or exercises  would be targeted for 
+studies of mechanics and strength of material. Implementation of computer programs could be done as part of computer graphics.
+ 
+Methods presented in this work can be used in gaming industry to provide objects that behave more realistically than currently without significant extra work.
+
+\subsection{Scope}
+
+In this work one solution to handling of plasticity is presented and verified with few examples.
+
 \subsection{Scientific contribution}
 
+This work opens wide area of further work of combining structural analysis and plasticity with physics engines.
+Few examples are shown in sections~\ref{sec:results} and \ref{subsec:futureWork}
 
 \cleardoublepage
