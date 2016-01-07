@@ -7,7 +7,25 @@ Soft body dynamics in which  object are deformable is in many cases still too co
 Finite element method will probably replace other methods by providing general solution at some time but not in very near future.
 In this work focus is on method where rigid bodies are connected by constraints.
 
-\subsection{Physics engines}
+\begin{tikzpicture}
+  \begin{scope}[blend group = soft light]
+    \fill[red!30!white]   ( 90:3.2) circle (5);
+    \fill[green!30!white] (210:3.2) circle (5);
+    \fill[blue!30!white]  (330:3.2) circle (5);
+  \end{scope}
+  \node at ( 90:4)   [align=left] {structural analysis\\
+material plasticity};
+  \node at ( 210:4)   [align=left] {physics engine\\
+rigid bodies\\
+constraints};
+  \node at ( 330:4)   [align=left] {programming\\
+extending of bulletphysics\\
+verification
+};
+  \node {\begin{varwidth}{2cm}plasticity in constraints\end{varwidth}};
+\end{tikzpicture}
+
+\subsection{Physics engine}
 
 Physics engines is active research area on many research and industry areas.
 Especially gaming and movie industry are powerful drivers.
