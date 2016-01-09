@@ -3,9 +3,40 @@
 \subsection{Future work}
 \label{subsec:futureWork}
 
+\subsubsection{Acceptance to current physics engines}
+
+Required work depends on selected dynamics engine. Availability of these features makes similar 
+implementation possible.
+
+\begin{itemize}
+\item generic spring or motor constraint is already available 
+\item possibility to update constraints after each simulation step
+\end{itemize}
+
+Current implementation is done based on \bullet but it still needs refactoring and testing before it can be 
+accepted to main stream. Interfaces should be reafctored so that handling of additional features like large 
+displacements and material nonlinearity can be implemented without further changes.
+
 \subsubsection{Large displacements}
+Large displacements are typical if plasticity is involved and
+large displacements can also take place due to rigid body motion and should be taken into account.
+
+Update of constraints can be done in  many ways but using callbacks allows clean integration i.e. no changes
+to solver core are needed.
+In \bullet there are already three per step callbacks. 
+
+\begin{itemize}
+\item updateActions
+\item updateActivationState
+\item btInternalTickCallback
+\end{itemize}
+
+\demolisher already uses updateActions and that seems 
+good way to do also other updates. Special care should be taken to avoid unnecessary updates.
+
 
 \subsubsection{Material nonlinearity}
-
+Update of constraint properties can be done in callbacks in similar way as for large displacements.
+Material definition should be defined so that stress-strain curve can be defined as array of pairs.
 
 \cleardoublepage
