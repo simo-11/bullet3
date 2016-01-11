@@ -810,7 +810,7 @@ public:
 		int loopSize = ha.size() - 1;
 		btScalar E(200E9);
 		btScalar G(80E9);
-		btScalar fu(200E6);
+		btScalar fy(200E6);
 		bool limitIfNeeded = true;
 		btScalar damping(0.1);
 		btScalar l4s = lsx / lpc;
@@ -825,10 +825,10 @@ public:
 		btScalar k0(E*steelArea/ 0.2); 
 		btScalar k1(E*steelArea*lsy/2.5);
 		btScalar k2(E*steelArea*lsz/2.5);
-		btScalar m(fu / E);
+		btScalar m(fy / E);
 		btScalar w0(k0*m);
-		btScalar w1(k1*fu/E);
-		btScalar w2(k2*fu/E);
+		btScalar w1(k1*fy/E);
+		btScalar w2(k2*fy/E);
 		for (int i = 0; i < loopSize; i++){
 			bt6DofElasticPlastic2Constraint *sc =
 				new bt6DofElasticPlastic2Constraint(*ha[i], *ha[i + 1],

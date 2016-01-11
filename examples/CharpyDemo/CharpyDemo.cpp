@@ -111,8 +111,8 @@ btScalar initialE(200E9); // Steel
 btScalar E(initialE);
 btScalar nu(0.3); // Steel
 btScalar G(initialE / (2 * (1 + nu)));
-btScalar initialFu(400e6);
-btScalar fu(initialFu);
+btScalar initialFy(400e6);
+btScalar fy(initialFy);
 btScalar initialDamping(0.2);
 btScalar damping(initialDamping);
 btScalar initialFrequencyRatio(10);
@@ -462,7 +462,7 @@ public:
 				break;
 			case 4: // cutting
 				hammerDraft = btScalar(0);
-				fu = btScalar(250e6);
+				fy = btScalar(250e6);
 				spaceBetweenAnvils = btScalar(0.022);
 				break;
 			case 5: // sidestep
@@ -472,7 +472,7 @@ public:
 				break;
 			case 6: // big and soft
 				hammerDraft = btScalar(0);
-				fu = btScalar(15e3);
+				fy = btScalar(15e3);
 				w = 0.2;
 				h = 0.2;
 				l = 0.4;
@@ -483,7 +483,7 @@ public:
 				variableTimeStep = false;
 				break;
 			case 7: // Integration instability
-				fu = btScalar(800e6);
+				fy = btScalar(800e6);
 			}
 		}
 
@@ -544,10 +544,10 @@ public:
 		E = tv*1e9;
 		restartHandler(control);
 	}
-	void setFu(Gwen::Controls::Base* control){
-		btScalar tv(fu / 1e6);
+	void setFy(Gwen::Controls::Base* control){
+		btScalar tv(fy / 1e6);
 		setScalar(control, &tv);
-		fu = tv*1e6;
+		fy = tv*1e6;
 restartHandler(control);
 	}
 	void setL(Gwen::Controls::Base* control){
@@ -697,16 +697,16 @@ restartHandler(control);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setE);
 	}
-	void addFu(){
-		addLabel("fu [MPa]");
+	void addfy(){
+		addLabel("fy [MPa]");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = uif(fu / 1e6,"%.3f");
+		string text = uif(fy / 1e6,"%.3f");
 		gc->SetText(text);
 		gc->SetToolTip("Ultimate strength");
 		gc->SetPos(gxi, gy);
 		gc->SetWidth(wxi);
 		gy += gyInc;
-		gc->onReturnPressed.Add(pPage, &CharpyDemo::setFu);
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setFy);
 	}
 	void addL(){
 		addLabel("length [m]");
@@ -891,7 +891,7 @@ restartHandler(control);
 		addSCount();
 		addStartAngle();
 		addE();
-		addFu();
+		addfy();
 		addL();
 		addW();
 		addH();
@@ -1175,7 +1175,7 @@ restartHandler(control);
 	btScalar getBreakingImpulseThreshold(){
 		btScalar b(w);
 		btScalar h(w - notchSize); // notch is 2 mm
-		btScalar w1(fu*b*h*h / 4);
+		btScalar w1(fy*b*h*h / 4);
 		btScalar M(w1*maxPlasticRotation);
 		btScalar v(60); // m/s but no known physical meaning
 		breakingImpulseThreshold = M / v;
@@ -1257,8 +1257,8 @@ restartHandler(control);
 			btScalar k0(E*b*h / l4s / 2); // axial
 			btScalar k1(48 * E*I1 / l4s / l4s / l4s);
 			btScalar k2(48 * E*I2 / l4s / l4s / l4s);
-			btScalar w1 = fu*b*h*h / 4;
-			btScalar w2(fu*b*b*h / 4);
+			btScalar w1 = fy*b*h*h / 4;
+			btScalar w2(fy*b*b*h / 4);
 			sc->setStiffness(0, k1);
 			sc->setStiffness(1, k2);
 			sc->setStiffness(2, k0);
@@ -1319,8 +1319,8 @@ restartHandler(control);
 			btScalar k0(E*b*h / l4s / 2);
 			btScalar k1(48 * E*I1 / l4s / l4s / l4s);
 			btScalar k2(48 * E*I1 / l4s / l4s / l4s);
-			btScalar w1 = fu*b*h*h / 4;
-			btScalar w2(fu*b*b*h / 4);
+			btScalar w1 = fy*b*h*h / 4;
+			btScalar w2(fy*b*b*h / 4);
 			sc->setStiffness(0, k1,limitIfNeeded);
 			sc->setLimit(0, 0, 0);
 			sc->setStiffness(1, k2, limitIfNeeded);
@@ -1364,7 +1364,7 @@ restartHandler(control);
 			mode5Hinge.push_back(sc);
 			btScalar b(w);
 			btScalar h=getH(i);
-			btScalar w1 = fu*b*h*h / 4;
+			btScalar w1 = fy*b*h*h / 4;
 			mode5HingeW1s.push_back(new btScalar(w1));
 			btJointFeedback* jf = new btJointFeedback();
 			specimenJointFeedback.push_back(jf);
@@ -1394,7 +1394,7 @@ restartHandler(control);
 			sc->setMaxPlasticRotation(maxPlasticRotation);
 			btScalar b(w);
 			btScalar h=getH(i);
-			btScalar w1 = fu*b*h*h / 4;
+			btScalar w1 = fy*b*h*h / 4;
 			btJointFeedback* jf=new btJointFeedback();
 			specimenJointFeedback.push_back(jf);
 			sc->setJointFeedback(jf);
@@ -1430,16 +1430,16 @@ restartHandler(control);
 			btScalar k0(E*b*h / l4s / 2);
 			btScalar k1(48 * E*I1 / l4s / l4s / l4s);
 			btScalar k2(48 * E*I2 / l4s / l4s / l4s);
-			btScalar w1 = fu*b*h*h / 4;
-			btScalar w2(fu*b*b*h / 4);
+			btScalar w1 = fy*b*h*h / 4;
+			btScalar w2(fy*b*b*h / 4);
 			sc->setStiffness(2, k0);
-			sc->setMaxForce(2, fu*b*h);
+			sc->setMaxForce(2, fy*b*h);
 			sc->setStiffness(0, k1);
-			sc->setMaxForce(0, fu*b*h / 2);
+			sc->setMaxForce(0, fy*b*h / 2);
 			sc->setStiffness(1, k2);
-			sc->setMaxForce(1, fu*b*h / 2);
+			sc->setMaxForce(1, fy*b*h / 2);
 			sc->setStiffness(5, G*It / l4s); // not very exact
-			sc->setMaxForce(5, fu / 2 * It / (h / 2)); // not very exact
+			sc->setMaxForce(5, fy / 2 * It / (h / 2)); // not very exact
 			sc->setStiffness(4, 3 * E*I1 / l4s); // not very exact
 			sc->setMaxForce(4, w1);
 			sc->setStiffness(3, 3 * E*I2 / l4s); // not very exact
@@ -1483,16 +1483,16 @@ restartHandler(control);
 			btScalar k0(E*b*h / l4s / 2);
 			btScalar k1(48 * E*I1 / l4s / l4s / l4s);
 			btScalar k2(48 * E*I2 / l4s / l4s / l4s);
-			btScalar w1 = fu*b*h*h / 4;
-			btScalar w2(fu*b*b*h / 4);
+			btScalar w1 = fy*b*h*h / 4;
+			btScalar w2(fy*b*b*h / 4);
 			sc->setStiffness(2, k0, limitIfNeeded);
-			sc->setMaxForce(2, fu*b*h);
+			sc->setMaxForce(2, fy*b*h);
 			sc->setStiffness(0, k1, limitIfNeeded);
-			sc->setMaxForce(0, fu*b*h / 2);
+			sc->setMaxForce(0, fy*b*h / 2);
 			sc->setStiffness(1, k2, limitIfNeeded);
-			sc->setMaxForce(1, fu*b*h / 2);
+			sc->setMaxForce(1, fy*b*h / 2);
 			sc->setStiffness(5, G*It / l4s, limitIfNeeded); // not very exact
-			sc->setMaxForce(5, fu / 2 * It / (h / 2)); // not very exact
+			sc->setMaxForce(5, fy / 2 * It / (h / 2)); // not very exact
 			sc->setStiffness(4, 3 * E*I1 / l4s, limitIfNeeded); // not very exact
 			sc->setMaxForce(4, w1);
 			sc->setStiffness(3, 3 * E*I2 / l4s, limitIfNeeded); // not very exact
@@ -2200,7 +2200,7 @@ void reinit(){
 	sCount = initialSCount;
 	E = initialE;
 	initG();
-	fu = initialFu;
+	fy = initialFy;
 	l = initialL;
 	w = initialW;
 	h = initialH;
@@ -2273,9 +2273,9 @@ bool CharpyDemo::ctrlKeyboardCallback(int key){
 		break;
 	case 3: //c
 		if (shiftActive){
-			fu *= 1.2;
+			fy *= 1.2;
 		} else {
-			fu /= 1.2;
+			fy /= 1.2;
 		}
 		return true;
 	case 4: //d
