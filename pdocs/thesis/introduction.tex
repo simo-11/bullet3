@@ -45,19 +45,24 @@ more widespread in future as more computing capacity and memory will be availabl
 In this work all theories in area of structural analysis are quite old and e.g. 
 \cite{timoshenko} is typical reference. Main focus is on elastic and 
 linear plastic parts of stress-strain curve and elastic and plastic section modulus.
+Straing hardening is taken into account mainly by assuming that plasticity in bending expands.
+This can be seen e.g. by bending paperclip. It does not break low angles but can take few full bends.
 
 \begin{figure}[htb!]
 \centering
 \begin{tikzpicture}
+\coordinate (Y) at (0.2,4);
 \draw[->] (0,0) -- (10,0) node[right] {\large{$\epsilon$}};
-\draw[->] (0,0) -- (0,8) node[above] {\large{$\sigma$}};
-\draw(0,0) -- (2,4) -- (4,4) .. controls (7,6) .. (10,5);
-\draw[dashed](0,4) -- (2,4);
+\draw[->] (0,0) -- (0,6) node[above] {\large{$\sigma$}};
+\draw(0,0) -- (Y) -- (2,4) .. controls (7,6) .. (10,5);
+\draw[dashed](0,4) -- (Y);
 \node at (-0.2,4) [align=right] {$f_y$};
 \end{tikzpicture}
 \caption{Stress-strain curve of ductile steel (not to scale).}
 \label{fig:areas}
 \end{figure}
+
+E.g. \cite{camp} is good example of university cource providing needed information about plasticity.
 
 \subsection{Physics engine}
 
@@ -77,25 +82,42 @@ He uses term Physics-based Animation and does detailed analysis on many areas li
 \item processing of constraints
 \end{itemize}
 
-E.g. \cite{cornell.cs3152} and \cite{cornell.cs5643} are good examples of modern university cources
+E.g. \cite{cornell.cs3152} and \cite{cornell.cs5643} are good examples of  university cources
 about physics engines. They also provide additional resources on used technologies.
+
+Few physics engines which have public source
+
+\begin{itemize}
+\item \bullet - \cite{\bullet} which is used e.g. in Blender and Erwin Coumans
+ has received Tehnical Academic Award for creation of the Bullet physics library, \cite{erwin.oscar}
+\item Box2D - \cite\{box2d} which is used e.g. in Angry Birds
+\item RigsOfRods - \cite{ror} which uses large amount of rod elements to simulate deformation and breaking of vehicles
+\end{itemize}
+
 
 \subsection{software engineering}
 
-Software engineering is needed to implement suggested idea. 
+Main requirements for software implementation can be summarized
+\begin{itemize}
+\item solution can be integrated easily to existing dynamics engines
+\item additional calculation time for each timestep may not exceed few milliseconds 
+\end{itemize}
 
 Few decades ago software engineering and structural analysis were highly coupled
 and e.g. \cite{bathe} and \cite{cook} contain very detailed instructions on
-computer implementation. Those books provided good baseline for many computer programs created in \lut for for analysis of 
+computer implementation. Those books provided good baseline for many computer 
+standalone programs created in \lut for for analysis of 
 thin-walled structures \cite{agifap,fsm,vtb}.  
-
 Getting and compiling complicated software packages is currently quite easy. 
 Understanding and getting enough knowledge to extend them requires a fair amount of hard work.
+
+Using calculation methods that have initially planned to be hand calculated gives good starting point for 
+getting fast processing. Lack of clean boundary conditions will require addional logic or accepting larger errors.
 
 \subsection{Motivation and objectives of the study}
 
 Target of this work is to find out suitable methods for handling of plasticity and verify them 
-in commonly used physics engine bulletphysics, \cite{bulletphysics}. 
+in commonly used physics engine \bullet, \cite{bulletphysics}. 
 Handling of plasticity basically means that objects involved may absorb kinetic energy and break. 
 
 There are two major areas of applications for these new features.
