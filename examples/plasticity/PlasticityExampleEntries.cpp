@@ -5,6 +5,7 @@
 #include "LinearMath/btAlignedObjectArray.h"
 #include "../CharpyDemo/CharpyDemo.h"
 #include "../CharpyDemo/DemolisherDemo.h"
+#include "../CharpyDemo/PlateDemo.h"
 #include "../ExampleBrowser/ExampleEntries.h"
 
 #ifdef ENABLE_LUA
@@ -82,18 +83,31 @@ cutting case, large objects, very low fu",
 very stiff constraints cause instability",
 	CharpyDemoCreateFunc, 70102),
 	ExampleEntry(0, "Demolisher"),
-	ExampleEntry(1, "None",
+	ExampleEntry(1, "Demolisher:None",
 	"Only mass resistance",
 	DemolisherDemoCreateFunc, 0),
-	ExampleEntry(1, "Rigid",
+	ExampleEntry(1, "Demolisher:Rigid",
 	"Not moveable",
 	DemolisherDemoCreateFunc, 1),
-	ExampleEntry(1, "Impulse",
-	"Constrains breaks based on impulse",
+	ExampleEntry(1, "Demolisher:Impulse",
+	"Constraints break based on impulse",
 	DemolisherDemoCreateFunc, 2),
-	ExampleEntry(1, "ElasticPlastic",
-	"ElasticPlastic constraint which breaks based on work",
+	ExampleEntry(1, "Demolisher:ElasticPlastic",
+	"ElasticPlastic constraints which break based on work",
 	DemolisherDemoCreateFunc, 3),
+	ExampleEntry(0, "Plate"),
+	ExampleEntry(1, "Plate:None",
+	"Only mass resistance",
+	PlateDemoCreateFunc, 0),
+	ExampleEntry(1, "Plate:Rigid",
+	"Not moveable",
+	PlateDemoCreateFunc, 1),
+	ExampleEntry(1, "Plate:Impulse",
+	"Constraints breaks based on impulse",
+	PlateDemoCreateFunc, 2),
+	ExampleEntry(1, "Plate:ElasticPlastic",
+	"ElasticPlastic constraints which break based on work",
+	PlateDemoCreateFunc, 3),
 };
 struct ExampleEntriesInternalData
 {

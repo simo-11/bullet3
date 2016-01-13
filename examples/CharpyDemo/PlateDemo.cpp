@@ -14,9 +14,9 @@ subject to the following restrictions:
 */
 
 /**
-Based on ForkLiftDemo by Simo Nikula 2015-
+Based on DemolisherDemo by Simo Nikula 2016-
 */
-#include "DemolisherDemo.h"
+#include "PlateDemo.h"
 #include "LinearMath/btQuickprof.h"
 #include <stdio.h> 
 #include <string>
@@ -31,11 +31,8 @@ Based on ForkLiftDemo by Simo Nikula 2015-
 #include "bt6DofElasticPlastic2Constraint.h"
 #include "../plasticity/PlasticityExampleBrowser.h"
 
-class btVehicleTuning;
-struct btVehicleRaycaster;
 class btCollisionShape;
 
-#include "BulletDynamics/Vehicle/btRaycastVehicle.h"
 #include "BulletDynamics/ConstraintSolver/btHingeConstraint.h"
 #include "BulletDynamics/ConstraintSolver/btSliderConstraint.h"
 
@@ -49,9 +46,9 @@ class btCollisionShape;
 #include "../ExampleBrowser/GwenGUISupport/gwenUserInterface.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenInternalData.h"
 
-const char * PROFILE_DEMOLISHER_SLEEP = "DemolisherDemo::Sleep";
+const char * PROFILE_PLATE_SLEEP = "PlateDemo::Sleep";
 
-class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
+class PlateDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 {
 public:
 	class btDiscreteDynamicsWorld* m_dynamicsWorld;
@@ -81,16 +78,11 @@ public:
 	btVector3*	m_vertices;
 	btScalar	maxEngineForce;//this should be engine/velocity dependent
 	btScalar	defaultBreakingForce;
-	btScalar	wheelFriction;
 	btScalar lsx, lsy, lsz;
 	int lpc;
 	btScalar breakingImpulseThreshold;
 	btScalar density;
 	btScalar carMass;
-	btScalar suspensionStiffness, suspensionMaxForce;
-	btScalar suspensionDamping;
-	btScalar suspensionCompression;
-	btScalar suspensionRestLength;
 	btScalar steelArea;
 	btScalar maxPlasticRotation;
 	btScalar maxPlasticStrain;
@@ -112,27 +104,18 @@ public:
 	int m_option;
 	enum Constraint { None = 0, Rigid = 1, Impulse = 2, ElasticPlastic = 3 };
 	Constraint constraintType;
-	btRaycastVehicle::btVehicleTuning	m_tuning;
-	btVehicleRaycaster*	m_vehicleRayCaster;
-	btRaycastVehicle*	m_vehicle;
-	btCollisionShape*	m_wheelShape;
-
 	float		m_cameraHeight;
 
 	float	m_minCameraDistance;
 	float	m_maxCameraDistance;
 	bool useMCLPSolver = true;
-	float	wheelRadius = 0.5f;
-	float	wheelWidth = 0.4f;
-	float	rollInfluence = 0.1f;//1.0f;
+	PlateDemo(CommonExampleOptions & options);
 
-	DemolisherDemo(CommonExampleOptions & options);
-
-	virtual ~DemolisherDemo();
+	virtual ~PlateDemo();
 
 	virtual void stepSimulation(float deltaTime);
 
-	virtual void	resetDemolisher();
+	virtual void	resetDemo();
 
 	virtual void clientResetScene();
 
@@ -405,11 +388,6 @@ public:
 	void setCarMass(Gwen::Controls::Base* control);
 	void setDefaultBreakingForce(Gwen::Controls::Base* control);
 	void setMaxEngineForce(Gwen::Controls::Base* control);
-	void setSuspensionStiffness(Gwen::Controls::Base* control);
-	void setSuspensionMaxForce(Gwen::Controls::Base* control);
-	void setSuspensionDamping(Gwen::Controls::Base* control);
-	void setSuspensionCompression(Gwen::Controls::Base* control);
-	void setSuspensionRestLength(Gwen::Controls::Base* control);
 	void setSteelArea(Gwen::Controls::Base* control);
 	void setMaxPlasticStrain(Gwen::Controls::Base* control);
 	void setMaxPlasticRotation(Gwen::Controls::Base* control);
@@ -451,7 +429,7 @@ public:
 		gc->SetPos(gxi, gy);
 		gc->SetChecked(gameBindings);
 		gy += gyInc;
-		gc->onCheckChanged.Add(pPage, &DemolisherDemo::setGameBindings);
+		gc->onCheckChanged.Add(pPage, &PlateDemo::setGameBindings);
 	}
 	Gwen::Controls::CheckBox* dumpPngGc;
 	void addDumpPng(){
@@ -461,7 +439,7 @@ public:
 		gc->SetChecked(dumpPng);
 		dumpPngGc = gc;
 		gy += gyInc;
-		gc->onCheckChanged.Add(pPage, &DemolisherDemo::setDumpPng);
+		gc->onCheckChanged.Add(pPage, &PlateDemo::setDumpPng);
 	}
 	void addLogDir(){
 		Gwen::Controls::Label* label = addLabel("logDir");
@@ -469,7 +447,7 @@ public:
 		gc->SetPos(gxi, gy);
 		gc->SetText(logDir);
 		gy += gyInc;
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setLogDir);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setLogDir);
 	}
 	void addDashboard(){
 		db11 = new Gwen::Controls::Label(pPage);
@@ -518,14 +496,14 @@ public:
 		gc->SetText(L"Pause");
 		gc->SetPos(gx, gy);
 		gc->SetSize(wxi - 4, gyInc - 4);
-		gc->onPress.Add(pPage, &DemolisherDemo::handlePauseSimulation);
+		gc->onPress.Add(pPage, &PlateDemo::handlePauseSimulation);
 	}
 	void addRestartButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
 		gc->SetText(L"Restart");
 		gc->SetPos(gx + wxi, gy);
 		gc->SetSize(wxi - 4, gyInc - 4);
-		gc->onPress.Add(pPage, &DemolisherDemo::restartHandler);
+		gc->onPress.Add(pPage, &PlateDemo::restartHandler);
 	}
 	void addResetButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
@@ -533,29 +511,21 @@ public:
 		gc->SetPos(gx + 2 * wxi, gy);
 		gc->SetSize(wxi - 4, gyInc - 4);
 		gy += gyInc;
-		gc->onPress.Add(pPage, &DemolisherDemo::resetHandler);
+		gc->onPress.Add(pPage, &PlateDemo::resetHandler);
 	}
 	void place(Gwen::Controls::Base* gc){
 		gc->SetPos(gxi, gy);
 		gc->SetWidth(wxi);
 		gy += gyInc;
 	}
-	void addWheelFriction(){
-		addLabel("wheel friction");
-		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(wheelFriction, "%.2f");
-		gc->SetText(text);
-		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setWheelFriction);
-	}
 	void addLpc(){
 		addLabel("lpc");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
 		std::string text = std::to_string(lpc);
-		gc->SetToolTip("Load parts in x-direction");
+		gc->SetToolTip("Load parts in each direction");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setLpc);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setLpc);
 	}
 	void addLsx(){
 		addLabel("lsx");
@@ -564,7 +534,7 @@ public:
 		gc->SetToolTip("Load size in x-direction");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setLsx);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setLsx);
 	}
 	void addLsy(){
 		addLabel("lsy");
@@ -573,7 +543,7 @@ public:
 		gc->SetToolTip("Load size in y-direction");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setLsy);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setLsy);
 	}
 	void addLsz(){
 		addLabel("lsz");
@@ -582,7 +552,7 @@ public:
 		gc->SetToolTip("Load size in z-direction");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setLsz);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setLsz);
 	}
 	void addDensity(){
 		addLabel("density");
@@ -591,7 +561,7 @@ public:
 		gc->SetToolTip("Load density [kg/m3]");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setDensity);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setDensity);
 	}
 	void addBreakingImpulseThreshold(){
 		addLabel("breakingImpulse");
@@ -600,7 +570,7 @@ public:
 		gc->SetToolTip("breakingImpulseThreshold for load parts [Ns]");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setBreakingImpulseThreshold);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setBreakingImpulseThreshold);
 	}
 	void addMaxPlasticStrain(){
 		addLabel("maxPlasticStrain");
@@ -609,7 +579,7 @@ public:
 		gc->SetToolTip("maxPlasticStrain");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setMaxPlasticStrain);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setMaxPlasticStrain);
 	}
 	void addMaxPlasticRotation(){
 		addLabel("maxPlasticRotation");
@@ -618,7 +588,7 @@ public:
 		gc->SetToolTip("maxPlasticRotation");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setMaxPlasticRotation);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setMaxPlasticRotation);
 	}
 	void addSteelArea(){
 		addLabel("steelArea");
@@ -627,7 +597,7 @@ public:
 		gc->SetToolTip("Area of enforcement steel [m2]");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setSteelArea);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setSteelArea);
 	}
 	void addCarMass(){
 		addLabel("car mass");
@@ -636,52 +606,7 @@ public:
 		gc->SetToolTip("car mass [kg]");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setCarMass);
-	}
-	void addSuspensionStiffness(){
-		addLabel("suspensionStiffness");
-		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(suspensionStiffness, "%.1f");
-		gc->SetToolTip("Suspension Stiffness [N/m]");
-		gc->SetText(text);
-		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setSuspensionStiffness);
-	}
-	void addSuspensionMaxForce(){
-		addLabel("suspensionMaxForce");
-		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(suspensionMaxForce, "%.0f");
-		gc->SetToolTip("Suspension Maximum Force [N]");
-		gc->SetText(text);
-		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setSuspensionMaxForce);
-	}
-	void addSuspensionDamping(){
-		addLabel("suspensionDamping");
-		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(suspensionDamping, "%.1f");
-		gc->SetToolTip("Suspension Damping");
-		gc->SetText(text);
-		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setSuspensionDamping);
-	}
-	void addSuspensionCompression(){
-		addLabel("suspensionCompression");
-		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(suspensionCompression, "%.1f");
-		gc->SetToolTip("Suspension Compression");
-		gc->SetText(text);
-		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setSuspensionCompression);
-	}
-	void addSuspensionRestLength(){
-		addLabel("suspensionRestLength");
-		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(suspensionRestLength, "%.2f");
-		gc->SetToolTip("Suspension RestLength [kg]");
-		gc->SetText(text);
-		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setSuspensionRestLength);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setCarMass);
 	}
 	void addMaxEngineForce(){
 		addLabel("max engine force");
@@ -690,7 +615,7 @@ public:
 		gc->SetToolTip("impulse");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setMaxEngineForce);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setMaxEngineForce);
 	}
 	void addDefaultBreakingForce(){
 		addLabel("default breaking force");
@@ -699,10 +624,10 @@ public:
 		gc->SetToolTip("impulse");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setDefaultBreakingForce);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setDefaultBreakingForce);
 	}
 
-	void DemolisherDemo::updatePauseButtonText(){
+	void PlateDemo::updatePauseButtonText(){
 		bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
 		if (pauseSimulation){
 			pauseButton->SetText(L"Continue");
@@ -758,14 +683,8 @@ public:
 			break;
 		}
 		addCarMass();
-		addSuspensionStiffness();
-		addSuspensionMaxForce();
-		addSuspensionDamping();
-		addSuspensionCompression();
-		addSuspensionRestLength();
 		addMaxEngineForce();
 		addDefaultBreakingForce();
-		addWheelFriction();
 		addGameBindings();
 		addDumpPng();
 		addLogDir();
@@ -870,7 +789,7 @@ public:
 		CommonGraphicsApp * app = PlasticityExampleBrowser::getApp();
 		if (dumpPng){
 			pngNro++;
-			sprintf_s(dumpFilename, FN_SIZE, "%s/demolisher-%d.png", logDir, pngNro);
+			sprintf_s(dumpFilename, FN_SIZE, "%s/plate-%d.png", logDir, pngNro);
 			dumpPngGc->SetToolTip(dumpFilename);
 			app->dumpNextFrameToPng(dumpFilename);
 		}
@@ -879,23 +798,17 @@ public:
 		}
     }
 };
-DemolisherDemo *demo = 0;
-
-
+PlateDemo *demo = 0;
 
 #include <stdio.h> //printf debugging
+#include "PlateDemo.h"
 
-
-#include "DemolisherDemo.h"
-
-
-
-void DemolisherDemo::setGameBindings(Gwen::Controls::Base* control){
+void PlateDemo::setGameBindings(Gwen::Controls::Base* control){
 	Gwen::Controls::CheckBox* cb =
 		static_cast<Gwen::Controls::CheckBox*>(control);
 	demo->gameBindings = cb->IsChecked();
 }
-void DemolisherDemo::setLogDir(Gwen::Controls::Base* control){
+void PlateDemo::setLogDir(Gwen::Controls::Base* control){
 	Gwen::Controls::TextBox* cb =
 		static_cast<Gwen::Controls::TextBox*>(control);
 	char *cp=getChar(cb->GetText());
@@ -906,91 +819,66 @@ void DemolisherDemo::setLogDir(Gwen::Controls::Base* control){
 		demo->logDir = cp;
 	}
 }
-void DemolisherDemo::setDumpPng(Gwen::Controls::Base* control){
+void PlateDemo::setDumpPng(Gwen::Controls::Base* control){
 	Gwen::Controls::CheckBox* cb =
 		static_cast<Gwen::Controls::CheckBox*>(control);
 	demo->dumpPng = cb->IsChecked();
 }
-void DemolisherDemo::setWheelFriction(Gwen::Controls::Base* control){
-	setScalar(control, &(demo->wheelFriction));
-	restartHandler(control);
-}
-void DemolisherDemo::setLpc(Gwen::Controls::Base* control){
+void PlateDemo::setLpc(Gwen::Controls::Base* control){
 	setInt(control, &(demo->lpc));
 	restartHandler(control);
 }
-void DemolisherDemo::setLsx(Gwen::Controls::Base* control){
+void PlateDemo::setLsx(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->lsx));
 	restartHandler(control);
 }
-void DemolisherDemo::setLsy(Gwen::Controls::Base* control){
+void PlateDemo::setLsy(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->lsy));
 	restartHandler(control);
 }
-void DemolisherDemo::setLsz(Gwen::Controls::Base* control){
+void PlateDemo::setLsz(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->lsz));
 	restartHandler(control);
 }
-void DemolisherDemo::setDensity(Gwen::Controls::Base* control){
+void PlateDemo::setDensity(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->density));
 	restartHandler(control);
 }
-void DemolisherDemo::setBreakingImpulseThreshold(Gwen::Controls::Base* control){
+void PlateDemo::setBreakingImpulseThreshold(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->breakingImpulseThreshold));
 	restartHandler(control);
 }
-void DemolisherDemo::setCarMass(Gwen::Controls::Base* control){
+void PlateDemo::setCarMass(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->carMass));
 	restartHandler(control);
 }
-void DemolisherDemo::setSuspensionStiffness(Gwen::Controls::Base* control){
-	setScalar(control, &(demo->suspensionStiffness));
-	restartHandler(control);
-}
-void DemolisherDemo::setSuspensionMaxForce(Gwen::Controls::Base* control){
-	setScalar(control, &(demo->suspensionMaxForce));
-	restartHandler(control);
-}
-void DemolisherDemo::setSuspensionDamping(Gwen::Controls::Base* control){
-	setScalar(control, &(demo->suspensionDamping));
-	restartHandler(control);
-}
-void DemolisherDemo::setSuspensionCompression(Gwen::Controls::Base* control){
-	setScalar(control, &(demo->suspensionCompression));
-	restartHandler(control);
-}
-void DemolisherDemo::setSuspensionRestLength(Gwen::Controls::Base* control){
-	setScalar(control, &(demo->suspensionRestLength));
-	restartHandler(control);
-}
-void DemolisherDemo::setMaxEngineForce(Gwen::Controls::Base* control){
+void PlateDemo::setMaxEngineForce(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->maxEngineForce));
 	restartHandler(control);
 }
-void DemolisherDemo::setDefaultBreakingForce(Gwen::Controls::Base* control){
+void PlateDemo::setDefaultBreakingForce(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->defaultBreakingForce));
 	restartHandler(control);
 }
-void DemolisherDemo::setSteelArea(Gwen::Controls::Base* control){
+void PlateDemo::setSteelArea(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->steelArea));
 	restartHandler(control);
 }
-void DemolisherDemo::setMaxPlasticStrain(Gwen::Controls::Base* control){
+void PlateDemo::setMaxPlasticStrain(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->maxPlasticStrain));
 	restartHandler(control);
 }
-void DemolisherDemo::setMaxPlasticRotation(Gwen::Controls::Base* control){
+void PlateDemo::setMaxPlasticRotation(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->maxPlasticRotation));
 	restartHandler(control);
 }
 
-void DemolisherDemo::restartHandler(Gwen::Controls::Base* control){
+void PlateDemo::restartHandler(Gwen::Controls::Base* control){
 	demo->restartRequested = true;
 }
-void DemolisherDemo::reinit(){
+void PlateDemo::reinit(){
 	maxEngineForce = 100000;
 	defaultBreakingForce = 1000;
-	wheelFriction = 0.8;
 	lpc = 5;
 	lsx = 10;
 	lsy = 3;
@@ -998,11 +886,6 @@ void DemolisherDemo::reinit(){
 	density = 2000;
 	breakingImpulseThreshold = 50000;
 	carMass = 50000;
-	suspensionStiffness=30;
-	suspensionMaxForce = 2000000; // allows static load of 800 tons
-	suspensionDamping = .5;
-	suspensionCompression=0.3;
-	suspensionRestLength=0.8;
 	steelArea = 0.001;
 	maxPlasticStrain = 0.1;
 	maxPlasticRotation = 1;
@@ -1010,13 +893,13 @@ void DemolisherDemo::reinit(){
 	speedometerUpdated = 0;
 	gameBindings = true;
 }
-void DemolisherDemo::resetHandler(Gwen::Controls::Base* control){
+void PlateDemo::resetHandler(Gwen::Controls::Base* control){
 	demo->reinit();
 	restartHandler(control);
 }
 
 
-DemolisherDemo::DemolisherDemo(CommonExampleOptions & options)
+PlateDemo::PlateDemo(CommonExampleOptions & options)
 	:CommonRigidBodyBase(options.m_guiHelper),
 	Gwen::Event::Handler(),
 	m_guiHelper(options.m_guiHelper),
@@ -1029,15 +912,13 @@ m_maxCameraDistance(10.f)
 {
 	options.m_guiHelper->setUpAxis(1);
 	m_option = options.m_option;
-	m_vehicle = 0;
-	m_wheelShape = 0;
 	m_useDefaultCamera = false;
 	initOptions();
 	initParameterUi();
 }
 
 
-void DemolisherDemo::exitPhysics()
+void PlateDemo::exitPhysics()
 {
 		//cleanup in the reverse order of creation/initialization
 
@@ -1080,15 +961,6 @@ void DemolisherDemo::exitPhysics()
 	delete m_dynamicsWorld;
 	m_dynamicsWorld=0;
 
-	delete m_vehicleRayCaster;
-	m_vehicleRayCaster = 0;
-
-	delete m_vehicle;
-	m_vehicle=0;
-	
-	delete m_wheelShape;
-	m_wheelShape=0;
-
 	//delete solver
 	delete m_constraintSolver;
 	m_constraintSolver=0;
@@ -1106,12 +978,12 @@ void DemolisherDemo::exitPhysics()
 
 }
 
-DemolisherDemo::~DemolisherDemo()
+PlateDemo::~PlateDemo()
 {
 	clearParameterUi();
 }
 
-void DemolisherDemo::initPhysics()
+void PlateDemo::initPhysics()
 {
 	int upAxis = 1;	
 	m_guiHelper->setUpAxis(upAxis);
@@ -1153,32 +1025,9 @@ tr.setOrigin(btVector3(0,-3,0));
 	halfAreaForDrag = xhl*yhl * 2;
 	btCollisionShape* chassisShape = new btBoxShape(btVector3(xhl,yhl,zhl));
 	m_collisionShapes.push_back(chassisShape);
-
-	btCompoundShape* compound = new btCompoundShape();
-	m_collisionShapes.push_back(compound);
+	m_carChassis = localCreateRigidBody(carMass, tr, chassisShape);
 	btTransform localTrans;
 	localTrans.setIdentity();
-	//localTrans effectively shifts the center of mass with respect to the chassis
-	localTrans.setOrigin(btVector3(0,suspensionRestLength+yhl,0));
-	compound->addChildShape(localTrans,chassisShape);
-	tr.setOrigin(btVector3(0,0.f,0));
-	m_carChassis = localCreateRigidBody(carMass,tr,compound);//chassisShape);	
-	m_wheelShape = new btCylinderShapeX(btVector3(wheelWidth,wheelRadius,wheelRadius));
-
-	m_guiHelper->createCollisionShapeGraphicsObject(m_wheelShape);
-	int wheelGraphicsIndex = m_wheelShape->getUserIndex();
-
-	const float position[4]={0,10,10,0};
-	const float quaternion[4]={0,0,0,1};
-	const float color[4]={0,1,0,1};
-	const float scaling[4] = {1,1,1,1};
-
-	for (int i=0;i<4;i++)
-	{
-		m_wheelInstances[i] = m_guiHelper->registerGraphicsInstance
-			(wheelGraphicsIndex, position, quaternion, color, scaling);
-	}
-
 	/// create load parts
 	{
 		btAlignedObjectArray<btRigidBody*> ha;
@@ -1212,75 +1061,11 @@ tr.setOrigin(btVector3(0,-3,0));
 			break;
 		}
 	}
-	/// create vehicle
-	{
-		m_vehicleRayCaster = new btDefaultVehicleRaycaster(m_dynamicsWorld);
-		m_vehicle = new btRaycastVehicle(m_tuning,m_carChassis,m_vehicleRayCaster);
-		
-		///never deactivate the vehicle
-		m_carChassis->setActivationState(DISABLE_DEACTIVATION);
-
-		m_dynamicsWorld->addAction(m_vehicle);
-
-		float connectionHeight = 1.2f;
-
-	
-		bool isFrontWheel=true;
-
-		//choose coordinate system
-		int rightIndex = 0;
-		int upIndex = 1;
-		int forwardIndex = 2;
-		m_vehicle->setCoordinateSystem(rightIndex, upIndex, forwardIndex);
-
-		btVector3 connectionPointCS0(xhl-(0.3*wheelWidth),
-			connectionHeight,zhl-wheelRadius);
-		btScalar caster = 0.05;
-		btScalar camber = 0.05;
-		btVector3 wheelDirectionCS0(camber, -1, caster);
-		btVector3 wheelAxleCS(-1, 0, 0);
-		// left front
-		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
-			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
-
-		connectionPointCS0 = btVector3(-xhl+(0.3*wheelWidth),
-			connectionHeight,zhl-wheelRadius);
-		wheelDirectionCS0 = btVector3(-camber, -1, caster);
-		// right front
-		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
-			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
-
-		connectionPointCS0 = btVector3(-xhl+(0.3*wheelWidth),
-			connectionHeight,-zhl+wheelRadius);
-		wheelDirectionCS0 = btVector3(-camber, -1, -caster);
-		isFrontWheel = false;
-		// right rear
-		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
-			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
-
-		connectionPointCS0 = btVector3(xhl-(0.3*wheelWidth),
-			connectionHeight,-zhl+wheelRadius);
-		wheelDirectionCS0 = btVector3(camber, -1, -caster);
-		// leaft rear
-		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
-			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
-		
-		for (int i=0;i<m_vehicle->getNumWheels();i++)
-		{
-			btWheelInfo& wheel = m_vehicle->getWheelInfo(i);
-			wheel.m_suspensionStiffness = suspensionStiffness;
-			wheel.m_wheelsDampingRelaxation = suspensionDamping;
-			wheel.m_wheelsDampingCompression = suspensionCompression;
-			wheel.m_frictionSlip = wheelFriction;
-			wheel.m_rollInfluence = rollInfluence;
-			wheel.m_maxSuspensionForce = suspensionMaxForce;
-		}
-	}
-	resetDemolisher();
+	resetDemo();
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
 }
 
-void DemolisherDemo::physicsDebugDraw(int debugFlags)
+void PlateDemo::physicsDebugDraw(int debugFlags)
 {
 	if (m_dynamicsWorld && m_dynamicsWorld->getDebugDrawer())
 	{
@@ -1289,76 +1074,34 @@ void DemolisherDemo::physicsDebugDraw(int debugFlags)
 	}
 }
 
-void DemolisherDemo::renderScene()
+void PlateDemo::renderScene()
 {
 	m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
-
-	for (int i=0;i<m_vehicle->getNumWheels();i++)
-	{
-		//synchronize the wheels with the (interpolated) chassis worldtransform
-		m_vehicle->updateWheelTransform(i,true);
-
-		CommonRenderInterface* renderer = m_guiHelper->getRenderInterface();
-		if (renderer)
-		{
-			btTransform tr = m_vehicle->getWheelInfo(i).m_worldTransform;
-			btVector3 pos=tr.getOrigin();
-			btQuaternion orn = tr.getRotation();
-			renderer->writeSingleInstanceTransformToCPU(pos,orn,m_wheelInstances[i]);
-		}
-	}	
 	updatePitch();
 	updateYaw();
 	updatePauseButtonText();
 	updateDashboards();
 	setDumpFilename();
 	m_guiHelper->render(m_dynamicsWorld);
-	ATTRIBUTE_ALIGNED16(btScalar) m[16];
-	int i;
 	btVector3 wheelColor(1,0,0);
 	btVector3	worldBoundsMin,worldBoundsMax;
 	getDynamicsWorld()->getBroadphase()->getBroadphaseAabb(worldBoundsMin,worldBoundsMax);
-	for (i=0;i<m_vehicle->getNumWheels();i++)
-	{
-		//synchronize the wheels with the (interpolated) chassis worldtransform
-		m_vehicle->updateWheelTransform(i,true);
-		//draw wheels (cylinders)
-		m_vehicle->getWheelInfo(i).m_worldTransform.getOpenGLMatrix(m);
-//		m_shapeDrawer->drawOpenGL(m,m_wheelShape,wheelColor,getDebugMode(),worldBoundsMin,worldBoundsMax);
-	}
 	btScalar idleTime = idleClock.getTimeSeconds();
 	if ( idleTime> 10 && !isMoving()){
 #ifdef _WIN32
 		if (displayWait>0){
-			BT_PROFILE(PROFILE_DEMOLISHER_SLEEP);
+			BT_PROFILE(PROFILE_PLATE_SLEEP);
 			Sleep(displayWait);
 		}
 #endif
 	}
 }
 
-void DemolisherDemo::stepSimulation(float deltaTime)
+void PlateDemo::stepSimulation(float deltaTime)
 {
 	if (restartRequested){
 		restart();
 		restartRequested = false;
-	}
-	{
-		int wheelIndex = 2;
-		m_vehicle->applyEngineForce(gEngineForce,wheelIndex);
-		m_vehicle->setBrake(gBreakingForce,wheelIndex);
-		wheelIndex = 3;
-		m_vehicle->applyEngineForce(gEngineForce,wheelIndex);
-		m_vehicle->setBrake(gBreakingForce,wheelIndex);
-
-
-		wheelIndex = 0;
-		m_vehicle->setSteeringValue(gVehicleSteering,wheelIndex);
-		m_vehicle->setBrake(gBreakingForce, wheelIndex);
-		wheelIndex = 1;
-		m_vehicle->setSteeringValue(gVehicleSteering,wheelIndex);
-		m_vehicle->setBrake(gBreakingForce, wheelIndex);
-
 	}
 	{
 		updateDrag();
@@ -1382,20 +1125,20 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 
 
 
-void DemolisherDemo::displayCallback(void) 
+void PlateDemo::displayCallback(void) 
 {
 	if (m_dynamicsWorld)
 		m_dynamicsWorld->debugDrawWorld();
 }
 
 
-void DemolisherDemo::clientResetScene()
+void PlateDemo::clientResetScene()
 {
 	exitPhysics();
 	initPhysics();
 }
 
-void DemolisherDemo::resetDemolisher()
+void PlateDemo::resetDemo()
 {
 	gVehicleSteering = 0.f;
 	gBreakingForce = defaultBreakingForce;
@@ -1408,19 +1151,10 @@ void DemolisherDemo::resetDemolisher()
 	m_dynamicsWorld->getBroadphase()->getOverlappingPairCache()->
 		cleanProxyFromPairs(m_carChassis->getBroadphaseHandle(),
 		getDynamicsWorld()->getDispatcher());
-	if (m_vehicle)
-	{
-		m_vehicle->resetSuspension();
-		for (int i=0;i<m_vehicle->getNumWheels();i++)
-		{
-			//synchronize the wheels with the (interpolated) chassis worldtransform
-			m_vehicle->updateWheelTransform(i,true);
-		}
-	}
 }
 
 
-bool	DemolisherDemo::keyboardCallback(int key, int state)
+bool	PlateDemo::keyboardCallback(int key, int state)
 {
 	bool handled = false;
 	CommonWindowInterface * win=m_guiHelper->getAppInterface()->m_window;
@@ -1628,7 +1362,7 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 	return handled;
 }
 
-void DemolisherDemo::specialKeyboardUp(int key, int x, int y)
+void PlateDemo::specialKeyboardUp(int key, int x, int y)
 {
 #if 0
    
@@ -1636,13 +1370,13 @@ void DemolisherDemo::specialKeyboardUp(int key, int x, int y)
 }
 
 
-void DemolisherDemo::specialKeyboard(int key, int x, int y)
+void PlateDemo::specialKeyboard(int key, int x, int y)
 {
 }
 
 
 
-btRigidBody* DemolisherDemo::localCreateRigidBody(btScalar mass, 
+btRigidBody* PlateDemo::localCreateRigidBody(btScalar mass, 
 	const btTransform& startTransform, btCollisionShape* shape)
 {
 	btAssert((!shape || shape->getShapeType() != INVALID_SHAPE_PROXYTYPE));
@@ -1674,9 +1408,9 @@ btRigidBody* DemolisherDemo::localCreateRigidBody(btScalar mass,
 	m_dynamicsWorld->addRigidBody(body);
 	return body;
 }
-CommonExampleInterface*    DemolisherDemoCreateFunc(struct CommonExampleOptions& options)
+CommonExampleInterface*    PlateDemoCreateFunc(struct CommonExampleOptions& options)
 {
-	demo = new DemolisherDemo(options);
+	demo = new PlateDemo(options);
 	return demo;
 
 }
