@@ -32,7 +32,7 @@ struct ExampleEntry
 };
 
 /**
-option is decoded in CharpyDemo constructor
+option is decoded in constructors
 */
 static ExampleEntry gDefaultExamples[]=
 {

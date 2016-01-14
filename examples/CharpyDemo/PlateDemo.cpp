@@ -25,9 +25,6 @@ Based on DemolisherDemo by Simo Nikula 2016-
 #endif
 #include "btBulletDynamicsCommon.h"
 #include "BulletCollision/CollisionShapes/btHeightfieldTerrainShape.h"
-#include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
-#include "BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h"
-#include "BulletDynamics/MLCPSolvers/btMLCPSolver.h"
 #include "bt6DofElasticPlastic2Constraint.h"
 #include "../plasticity/PlasticityExampleBrowser.h"
 
@@ -56,7 +53,7 @@ public:
 	{
 		return m_dynamicsWorld;
 	}
-	btRigidBody* m_carChassis;
+	btRigidBody* m_loadBody;
 	btRigidBody* localCreateRigidBody(btScalar mass, const btTransform& worldTransform, btCollisionShape* colSape);
 
 	GUIHelperInterface* m_guiHelper;
@@ -78,11 +75,12 @@ public:
 	btVector3*	m_vertices;
 	btScalar	maxEngineForce;//this should be engine/velocity dependent
 	btScalar	defaultBreakingForce;
-	btScalar lsx, lsy, lsz;
-	int lpc;
+	btScalar lsx, lsz;
+	btScalar thickness;
+	int cx,cz;
 	btScalar breakingImpulseThreshold;
 	btScalar density;
-	btScalar carMass;
+	btScalar loadMass;
 	btScalar steelArea;
 	btScalar maxPlasticRotation;
 	btScalar maxPlasticStrain;
@@ -108,7 +106,6 @@ public:
 
 	float	m_minCameraDistance;
 	float	m_maxCameraDistance;
-	bool useMCLPSolver = true;
 	PlateDemo(CommonExampleOptions & options);
 
 	virtual ~PlateDemo();
@@ -172,69 +169,6 @@ public:
 	void restartHandler(Gwen::Controls::Base* control);
 	void reinit();
 	void resetHandler(Gwen::Controls::Base* control);
-	btVector3 lastLocation = btVector3(0, 0, 0);
-	btVector3 currentLocation = btVector3(0, 0, 0);
-	float lastClock = 0;
-	float currentClock = 0;
-	bool isMoving(){
-		btScalar d2 = currentLocation.distance2(lastLocation);
-		bool isMoving = d2 > 1e-4;
-		return isMoving;
-	}
-#define CAM_SMOOTH_SIZE 10
-	btVector3 cla[CAM_SMOOTH_SIZE];
-	btVector3 scl; // smoothed camera location
-	int clai = 0;
-	int clas = 0;
-	void updateCameraLocation(){
-		if (clas > 0){
-			scl = scl + currentLocation / clas;
-		}
-		else{
-			scl = currentLocation;
-		}
-		clas++;
-		if (clas > CAM_SMOOTH_SIZE){
-			scl = scl - cla[clai] / CAM_SMOOTH_SIZE;
-			cla[clai] = currentLocation;
-			clai++;
-			if (clai >= CAM_SMOOTH_SIZE){
-				clai = 0;
-			}
-			clas = CAM_SMOOTH_SIZE;
-		}
-		else{ // initial fill
-			cla[clas-1] = currentLocation;
-		}
-		CommonCameraInterface* camera =
-			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
-		camera->setCameraTargetPosition(scl.x(), scl.y(), scl.z());
-	}
-	/** update fps and kmph after interval seconds have passed */
-	float speedometerUpdated;
-	btVector3 speedometerLocation = lastLocation;
-	float updateInterval = 0.3;
-	int updateViewCount = 0;
-	void updateView(){
-		updateViewCount++;
-		float now = driveClock.getTimeSeconds();
-		float timeDelta = now - lastClock;
-		lastClock = currentClock;
-		currentClock = now;
-		lastLocation = currentLocation;
-		currentLocation = m_carChassis->getCenterOfMassPosition();
-		updateCameraLocation();
-		timeDelta = now - speedometerUpdated;
-		if (timeDelta < updateInterval){
-			return;
-		}
-		mps = (int)(currentLocation.distance(speedometerLocation) / timeDelta);
-		kmph = (int)(3.6*currentLocation.distance(speedometerLocation) / timeDelta);
-		fps = updateViewCount / timeDelta;
-		speedometerLocation = currentLocation;
-		speedometerUpdated = now;
-		updateViewCount = 0;
-	}
 	float gVehicleSteering = 0.f;
 	float steeringIncrement = 0.04f;
 	float steeringClamp = 0.3f;
@@ -305,7 +239,7 @@ public:
 	btScalar dragForce = 0;
 	btScalar halfAreaForDrag;
 	void updateDrag(){
-		btVector3 vel = m_carChassis->getLinearVelocity();
+		btVector3 vel = m_loadBody->getLinearVelocity();
 		dragForce = -vel.length2();
 		btVector3 norm;
 		if (dragForce < -0.01){
@@ -379,13 +313,16 @@ public:
 		return std::string(buffer);
 	}
 	void setWheelFriction(Gwen::Controls::Base* control);
-	void setLpc(Gwen::Controls::Base* control);
+	void setCx(Gwen::Controls::Base* control);
+	void setCy(Gwen::Controls::Base* control);
+	void setCz(Gwen::Controls::Base* control);
 	void setLsx(Gwen::Controls::Base* control);
 	void setLsy(Gwen::Controls::Base* control);
 	void setLsz(Gwen::Controls::Base* control);
+	void setThickness(Gwen::Controls::Base* control);
 	void setDensity(Gwen::Controls::Base* control);
 	void setBreakingImpulseThreshold(Gwen::Controls::Base* control);
-	void setCarMass(Gwen::Controls::Base* control);
+	void setLoadMass(Gwen::Controls::Base* control);
 	void setDefaultBreakingForce(Gwen::Controls::Base* control);
 	void setMaxEngineForce(Gwen::Controls::Base* control);
 	void setSteelArea(Gwen::Controls::Base* control);
@@ -396,32 +333,6 @@ public:
 	void setDumpPng(Gwen::Controls::Base* control);
 	Gwen::Controls::Base* pPage;
 	Gwen::Controls::Button* pauseButton;
-	Gwen::Controls::Label *db11, *db12, *db13, *db14, *db15, *db16;
-	Gwen::Controls::Label *db21, *db22, *db23;
-	int fps = 0;
-	int kmph = 0;
-	int mps = 0;
-	void updateDashboards(){
-		char buffer[UIF_SIZE];
-		sprintf_s(buffer, UIF_SIZE, "%-3d ", fps);
-		std::string str = std::string(buffer);
-		db11->SetText(str);
-		sprintf_s(buffer, UIF_SIZE, "%-3d ", kmph);
-		str = std::string(buffer);
-		db13->SetText(str);
-		sprintf_s(buffer, UIF_SIZE, "%-3d ", mps);
-		str = std::string(buffer);
-		db15->SetText(str);
-		sprintf_s(buffer, UIF_SIZE, "%-+9.0f ", gEngineForce);
-		str = std::string(buffer);
-		db21->SetText(str);
-		sprintf_s(buffer, UIF_SIZE, "%9.0f ", -gBreakingForce);
-		str = std::string(buffer);
-		db22->SetText(str);
-		sprintf_s(buffer, UIF_SIZE, "%9.0f ", -dragForce);
-		str = std::string(buffer);
-		db23->SetText(str);
-	}
 	void addGameBindings(){
 		Gwen::Controls::Label* label = addLabel("gameBindings");
 		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
@@ -448,40 +359,6 @@ public:
 		gc->SetText(logDir);
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setLogDir);
-	}
-	void addDashboard(){
-		db11 = new Gwen::Controls::Label(pPage);
-		db12 = new Gwen::Controls::Label(pPage);
-		db13 = new Gwen::Controls::Label(pPage);
-		db14 = new Gwen::Controls::Label(pPage);
-		db15 = new Gwen::Controls::Label(pPage);
-		db16 = new Gwen::Controls::Label(pPage);
-		db21 = new Gwen::Controls::Label(pPage);
-		db22 = new Gwen::Controls::Label(pPage);
-		db23 = new Gwen::Controls::Label(pPage);
-		updateDashboards();
-		db11->SizeToContents();
-		db11->SetPos(gx, gy);
-		db12->SetText("fps");
-		db12->SizeToContents();
-		db12->SetPos(gx + wxi / 2, gy);
-		db13->SizeToContents();
-		db13->SetPos(gx + wxi, gy);
-		db14->SetText("km/h");
-		db14->SizeToContents();
-		db14->SetPos(gx + 14 * wxi / 10, gy);
-		db15->SizeToContents();
-		db15->SetPos(gx + 2*wxi, gy);
-		db16->SetText("m/s");
-		db16->SizeToContents();
-		db16->SetPos(gx + 24 * wxi / 10, gy);
-		gy += gyInc;
-		db21->SizeToContents();
-		db21->SetPos(gx, gy);
-		db22->SizeToContents();
-		db22->SetPos(gx + wxi, gy);
-		db23->SizeToContents();
-		db23->SetPos(gx + 2 * wxi, gy);
 	}
 	Gwen::Controls::Label* addLabel(std::string txt){
 		Gwen::Controls::Label* gc = new Gwen::Controls::Label(pPage);
@@ -518,14 +395,23 @@ public:
 		gc->SetWidth(wxi);
 		gy += gyInc;
 	}
-	void addLpc(){
-		addLabel("lpc");
+	void addCx(){
+		addLabel("cx");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = std::to_string(lpc);
-		gc->SetToolTip("Load parts in each direction");
+		std::string text = std::to_string(cx);
+		gc->SetToolTip("Parts in x direction");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &PlateDemo::setLpc);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setCx);
+	}
+	void addCz(){
+		addLabel("cz");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = std::to_string(cz);
+		gc->SetToolTip("Parts in z direction");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setCz);
 	}
 	void addLsx(){
 		addLabel("lsx");
@@ -536,15 +422,6 @@ public:
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setLsx);
 	}
-	void addLsy(){
-		addLabel("lsy");
-		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(lsy, "%.2f");
-		gc->SetToolTip("Load size in y-direction");
-		gc->SetText(text);
-		place(gc);
-		gc->onReturnPressed.Add(pPage, &PlateDemo::setLsy);
-	}
 	void addLsz(){
 		addLabel("lsz");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
@@ -553,6 +430,14 @@ public:
 		gc->SetText(text);
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setLsz);
+	}
+	void addThickness(){
+		addLabel("thickness");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(thickness, "%.2f");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setThickness);
 	}
 	void addDensity(){
 		addLabel("density");
@@ -599,14 +484,14 @@ public:
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setSteelArea);
 	}
-	void addCarMass(){
-		addLabel("car mass");
+	void addLoadMass(){
+		addLabel("load mass");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(carMass, "%.0f");
-		gc->SetToolTip("car mass [kg]");
+		std::string text = uif(loadMass, "%.0f");
+		gc->SetToolTip("load mass [kg]");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &PlateDemo::setCarMass);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setLoadMass);
 	}
 	void addMaxEngineForce(){
 		addLabel("max engine force");
@@ -667,10 +552,11 @@ public:
 		canvas = gui->getInternalData()->pCanvas;
 		pPage = gui->getInternalData()->m_demoPage->GetPage();
 		gy = 5;
-		addLpc();
+		addCx();
+		addCz();
 		addLsx();
-		addLsy();
 		addLsz();
+		addThickness();
 		addDensity();
 		switch (constraintType){
 		case Impulse:
@@ -682,7 +568,7 @@ public:
 			addSteelArea();
 			break;
 		}
-		addCarMass();
+		addLoadMass();
 		addMaxEngineForce();
 		addDefaultBreakingForce();
 		addGameBindings();
@@ -691,7 +577,6 @@ public:
 		addPauseSimulationButton();
 		addRestartButton();
 		addResetButton();
-		addDashboard();
 	}
 	void clearParameterUi(){
 		if (pPage){
@@ -710,7 +595,7 @@ public:
 	}
 	void addFixedConstraint(btAlignedObjectArray<btRigidBody*> ha){
 		int loopSize = ha.size() - 1;
-		btScalar halfLength = lsx / lpc / 2;
+		btScalar halfLength = lsx / cx / 2;
 		btTransform tra;
 		btTransform trb;
 		tra.setIdentity();
@@ -736,7 +621,7 @@ public:
 		btScalar fy(200E6);
 		bool limitIfNeeded = true;
 		btScalar damping(0.1);
-		btScalar l4s = lsx / lpc;
+		btScalar l4s = lsx / cx;
 		btScalar halfLength = l4s / 2;
 		btTransform tra;
 		btTransform trb;
@@ -746,7 +631,7 @@ public:
 		tra.setOrigin(cpos);
 		trb.setOrigin(-cpos);
 		btScalar k0(E*steelArea/ 0.2); 
-		btScalar k1(E*steelArea*lsy/2.5);
+		btScalar k1(E*steelArea*thickness/2.5);
 		btScalar k2(E*steelArea*lsz/2.5);
 		btScalar m(fy / E);
 		btScalar w0(k0*m);
@@ -824,20 +709,24 @@ void PlateDemo::setDumpPng(Gwen::Controls::Base* control){
 		static_cast<Gwen::Controls::CheckBox*>(control);
 	demo->dumpPng = cb->IsChecked();
 }
-void PlateDemo::setLpc(Gwen::Controls::Base* control){
-	setInt(control, &(demo->lpc));
+void PlateDemo::setCx(Gwen::Controls::Base* control){
+	setInt(control, &(demo->cx));
+	restartHandler(control);
+}
+void PlateDemo::setCz(Gwen::Controls::Base* control){
+	setInt(control, &(demo->cz));
 	restartHandler(control);
 }
 void PlateDemo::setLsx(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->lsx));
 	restartHandler(control);
 }
-void PlateDemo::setLsy(Gwen::Controls::Base* control){
-	setScalar(control, &(demo->lsy));
-	restartHandler(control);
-}
 void PlateDemo::setLsz(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->lsz));
+	restartHandler(control);
+}
+void PlateDemo::setThickness(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->thickness));
 	restartHandler(control);
 }
 void PlateDemo::setDensity(Gwen::Controls::Base* control){
@@ -848,8 +737,8 @@ void PlateDemo::setBreakingImpulseThreshold(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->breakingImpulseThreshold));
 	restartHandler(control);
 }
-void PlateDemo::setCarMass(Gwen::Controls::Base* control){
-	setScalar(control, &(demo->carMass));
+void PlateDemo::setLoadMass(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->loadMass));
 	restartHandler(control);
 }
 void PlateDemo::setMaxEngineForce(Gwen::Controls::Base* control){
@@ -879,18 +768,18 @@ void PlateDemo::restartHandler(Gwen::Controls::Base* control){
 void PlateDemo::reinit(){
 	maxEngineForce = 100000;
 	defaultBreakingForce = 1000;
-	lpc = 5;
-	lsx = 10;
-	lsy = 3;
+	cx = 1;
+	cz = 1;
+	lsx = 6;
 	lsz = 2;
+	thickness = 0.1;
 	density = 2000;
 	breakingImpulseThreshold = 50000;
-	carMass = 50000;
+	loadMass = 50000;
 	steelArea = 0.001;
 	maxPlasticStrain = 0.1;
 	maxPlasticRotation = 1;
 	driveClock.reset();
-	speedometerUpdated = 0;
 	gameBindings = true;
 }
 void PlateDemo::resetHandler(Gwen::Controls::Base* control){
@@ -903,7 +792,7 @@ PlateDemo::PlateDemo(CommonExampleOptions & options)
 	:CommonRigidBodyBase(options.m_guiHelper),
 	Gwen::Event::Handler(),
 	m_guiHelper(options.m_guiHelper),
-m_carChassis(0),
+m_loadBody(0),
 m_indexVertexArrays(0),
 m_vertices(0),
 m_cameraHeight(4.f),
@@ -987,69 +876,74 @@ void PlateDemo::initPhysics()
 {
 	int upAxis = 1;	
 	m_guiHelper->setUpAxis(upAxis);
-	btVector3 groundExtents(200,200,200);
-	groundExtents[upAxis]=3;
+	btScalar xm(0.9*lsx);
+	btScalar zm(0.9*lsz);
+	btVector3 groundExtents(9, 1, 9);
 	btCollisionShape* groundShape = new btBoxShape(groundExtents);
 	m_collisionShapes.push_back(groundShape);
+	btVector3 supportExtents(lsx / 2, 1, lsz / 2);
+	btCollisionShape* supportShape = new btBoxShape(supportExtents);
+	m_collisionShapes.push_back(supportShape);
 	m_collisionConfiguration = new btDefaultCollisionConfiguration();
 	m_dispatcher = new btCollisionDispatcher(m_collisionConfiguration);
-	btVector3 worldMin(-1000,-1000,-1000);
-	btVector3 worldMax(1000,1000,1000);
+	btVector3 worldMin(-100,-100,-100);
+	btVector3 worldMax(100,100,100);
 	m_overlappingPairCache = new btAxisSweep3(worldMin,worldMax);
-	if (useMCLPSolver)
-	{
-		btDantzigSolver* mlcp = new btDantzigSolver();
-		//btSolveProjectedGaussSeidel* mlcp = new btSolveProjectedGaussSeidel;
-		btMLCPSolver* sol = new btMLCPSolver(mlcp);
-		m_constraintSolver = sol;
-	} else
-	{
-		m_constraintSolver = new btSequentialImpulseConstraintSolver();
-	}
+	m_constraintSolver = new btSequentialImpulseConstraintSolver();
 	m_dynamicsWorld = new btDiscreteDynamicsWorld
 		(m_dispatcher,m_overlappingPairCache,m_constraintSolver,m_collisionConfiguration);
-	if (useMCLPSolver)
-	{//for direct solver it is better to have a small A matrix
-		m_dynamicsWorld ->getSolverInfo().m_minimumSolverBatchSize = 1;
-	} else
-	{//for direct solver, it is better to solve multiple objects together, small batches have high overhead
-		m_dynamicsWorld ->getSolverInfo().m_minimumSolverBatchSize = 128;
-	}
+	m_dynamicsWorld ->getSolverInfo().m_minimumSolverBatchSize = 128;
 	m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
-btTransform tr;
-tr.setIdentity();
-tr.setOrigin(btVector3(0,-3,0));
-	//create ground object
+	//create ground and support objects
+	btTransform tr;
+	tr.setIdentity();
+	tr.setOrigin(btVector3(0,-2,0));
 	localCreateRigidBody(0,tr,groundShape);
-	float xhl = 1.66, yhl = 1., zhl = 3.37;
+	tr.setOrigin(btVector3(xm, -1, 0));
+	localCreateRigidBody(0, tr, supportShape);
+	tr.setOrigin(btVector3(-xm, -1, 0));
+	localCreateRigidBody(0, tr, supportShape);
+	tr.setOrigin(btVector3(0, -1, -zm));
+	localCreateRigidBody(0, tr, supportShape);
+	tr.setOrigin(btVector3(0, -1, zm));
+	localCreateRigidBody(0, tr, supportShape);
+	// load
+	float xhl = 0.5, yhl = 1., zhl = 0.5;
 	halfAreaForDrag = xhl*yhl * 2;
-	btCollisionShape* chassisShape = new btBoxShape(btVector3(xhl,yhl,zhl));
-	m_collisionShapes.push_back(chassisShape);
-	m_carChassis = localCreateRigidBody(carMass, tr, chassisShape);
+	btCollisionShape* loadShape = new btBoxShape(btVector3(xhl,yhl,zhl));
+	m_collisionShapes.push_back(loadShape);
+	tr.setIdentity();
+	tr.setOrigin(btVector3(0, 5*yhl+thickness, 0));
+	m_loadBody = localCreateRigidBody(loadMass, tr, loadShape);
 	btTransform localTrans;
 	localTrans.setIdentity();
-	/// create load parts
+	/// create plates
 	{
 		btAlignedObjectArray<btRigidBody*> ha;
-		btScalar xlen = lsx / lpc;
-		btCollisionShape* loadShape = new btBoxShape(btVector3(xlen/2, lsy / 2, lsz / 2));
+		btScalar xlen = lsx / cx;
+		btScalar zlen = lsz / cz;
+		btCollisionShape* loadShape = new btBoxShape(btVector3(xlen/2, thickness, zlen / 2));
 		btScalar mass;
 		switch (constraintType){
 		case Rigid:
 			mass = 0;
 			break;
 		default:
-			mass = lsx*lsy*lsz*density / lpc;
+			mass = xlen*zlen*thickness*density;
 			break;
 		}
 		m_collisionShapes.push_back(loadShape);
 		btScalar xloc = (xlen-lsx)/2;
-		for (int i = 0; i < lpc; i++){
-			btTransform loadTrans;
-			loadTrans.setIdentity();
-			btVector3 pos = btVector3(xloc, lsy / 2, 5);
-			loadTrans.setOrigin(pos);
-			ha.push_back(localCreateRigidBody(mass, loadTrans, loadShape));
+		for (int i = 0; i < cx; i++){
+			btScalar zloc = (zlen - lsz) / 2;
+			for (int j = 0; j < cz; j++){
+				btTransform plateTrans;
+				plateTrans.setIdentity();
+				btVector3 pos = btVector3(xloc, thickness/ 2, zloc);
+				plateTrans.setOrigin(pos);
+				ha.push_back(localCreateRigidBody(mass, plateTrans, loadShape));
+				zloc += zlen;
+			}
 			xloc += xlen;
 		}
 		switch (constraintType){
@@ -1080,14 +974,13 @@ void PlateDemo::renderScene()
 	updatePitch();
 	updateYaw();
 	updatePauseButtonText();
-	updateDashboards();
 	setDumpFilename();
 	m_guiHelper->render(m_dynamicsWorld);
 	btVector3 wheelColor(1,0,0);
 	btVector3	worldBoundsMin,worldBoundsMax;
 	getDynamicsWorld()->getBroadphase()->getBroadphaseAabb(worldBoundsMin,worldBoundsMax);
 	btScalar idleTime = idleClock.getTimeSeconds();
-	if ( idleTime> 10 && !isMoving()){
+	if ( idleTime> 10){
 #ifdef _WIN32
 		if (displayWait>0){
 			BT_PROFILE(PROFILE_PLATE_SLEEP);
@@ -1105,7 +998,7 @@ void PlateDemo::stepSimulation(float deltaTime)
 	}
 	{
 		updateDrag();
-		m_carChassis->applyCentralForce(drag);
+		m_loadBody->applyCentralForce(drag);
 	}
 
 	float dt = deltaTime;
@@ -1115,11 +1008,6 @@ void PlateDemo::stepSimulation(float deltaTime)
 		int maxSimSubSteps =  2;		
 		int numSimSteps;
         numSimSteps = m_dynamicsWorld->stepSimulation(dt,maxSimSubSteps);
-		updateView();
-	}
-	else{
-		kmph = 0;
-		mps = 0;
 	}
 }
 
@@ -1143,14 +1031,6 @@ void PlateDemo::resetDemo()
 	gVehicleSteering = 0.f;
 	gBreakingForce = defaultBreakingForce;
 	gEngineForce = 0.f;
-	clas = 0;
-	clai = 0;
-	m_carChassis->setCenterOfMassTransform(btTransform::getIdentity());
-	m_carChassis->setLinearVelocity(btVector3(0,0,0));
-	m_carChassis->setAngularVelocity(btVector3(0,0,0));
-	m_dynamicsWorld->getBroadphase()->getOverlappingPairCache()->
-		cleanProxyFromPairs(m_carChassis->getBroadphaseHandle(),
-		getDynamicsWorld()->getDispatcher());
 }
 
 
@@ -1266,27 +1146,6 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 				btDiscreteDynamicsWorld* world = (btDiscreteDynamicsWorld*)m_dynamicsWorld;
 				world->setLatencyMotionStateInterpolation(!world->getLatencyMotionStateInterpolation());
 				printf("world latencyMotionStateInterpolation = %d\n", world->getLatencyMotionStateInterpolation());
-				break;
-			}
-		case B3G_F6:
-			{
-				handled = true;
-				//switch solver (needs demo restart)
-				useMCLPSolver = !useMCLPSolver;
-				printf("switching to useMLCPSolver = %d\n", useMCLPSolver);
-
-				delete m_constraintSolver;
-				if (useMCLPSolver)
-				{
-					btDantzigSolver* mlcp = new btDantzigSolver();
-					//btSolveProjectedGaussSeidel* mlcp = new btSolveProjectedGaussSeidel;
-					btMLCPSolver* sol = new btMLCPSolver(mlcp);
-					m_constraintSolver = sol;
-				} else
-				{
-					m_constraintSolver = new btSequentialImpulseConstraintSolver();
-				}
-				m_dynamicsWorld->setConstraintSolver(m_constraintSolver);
 				break;
 			}
 		case B3G_F5:
