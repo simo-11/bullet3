@@ -594,28 +594,29 @@ public:
 		initPhysics();
 	}
 	void addFixedConstraint(btAlignedObjectArray<btRigidBody*> ha){
-		int loopSize = ha.size() - 1;
-		btScalar halfLength = lsx / cx / 2;
+		btScalar halfLengthX = lsx / cx / 2;
+		btScalar halfLengthZ = lsz / cz / 2;
 		btTransform tra;
 		btTransform trb;
 		tra.setIdentity();
 		trb.setIdentity();
-		btVector3 cpos(halfLength, 0, 0);
+		btVector3 cpos(halfLengthX, 0, 0);
 		tra.setOrigin(cpos);
 		trb.setOrigin(-cpos);
-		for (int i = 0; i < loopSize; i++){
-			btGeneric6DofConstraint *sc =
-				new btGeneric6DofConstraint(*ha[i], *ha[i + 1],
-				tra, trb, true);
-			sc->setBreakingImpulseThreshold(breakingImpulseThreshold);
-			m_dynamicsWorld->addConstraint(sc, true);
-			for (int i = 0; i < 6; i++){
-				sc->setLimit(i, 0, 0); // make fixed
+		for (int i = 0; i < cx-1; i++){
+			for (int j = 0; j < cz; j++){
+				btGeneric6DofConstraint *sc =
+					new btGeneric6DofConstraint(*ha[cx*i + j], *ha[cx*(i + 1) + j],
+					tra, trb, true);
+				sc->setBreakingImpulseThreshold(breakingImpulseThreshold);
+				m_dynamicsWorld->addConstraint(sc, true);
+				for (int i = 0; i < 6; i++){
+					sc->setLimit(i, 0, 0); // make fixed
+				}
 			}
 		}
 	}
 	void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha){
-		int loopSize = ha.size() - 1;
 		btScalar E(200E9);
 		btScalar G(80E9);
 		btScalar fy(200E6);
@@ -632,12 +633,12 @@ public:
 		trb.setOrigin(-cpos);
 		btScalar k0(E*steelArea/ 0.2); 
 		btScalar k1(E*steelArea*thickness/2.5);
-		btScalar k2(E*steelArea*lsz/2.5);
+		btScalar k2(E*steelArea*thickness/ 2.5);
 		btScalar m(fy / E);
 		btScalar w0(k0*m);
 		btScalar w1(k1*fy/E);
 		btScalar w2(k2*fy/E);
-		for (int i = 0; i < loopSize; i++){
+		for (int i = 0; i < 0; i++){
 			bt6DofElasticPlastic2Constraint *sc =
 				new bt6DofElasticPlastic2Constraint(*ha[i], *ha[i + 1],
 				tra, trb);
@@ -768,14 +769,14 @@ void PlateDemo::restartHandler(Gwen::Controls::Base* control){
 void PlateDemo::reinit(){
 	maxEngineForce = 100000;
 	defaultBreakingForce = 1000;
-	cx = 1;
-	cz = 1;
+	cx = 6;
+	cz = 6;
 	lsx = 6;
-	lsz = 2;
+	lsz = 6;
 	thickness = 0.1;
 	density = 2000;
 	breakingImpulseThreshold = 50000;
-	loadMass = 50000;
+	loadMass = 10000;
 	steelArea = 0.001;
 	maxPlasticStrain = 0.1;
 	maxPlasticRotation = 1;
@@ -876,14 +877,17 @@ void PlateDemo::initPhysics()
 {
 	int upAxis = 1;	
 	m_guiHelper->setUpAxis(upAxis);
-	btScalar xm(0.9*lsx);
-	btScalar zm(0.9*lsz);
-	btVector3 groundExtents(9, 1, 9);
+	btScalar xm(lsx/2);
+	btScalar zm(lsz/2);
+	btVector3 groundExtents(9, thickness, 9);
 	btCollisionShape* groundShape = new btBoxShape(groundExtents);
 	m_collisionShapes.push_back(groundShape);
-	btVector3 supportExtents(lsx / 2, 1, lsz / 2);
-	btCollisionShape* supportShape = new btBoxShape(supportExtents);
-	m_collisionShapes.push_back(supportShape);
+	btVector3 supportExtentsX(lsx / 2, thickness, 3*thickness);
+	btCollisionShape* supportShapeX = new btBoxShape(supportExtentsX);
+	m_collisionShapes.push_back(supportShapeX);
+	btVector3 supportExtentsZ(3*thickness, thickness, lsz/2);
+	btCollisionShape* supportShapeZ = new btBoxShape(supportExtentsZ);
+	m_collisionShapes.push_back(supportShapeZ);
 	m_collisionConfiguration = new btDefaultCollisionConfiguration();
 	m_dispatcher = new btCollisionDispatcher(m_collisionConfiguration);
 	btVector3 worldMin(-100,-100,-100);
@@ -897,16 +901,16 @@ void PlateDemo::initPhysics()
 	//create ground and support objects
 	btTransform tr;
 	tr.setIdentity();
-	tr.setOrigin(btVector3(0,-2,0));
+	tr.setOrigin(btVector3(0,-30*thickness,0));
 	localCreateRigidBody(0,tr,groundShape);
-	tr.setOrigin(btVector3(xm, -1, 0));
-	localCreateRigidBody(0, tr, supportShape);
-	tr.setOrigin(btVector3(-xm, -1, 0));
-	localCreateRigidBody(0, tr, supportShape);
-	tr.setOrigin(btVector3(0, -1, -zm));
-	localCreateRigidBody(0, tr, supportShape);
-	tr.setOrigin(btVector3(0, -1, zm));
-	localCreateRigidBody(0, tr, supportShape);
+	tr.setOrigin(btVector3(xm, -thickness, 0));
+	localCreateRigidBody(0, tr, supportShapeZ);
+	tr.setOrigin(btVector3(-xm, -thickness, 0));
+	localCreateRigidBody(0, tr, supportShapeZ);
+	tr.setOrigin(btVector3(0, -thickness, -zm));
+	localCreateRigidBody(0, tr, supportShapeX);
+	tr.setOrigin(btVector3(0, -thickness, zm));
+	localCreateRigidBody(0, tr, supportShapeX);
 	// load
 	float xhl = 0.5, yhl = 1., zhl = 0.5;
 	halfAreaForDrag = xhl*yhl * 2;
@@ -919,7 +923,11 @@ void PlateDemo::initPhysics()
 	localTrans.setIdentity();
 	/// create plates
 	{
+		/**
+		* store all sequentially z-direction in inner loop
+		*/
 		btAlignedObjectArray<btRigidBody*> ha;
+		ha.reserve(cx*cz);
 		btScalar xlen = lsx / cx;
 		btScalar zlen = lsz / cz;
 		btCollisionShape* loadShape = new btBoxShape(btVector3(xlen/2, thickness, zlen / 2));
