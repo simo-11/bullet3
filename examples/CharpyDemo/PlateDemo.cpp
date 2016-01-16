@@ -483,7 +483,7 @@ public:
 	void addLoadRaiseX(){
 		addLabel("load raise x");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		gc->SetToolTip("load raise x[m] (aswd)");
+		gc->SetToolTip("load raise x[m] (ad)");
 		loadRaiseXGc = gc;
 		updateLoadRaiseXGc();
 		place(gc);
@@ -500,7 +500,7 @@ public:
 		loadRaiseZGc = gc;
 		updateLoadRaiseZGc();
 		std::string text = uif(loadRaiseZ, "%.2f");
-		gc->SetToolTip("load raise z[m] (aswd)");
+		gc->SetToolTip("load raise z[m] (sw)");
 		gc->SetText(text);
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setLoadRaiseZ);
@@ -758,14 +758,8 @@ public:
 		yhl = loadMass / density / 2 / (2 * xhl) / (2 * zhl);
 		return new btBoxShape(btVector3(xhl, yhl, zhl));
 	}
-	void updateLoadRaiseX(btScalar increment){
-		loadRaiseX += increment;
-		updateLoadRaiseXGc();
-	}
-	void updateLoadRaiseZ(btScalar increment){
-		loadRaiseZ += increment;
-		updateLoadRaiseZGc();
-	}
+	void updateLoadRaiseX(btScalar increment);
+	void updateLoadRaiseZ(btScalar increment);
 	btTransform getLoadRaisePoint(){
 		btTransform tr;
 		tr.setIdentity();
@@ -791,6 +785,18 @@ void PlateDemo::handleRaiseLoad(Gwen::Controls::Base* control){
 	Gwen::Controls::Button* gc =
 		static_cast<Gwen::Controls::Button*>(control);
 	demo->raiseLoad = true;
+}
+void PlateDemo::updateLoadRaiseX(btScalar increment){
+	PlasticityExampleBrowser::setPauseSimulation(true);
+	demo->raiseLoad = true;
+	demo->loadRaiseX += increment;
+	updateLoadRaiseXGc();
+}
+void PlateDemo::updateLoadRaiseZ(btScalar increment){
+	PlasticityExampleBrowser::setPauseSimulation(true);
+	demo->raiseLoad = true;
+	demo->loadRaiseZ += increment;
+	updateLoadRaiseZGc();
 }
 
 void PlateDemo::setGameBindings(Gwen::Controls::Base* control){
@@ -853,12 +859,15 @@ void PlateDemo::setLoadMass(Gwen::Controls::Base* control){
 }
 void PlateDemo::setLoadRaise(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->loadRaise));
+	restartHandler(control);
 }
 void PlateDemo::setLoadRaiseX(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->loadRaiseX));
+	restartHandler(control);
 }
 void PlateDemo::setLoadRaiseZ(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->loadRaiseZ));
+	restartHandler(control);
 }
 void PlateDemo::setSteelArea(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->steelArea));
@@ -990,19 +999,19 @@ void PlateDemo::initPhysics()
 	m_guiHelper->setUpAxis(upAxis);
 	btScalar xm(lsx/2);
 	btScalar zm(lsz/2);
-	btVector3 groundExtents(9, thickness, 9);
+	btVector3 groundExtents(9, 0.5, 9);
 	btCollisionShape* groundShape = new btBoxShape(groundExtents);
 	m_collisionShapes.push_back(groundShape);
-	btVector3 supportExtentsX(lsx / 2, thickness, 3*thickness);
+	btVector3 supportExtentsX(lsx / 2, thickness, lsz/20);
 	btCollisionShape* supportShapeX = new btBoxShape(supportExtentsX);
 	m_collisionShapes.push_back(supportShapeX);
-	btVector3 supportExtentsZ(3*thickness, thickness, lsz/2);
+	btVector3 supportExtentsZ(lsx/20, thickness, lsz/2);
 	btCollisionShape* supportShapeZ = new btBoxShape(supportExtentsZ);
 	m_collisionShapes.push_back(supportShapeZ);
 	m_collisionConfiguration = new btDefaultCollisionConfiguration();
 	m_dispatcher = new btCollisionDispatcher(m_collisionConfiguration);
-	btVector3 worldMin(-100,-100,-100);
-	btVector3 worldMax(100,100,100);
+	btVector3 worldMin(-20,-20,-20);
+	btVector3 worldMax(20,20,20);
 	m_overlappingPairCache = new btAxisSweep3(worldMin,worldMax);
 	m_constraintSolver = new btSequentialImpulseConstraintSolver();
 	m_dynamicsWorld = new btDiscreteDynamicsWorld
@@ -1012,7 +1021,7 @@ void PlateDemo::initPhysics()
 	//create ground and support objects
 	btTransform tr;
 	tr.setIdentity();
-	tr.setOrigin(btVector3(0,-30*thickness,0));
+	tr.setOrigin(btVector3(0,-20*thickness-2,0));
 	localCreateRigidBody(0,tr,groundShape);
 	tr.setOrigin(btVector3(xm, -thickness, 0));
 	localCreateRigidBody(0, tr, supportShapeZ);
