@@ -54,6 +54,7 @@ public:
 		return m_dynamicsWorld;
 	}
 	btRigidBody* m_loadBody;
+	bool raiseLoad = false;
 	btRigidBody* localCreateRigidBody(btScalar mass, const btTransform& worldTransform, btCollisionShape* colSape);
 
 	GUIHelperInterface* m_guiHelper;
@@ -73,20 +74,17 @@ public:
 	class btTriangleIndexVertexArray*	m_indexVertexArrays;
 
 	btVector3*	m_vertices;
-	btScalar	maxEngineForce;//this should be engine/velocity dependent
-	btScalar	defaultBreakingForce;
 	btScalar lsx, lsz;
 	btScalar thickness;
 	int cx,cz;
 	btScalar breakingImpulseThreshold;
 	btScalar density;
-	btScalar loadMass;
+	btScalar loadMass, loadRaise, loadRaiseX, loadRaiseZ;
 	btScalar steelArea;
 	btScalar maxPlasticRotation;
 	btScalar maxPlasticStrain;
-	float	gEngineForce = 0.f;
-	float	gBreakingForce = 100.f;
 	bool gameBindings = true;
+	bool disableCollisionsBetweenLinkedBodies = true;
 	bool dumpPng = false;
 	char *logDir = _strdup("d:/wrk");
 	int gx = 10; // for labels
@@ -158,10 +156,6 @@ public:
 	btClock idleClock;
 	btClock driveClock;
 	long displayWait = 50;
-	int m_viewMode = 1;
-	void setViewMode(int mode){
-		m_viewMode = mode;
-	}
 	/** Gwen controls handling.
 	Just flag changes to avoid need to specify all parent references
 	if calls come from Gwen
@@ -169,25 +163,6 @@ public:
 	void restartHandler(Gwen::Controls::Base* control);
 	void reinit();
 	void resetHandler(Gwen::Controls::Base* control);
-	float gVehicleSteering = 0.f;
-	float steeringIncrement = 0.04f;
-	float steeringClamp = 0.3f;
-	float steeringDelta = 0.f;
-	void setSteeringDelta(float delta){
-		steeringDelta = delta;
-	}
-	void updateSteering(){
-		if (steeringDelta == 0.f){
-			return;
-		}
-		gVehicleSteering += steeringDelta;
-		if (gVehicleSteering > steeringClamp){
-			gVehicleSteering = steeringClamp;
-		}
-		else if (gVehicleSteering < -steeringClamp){
-			gVehicleSteering = -steeringClamp;
-		}
-	}
 	float pitchDelta = 0;
 	void setPitchDelta(float delta){
 		pitchDelta = delta;
@@ -220,33 +195,8 @@ public:
 			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
 		float current = camera->getCameraYaw();
 		current += yawDelta;
-		if (current >= 0 && current < 90){
+		if (current > -90 && current < 90){
 			camera->setCameraYaw(current);
-		}
-	}
-	void updateEngineForce(float scale){
-		gEngineForce += scale*maxEngineForce;
-		gBreakingForce = 0.f;
-	}
-	/**
-	https://en.wikipedia.org/wiki/Drag_(physics)
-	ro is about 1 kg/m3
-	area is about 2 m2
-	Cd is about 1
-	so we use speed2
-	*/
-	btVector3 drag;
-	btScalar dragForce = 0;
-	btScalar halfAreaForDrag;
-	void updateDrag(){
-		btVector3 vel = m_loadBody->getLinearVelocity();
-		dragForce = -vel.length2();
-		btVector3 norm;
-		if (dragForce < -0.01){
-			drag = vel.normalized()*dragForce;
-		}
-		else{
-			drag = btVector3(0, 0, 0);
 		}
 	}
 	std::string getText(Gwen::Controls::Base* control){
@@ -323,16 +273,30 @@ public:
 	void setDensity(Gwen::Controls::Base* control);
 	void setBreakingImpulseThreshold(Gwen::Controls::Base* control);
 	void setLoadMass(Gwen::Controls::Base* control);
+	void setLoadRaise(Gwen::Controls::Base* control);
+	void setLoadRaiseX(Gwen::Controls::Base* control);
+	void setLoadRaiseZ(Gwen::Controls::Base* control);
 	void setDefaultBreakingForce(Gwen::Controls::Base* control);
 	void setMaxEngineForce(Gwen::Controls::Base* control);
 	void setSteelArea(Gwen::Controls::Base* control);
 	void setMaxPlasticStrain(Gwen::Controls::Base* control);
 	void setMaxPlasticRotation(Gwen::Controls::Base* control);
 	void setGameBindings(Gwen::Controls::Base* control);
+	void setDisableCollisionsBetweenLinkedBodies(Gwen::Controls::Base* control);
 	void setLogDir(Gwen::Controls::Base* control);
 	void setDumpPng(Gwen::Controls::Base* control);
 	Gwen::Controls::Base* pPage;
 	Gwen::Controls::Button* pauseButton;
+	Gwen::Controls::Button* raiseLoadButton;
+	void addCollisionBetweenLinkedBodies(){
+		Gwen::Controls::Label* label = addLabel("disableCollisions");
+		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
+		gc->SetToolTip("disableCollisionsBetweenLinkedBodies");
+		gc->SetPos(gxi, gy);
+		gc->SetChecked(disableCollisionsBetweenLinkedBodies);
+		gy += gyInc;
+		gc->onCheckChanged.Add(pPage, &PlateDemo::setDisableCollisionsBetweenLinkedBodies);
+	}
 	void addGameBindings(){
 		Gwen::Controls::Label* label = addLabel("gameBindings");
 		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
@@ -390,6 +354,14 @@ public:
 		gy += gyInc;
 		gc->onPress.Add(pPage, &PlateDemo::resetHandler);
 	}
+	void addRaiseLoadButton(){
+		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
+		gc->SetText(L"Raise load");
+		gc->SetPos(gx, gy);
+		gc->SetSize(wxi + 10, gyInc - 4);
+		gc->onPress.Add(pPage, &PlateDemo::handleRaiseLoad);
+	}
+
 	void place(Gwen::Controls::Base* gc){
 		gc->SetPos(gxi, gy);
 		gc->SetWidth(wxi);
@@ -417,7 +389,7 @@ public:
 		addLabel("lsx");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
 		std::string text = uif(lsx, "%.2f");
-		gc->SetToolTip("Load size in x-direction");
+		gc->SetToolTip("Length in x-direction");
 		gc->SetText(text);
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setLsx);
@@ -426,7 +398,7 @@ public:
 		addLabel("lsz");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
 		std::string text = uif(lsz, "%.2f");
-		gc->SetToolTip("Load size in z-direction");
+		gc->SetToolTip("Length in z-direction");
 		gc->SetText(text);
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setLsz);
@@ -435,6 +407,7 @@ public:
 		addLabel("thickness");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
 		std::string text = uif(thickness, "%.2f");
+		gc->SetToolTip("Plate thickness");
 		gc->SetText(text);
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setThickness);
@@ -443,7 +416,7 @@ public:
 		addLabel("density");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
 		std::string text = uif(density, "%.2f");
-		gc->SetToolTip("Load density [kg/m3]");
+		gc->SetToolTip("Plate density [kg/m3]");
 		gc->SetText(text);
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setDensity);
@@ -493,25 +466,45 @@ public:
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setLoadMass);
 	}
-	void addMaxEngineForce(){
-		addLabel("max engine force");
+	void addLoadRaise(){
+		addLabel("load raise");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(maxEngineForce, "%.0f");
-		gc->SetToolTip("impulse");
+		std::string text = uif(loadRaise, "%.2f");
+		gc->SetToolTip("load raise [m]");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &PlateDemo::setMaxEngineForce);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setLoadRaise);
 	}
-	void addDefaultBreakingForce(){
-		addLabel("default breaking force");
+	Gwen::Controls::TextBoxNumeric* loadRaiseXGc;
+	void updateLoadRaiseXGc(){
+		std::string text = uif(loadRaiseX, "%.2f");
+		loadRaiseXGc->SetText(text);
+	}
+	void addLoadRaiseX(){
+		addLabel("load raise x");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(defaultBreakingForce, "%.2f");
-		gc->SetToolTip("impulse");
+		gc->SetToolTip("load raise x[m] (aswd)");
+		loadRaiseXGc = gc;
+		updateLoadRaiseXGc();
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setLoadRaiseX);
+	}
+	Gwen::Controls::TextBoxNumeric* loadRaiseZGc;
+	void updateLoadRaiseZGc(){
+		std::string text = uif(loadRaiseZ, "%.2f");
+		loadRaiseZGc->SetText(text);
+	}
+	void addLoadRaiseZ(){
+		addLabel("load raise z");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		loadRaiseZGc = gc;
+		updateLoadRaiseZGc();
+		std::string text = uif(loadRaiseZ, "%.2f");
+		gc->SetToolTip("load raise z[m] (aswd)");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &PlateDemo::setDefaultBreakingForce);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setLoadRaiseZ);
 	}
-
 	void PlateDemo::updatePauseButtonText(){
 		bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
 		if (pauseSimulation){
@@ -528,6 +521,7 @@ public:
 		pauseSimulation = !pauseSimulation;
 		PlasticityExampleBrowser::setPauseSimulation(pauseSimulation);
 	}
+	void handleRaiseLoad(Gwen::Controls::Base* control);
 	void initOptions(){
 		resetCamera();
 		int option = m_option;
@@ -561,22 +555,26 @@ public:
 		switch (constraintType){
 		case Impulse:
 			addBreakingImpulseThreshold();
+			addCollisionBetweenLinkedBodies();
 			break;
 		case ElasticPlastic:
 			addMaxPlasticRotation();
 			addMaxPlasticStrain();
 			addSteelArea();
+			addCollisionBetweenLinkedBodies();
 			break;
 		}
 		addLoadMass();
-		addMaxEngineForce();
-		addDefaultBreakingForce();
+		addLoadRaise();
+		addLoadRaiseX();
+		addLoadRaiseZ();
 		addGameBindings();
 		addDumpPng();
 		addLogDir();
 		addPauseSimulationButton();
 		addRestartButton();
 		addResetButton();
+		addRaiseLoadButton();
 	}
 	void clearParameterUi(){
 		if (pPage){
@@ -593,80 +591,151 @@ public:
 		initParameterUi();
 		initPhysics();
 	}
+	void prepareAndAdd(btGeneric6DofConstraint *sc){
+		sc->setBreakingImpulseThreshold(breakingImpulseThreshold);
+		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
+		for (int i = 0; i < 6; i++){
+			sc->setLimit(i, 0, 0); // make fixed
+		}
+	}
 	void addFixedConstraint(btAlignedObjectArray<btRigidBody*> ha){
-		btScalar halfLengthX = lsx / cx / 2;
-		btScalar halfLengthZ = lsz / cz / 2;
-		btTransform tra;
-		btTransform trb;
-		tra.setIdentity();
-		trb.setIdentity();
-		btVector3 cpos(halfLengthX, 0, 0);
-		tra.setOrigin(cpos);
-		trb.setOrigin(-cpos);
-		for (int i = 0; i < cx-1; i++){
-			for (int j = 0; j < cz; j++){
-				btGeneric6DofConstraint *sc =
-					new btGeneric6DofConstraint(*ha[cx*i + j], *ha[cx*(i + 1) + j],
-					tra, trb, true);
-				sc->setBreakingImpulseThreshold(breakingImpulseThreshold);
-				m_dynamicsWorld->addConstraint(sc, true);
-				for (int i = 0; i < 6; i++){
-					sc->setLimit(i, 0, 0); // make fixed
+		// x-direction
+		{
+			btScalar halfLength = lsx / cx / 2;
+			btTransform tra;
+			btTransform trb;
+			tra.setIdentity();
+			trb.setIdentity();
+			btVector3 cpos(halfLength, 0, 0);
+			tra.setOrigin(cpos);
+			trb.setOrigin(-cpos);
+			for (int i = 0; i < cx - 1; i++){
+				for (int j = 0; j < cz; j++){
+					btGeneric6DofConstraint *sc =
+						new btGeneric6DofConstraint(*ha[cx*i + j], *ha[cx*(i + 1) + j],
+						tra, trb, true);
+					prepareAndAdd(sc);
 				}
 			}
 		}
+		// z-direction
+		{
+			btScalar halfLength = lsz / cz / 2;
+			btTransform tra;
+			btTransform trb;
+			tra.setIdentity();
+			trb.setIdentity();
+			btVector3 cpos(0, 0, halfLength);
+			tra.setOrigin(cpos);
+			trb.setOrigin(-cpos);
+			for (int i = 0; i < cx ; i++){
+				for (int j = 0; j < cz-1; j++){
+					btGeneric6DofConstraint *sc =
+						new btGeneric6DofConstraint(*ha[cx*i + j], *ha[cx*i + j+1],
+						tra, trb, true);
+					prepareAndAdd(sc);
+				}
+			}
+		}
+	}
+	void prepareAndAdd(bt6DofElasticPlastic2Constraint *sc){
+		btScalar damping(0.1);
+		m_dynamicsWorld->addConstraint(sc, true);
+		for (int i = 0; i < 6; i++)
+		{
+			sc->enableSpring(i, true);
+		}
+		for (int i = 0; i < 6; i++)
+		{
+			sc->setDamping(i, damping);
+		}
+		sc->setEquilibriumPoint();
+		m_dynamicsWorld->addAction(sc);
 	}
 	void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha){
 		btScalar E(200E9);
 		btScalar G(80E9);
 		btScalar fy(200E6);
 		bool limitIfNeeded = true;
-		btScalar damping(0.1);
-		btScalar l4s = lsx / cx;
-		btScalar halfLength = l4s / 2;
-		btTransform tra;
-		btTransform trb;
-		tra.setIdentity();
-		trb.setIdentity();
-		btVector3 cpos(halfLength, 0, 0);
-		tra.setOrigin(cpos);
-		trb.setOrigin(-cpos);
-		btScalar k0(E*steelArea/ 0.2); 
-		btScalar k1(E*steelArea*thickness/2.5);
-		btScalar k2(E*steelArea*thickness/ 2.5);
-		btScalar m(fy / E);
-		btScalar w0(k0*m);
-		btScalar w1(k1*fy/E);
-		btScalar w2(k2*fy/E);
-		for (int i = 0; i < 0; i++){
-			bt6DofElasticPlastic2Constraint *sc =
-				new bt6DofElasticPlastic2Constraint(*ha[i], *ha[i + 1],
-				tra, trb);
-			sc->setMaxPlasticRotation(maxPlasticRotation);
-			sc->setMaxPlasticStrain(maxPlasticStrain);
-			sc->setStiffness(2, k0, limitIfNeeded);
-			sc->setMaxForce(2, w0);
-			sc->setStiffness(0, k1, limitIfNeeded);
-			sc->setMaxForce(0, w0/2);
-			sc->setStiffness(1, k2, limitIfNeeded);
-			sc->setMaxForce(1, w0/2);
-			sc->setStiffness(5, k0); 
-			sc->setMaxForce(5, w0); 
-			sc->setStiffness(4, k1); 
-			sc->setMaxForce(4, w1);
-			sc->setStiffness(3, k2, limitIfNeeded); 
-			sc->setMaxForce(3, w2);
-			m_dynamicsWorld->addConstraint(sc, true);
-			for (int i = 0; i<6; i++)
-			{
-				sc->enableSpring(i, true);
+		{ // x-direction
+			btScalar halfLength = lsx / cx / 2;
+			btTransform tra;
+			btTransform trb;
+			tra.setIdentity();
+			trb.setIdentity();
+			btVector3 cpos(halfLength, 0, 0);
+			tra.setOrigin(cpos);
+			trb.setOrigin(-cpos);
+			btScalar k0(E*steelArea / 0.2);
+			btScalar k1(E*steelArea*thickness / 2.5);
+			btScalar k2(E*steelArea*thickness / 2.5);
+			btScalar m(fy / E);
+			btScalar w0(k0*m);
+			btScalar w1(k1*fy / E);
+			btScalar w2(k2*fy / E);
+			for (int i = 0; i < cx - 1; i++){
+				for (int j = 0; j < cz; j++){
+					bt6DofElasticPlastic2Constraint *sc =
+						new bt6DofElasticPlastic2Constraint
+						(*ha[cx*i + j], *ha[cx*(i + 1) + j],
+						tra, trb);
+					sc->setMaxPlasticRotation(maxPlasticRotation);
+					sc->setMaxPlasticStrain(maxPlasticStrain);
+					sc->setStiffness(2, k0, limitIfNeeded);
+					sc->setMaxForce(2, w0);
+					sc->setStiffness(0, k1, limitIfNeeded);
+					sc->setMaxForce(0, w0 / 2);
+					sc->setStiffness(1, k2, limitIfNeeded);
+					sc->setMaxForce(1, w0 / 2);
+					sc->setStiffness(5, k0, limitIfNeeded);
+					sc->setMaxForce(5, w0);
+					sc->setStiffness(4, k1, limitIfNeeded);
+					sc->setMaxForce(4, w1);
+					sc->setStiffness(3, k2, limitIfNeeded);
+					sc->setMaxForce(3, w2);
+					prepareAndAdd(sc);
+				}
 			}
-			for (int i = 0; i<6; i++)
-			{
-				sc->setDamping(i, damping);
+		}	
+		{ // z-direction
+			btScalar halfLength = lsz / cz / 2;
+			btTransform tra;
+			btTransform trb;
+			tra.setIdentity();
+			trb.setIdentity();
+			btVector3 cpos(0, 0, halfLength);
+			tra.setOrigin(cpos);
+			trb.setOrigin(-cpos);
+			btScalar k0(E*steelArea / 0.2);
+			btScalar k1(E*steelArea*thickness / 2.5);
+			btScalar k2(E*steelArea*thickness / 2.5);
+			btScalar m(fy / E);
+			btScalar w0(k0*m);
+			btScalar w1(k1*fy / E);
+			btScalar w2(k2*fy / E);
+			for (int i = 0; i < cx; i++){
+				for (int j = 0; j < cz - 1; j++){
+					bt6DofElasticPlastic2Constraint *sc =
+						new bt6DofElasticPlastic2Constraint
+						(*ha[cx*i + j], *ha[cx*i + j+1],
+						tra, trb);
+					sc->setMaxPlasticRotation(maxPlasticRotation);
+					sc->setMaxPlasticStrain(maxPlasticStrain);
+					sc->setStiffness(2, k0, limitIfNeeded);
+					sc->setMaxForce(2, w0);
+					sc->setStiffness(0, k1, limitIfNeeded);
+					sc->setMaxForce(0, w0 / 2);
+					sc->setStiffness(1, k2, limitIfNeeded);
+					sc->setMaxForce(1, w0 / 2);
+					sc->setStiffness(5, k0, limitIfNeeded);
+					sc->setMaxForce(5, w0);
+					sc->setStiffness(4, k1, limitIfNeeded);
+					sc->setMaxForce(4, w1);
+					sc->setStiffness(3, k2, limitIfNeeded);
+					sc->setMaxForce(3, w2);
+					prepareAndAdd(sc);
+				}
 			}
-			sc->setEquilibriumPoint();
-			m_dynamicsWorld->addAction(sc);
 		}
 	}
 	int pngNro = 0;
@@ -683,16 +752,56 @@ public:
 			app->dumpNextFrameToPng(NULL);
 		}
     }
+	btScalar xhl = 0.5, zhl = 0.5;
+	btScalar yhl;
+	btBoxShape * getLoadShape(){
+		yhl = loadMass / density / 2 / (2 * xhl) / (2 * zhl);
+		return new btBoxShape(btVector3(xhl, yhl, zhl));
+	}
+	void updateLoadRaiseX(btScalar increment){
+		loadRaiseX += increment;
+		updateLoadRaiseXGc();
+	}
+	void updateLoadRaiseZ(btScalar increment){
+		loadRaiseZ += increment;
+		updateLoadRaiseZGc();
+	}
+	btTransform getLoadRaisePoint(){
+		btTransform tr;
+		tr.setIdentity();
+		tr.setOrigin(btVector3
+			(loadRaiseX, yhl + thickness + loadRaise, loadRaiseZ));
+		return tr;
+	}
+	void raiseLoadAction(){
+		btVector3 zero(0, 0, 0);
+		m_loadBody->setCenterOfMassTransform(getLoadRaisePoint());
+		m_loadBody->setAngularVelocity(zero);
+		m_loadBody->setLinearVelocity(zero);
+		raiseLoad = false;
+	}
+
 };
 PlateDemo *demo = 0;
 
 #include <stdio.h> //printf debugging
 #include "PlateDemo.h"
 
+void PlateDemo::handleRaiseLoad(Gwen::Controls::Base* control){
+	Gwen::Controls::Button* gc =
+		static_cast<Gwen::Controls::Button*>(control);
+	demo->raiseLoad = true;
+}
+
 void PlateDemo::setGameBindings(Gwen::Controls::Base* control){
 	Gwen::Controls::CheckBox* cb =
 		static_cast<Gwen::Controls::CheckBox*>(control);
 	demo->gameBindings = cb->IsChecked();
+}
+void PlateDemo::setDisableCollisionsBetweenLinkedBodies(Gwen::Controls::Base* control){
+	Gwen::Controls::CheckBox* cb =
+		static_cast<Gwen::Controls::CheckBox*>(control);
+	demo->disableCollisionsBetweenLinkedBodies = cb->IsChecked();
 }
 void PlateDemo::setLogDir(Gwen::Controls::Base* control){
 	Gwen::Controls::TextBox* cb =
@@ -742,13 +851,14 @@ void PlateDemo::setLoadMass(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->loadMass));
 	restartHandler(control);
 }
-void PlateDemo::setMaxEngineForce(Gwen::Controls::Base* control){
-	setScalar(control, &(demo->maxEngineForce));
-	restartHandler(control);
+void PlateDemo::setLoadRaise(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->loadRaise));
 }
-void PlateDemo::setDefaultBreakingForce(Gwen::Controls::Base* control){
-	setScalar(control, &(demo->defaultBreakingForce));
-	restartHandler(control);
+void PlateDemo::setLoadRaiseX(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->loadRaiseX));
+}
+void PlateDemo::setLoadRaiseZ(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->loadRaiseZ));
 }
 void PlateDemo::setSteelArea(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->steelArea));
@@ -767,16 +877,17 @@ void PlateDemo::restartHandler(Gwen::Controls::Base* control){
 	demo->restartRequested = true;
 }
 void PlateDemo::reinit(){
-	maxEngineForce = 100000;
-	defaultBreakingForce = 1000;
 	cx = 6;
 	cz = 6;
 	lsx = 6;
 	lsz = 6;
 	thickness = 0.1;
 	density = 2000;
-	breakingImpulseThreshold = 50000;
-	loadMass = 10000;
+	breakingImpulseThreshold = 1000;
+	loadMass = 5000;
+	loadRaise = 5;
+	loadRaiseX = 0;
+	loadRaiseZ = 0;
 	steelArea = 0.001;
 	maxPlasticStrain = 0.1;
 	maxPlasticRotation = 1;
@@ -912,13 +1023,9 @@ void PlateDemo::initPhysics()
 	tr.setOrigin(btVector3(0, -thickness, zm));
 	localCreateRigidBody(0, tr, supportShapeX);
 	// load
-	float xhl = 0.5, yhl = 1., zhl = 0.5;
-	halfAreaForDrag = xhl*yhl * 2;
-	btCollisionShape* loadShape = new btBoxShape(btVector3(xhl,yhl,zhl));
+	btCollisionShape* loadShape = getLoadShape();
 	m_collisionShapes.push_back(loadShape);
-	tr.setIdentity();
-	tr.setOrigin(btVector3(0, 5*yhl+thickness, 0));
-	m_loadBody = localCreateRigidBody(loadMass, tr, loadShape);
+	m_loadBody = localCreateRigidBody(loadMass, getLoadRaisePoint(), loadShape);
 	btTransform localTrans;
 	localTrans.setIdentity();
 	/// create plates
@@ -978,6 +1085,9 @@ void PlateDemo::physicsDebugDraw(int debugFlags)
 
 void PlateDemo::renderScene()
 {
+	if (raiseLoad){
+		raiseLoadAction();
+	}
 	m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
 	updatePitch();
 	updateYaw();
@@ -1004,11 +1114,6 @@ void PlateDemo::stepSimulation(float deltaTime)
 		restart();
 		restartRequested = false;
 	}
-	{
-		updateDrag();
-		m_loadBody->applyCentralForce(drag);
-	}
-
 	float dt = deltaTime;
 	
 	if (m_dynamicsWorld)
@@ -1036,9 +1141,6 @@ void PlateDemo::clientResetScene()
 
 void PlateDemo::resetDemo()
 {
-	gVehicleSteering = 0.f;
-	gBreakingForce = defaultBreakingForce;
-	gEngineForce = 0.f;
 }
 
 
@@ -1097,14 +1199,14 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 		case 'a':if (!gameBindings){break;}
 		case B3G_LEFT_ARROW :
 			{
-				setSteeringDelta(steeringIncrement);
+				updateLoadRaiseX(1);
 				handled = true;
 				break;
 			}
 		case 'd':if (!gameBindings){ break; }
 		case B3G_RIGHT_ARROW:
 			{
-				setSteeringDelta(-steeringIncrement);
+				updateLoadRaiseX(-1);
 				handled = true;
 				break;
 			}
@@ -1112,42 +1214,16 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 		case B3G_UP_ARROW:
 			{
 				handled = true;
-				gEngineForce = maxEngineForce;
-				gBreakingForce = 0.f;
+				updateLoadRaiseZ(1);
 				break;
 			}
 		case 's':if (!gameBindings){ break; }
 		case B3G_DOWN_ARROW:
 			{
 				handled = true;
-				gEngineForce = -maxEngineForce;
-				gBreakingForce = 0.f;
+				updateLoadRaiseZ(-1);
 				break;
 			}
-		case 'r':
-		{
-			handled = true;
-			updateEngineForce(0.1);
-			break;
-		}
-		case 'f':
-		{
-			handled = true;
-			updateEngineForce(-0.1);
-			break;
-		}
-		case B3G_F1:
-		{
-			handled = true;
-			setViewMode(1);
-			break;
-		}
-		case B3G_F2:
-		{
-			handled = true;
-			setViewMode(2);
-			break;
-		}
 		case B3G_F7:
 			{
 				handled = true;
@@ -1187,8 +1263,6 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 					setYawDelta(0.f);
 				}
 				if (isCommon){
-					gEngineForce = 0.f;
-					gBreakingForce = defaultBreakingForce;
 				}
 				handled = true;
 				break;
@@ -1200,8 +1274,6 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 					setYawDelta(0.f);
 				}
 				if (isCommon){
-					gEngineForce = 0.f;
-					gBreakingForce = defaultBreakingForce;
 				}
 				handled = true;
 				break;
@@ -1215,7 +1287,6 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 					setPitchDelta(0.f);
 				}
 				if (isCommon){
-					setSteeringDelta(0.f);
 				}
 				handled = true;
 				break;
@@ -1225,7 +1296,6 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 			}
 		}
 	}
-	updateSteering();
 	return handled;
 }
 
