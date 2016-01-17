@@ -640,7 +640,7 @@ public:
 	}
 	void prepareAndAdd(bt6DofElasticPlastic2Constraint *sc){
 		btScalar damping(0.1);
-		m_dynamicsWorld->addConstraint(sc, true);
+		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
 		for (int i = 0; i < 6; i++)
 		{
 			sc->enableSpring(i, true);
@@ -804,7 +804,8 @@ void PlateDemo::setGameBindings(Gwen::Controls::Base* control){
 		static_cast<Gwen::Controls::CheckBox*>(control);
 	demo->gameBindings = cb->IsChecked();
 }
-void PlateDemo::setDisableCollisionsBetweenLinkedBodies(Gwen::Controls::Base* control){
+void PlateDemo::setDisableCollisionsBetweenLinkedBodies
+	(Gwen::Controls::Base* control){
 	Gwen::Controls::CheckBox* cb =
 		static_cast<Gwen::Controls::CheckBox*>(control);
 	demo->disableCollisionsBetweenLinkedBodies = cb->IsChecked();

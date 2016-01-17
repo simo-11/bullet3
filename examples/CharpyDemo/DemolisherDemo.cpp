@@ -97,6 +97,7 @@ public:
 	float	gEngineForce = 0.f;
 	float	gBreakingForce = 100.f;
 	bool gameBindings = true;
+	bool disableCollisionsBetweenLinkedBodies = true;
 	bool dumpPng = false;
 	char *logDir = _strdup("d:/wrk");
 	int gx = 10; // for labels
@@ -414,6 +415,7 @@ public:
 	void setMaxPlasticStrain(Gwen::Controls::Base* control);
 	void setMaxPlasticRotation(Gwen::Controls::Base* control);
 	void setGameBindings(Gwen::Controls::Base* control);
+	void setDisableCollisionsBetweenLinkedBodies(Gwen::Controls::Base* control);
 	void setLogDir(Gwen::Controls::Base* control);
 	void setDumpPng(Gwen::Controls::Base* control);
 	Gwen::Controls::Base* pPage;
@@ -444,6 +446,17 @@ public:
 		str = std::string(buffer);
 		db23->SetText(str);
 	}
+	void addCollisionBetweenLinkedBodies(){
+		Gwen::Controls::Label* label = addLabel("disableCollisions");
+		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
+		gc->SetToolTip("disableCollisionsBetweenLinkedBodies");
+		gc->SetPos(gxi, gy);
+		gc->SetChecked(disableCollisionsBetweenLinkedBodies);
+		gy += gyInc;
+		gc->onCheckChanged.Add(pPage, 
+			&DemolisherDemo::setDisableCollisionsBetweenLinkedBodies);
+	}
+
 	void addGameBindings(){
 		Gwen::Controls::Label* label = addLabel("gameBindings");
 		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
@@ -749,9 +762,11 @@ public:
 		addDensity();
 		switch (constraintType){
 		case Impulse:
+			addCollisionBetweenLinkedBodies();
 			addBreakingImpulseThreshold();
 			break;
 		case ElasticPlastic:
+			addCollisionBetweenLinkedBodies();
 			addMaxPlasticRotation();
 			addMaxPlasticStrain();
 			addSteelArea();
@@ -804,7 +819,7 @@ public:
 				new btGeneric6DofConstraint(*ha[i], *ha[i + 1],
 				tra, trb, true);
 			sc->setBreakingImpulseThreshold(breakingImpulseThreshold);
-			m_dynamicsWorld->addConstraint(sc, true);
+			m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
 			for (int i = 0; i < 6; i++){
 				sc->setLimit(i, 0, 0); // make fixed
 			}
@@ -851,7 +866,7 @@ public:
 			sc->setMaxForce(4, w1);
 			sc->setStiffness(3, k2, limitIfNeeded); 
 			sc->setMaxForce(3, w2);
-			m_dynamicsWorld->addConstraint(sc, true);
+			m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
 			for (int i = 0; i<6; i++)
 			{
 				sc->enableSpring(i, true);
@@ -894,6 +909,12 @@ void DemolisherDemo::setGameBindings(Gwen::Controls::Base* control){
 	Gwen::Controls::CheckBox* cb =
 		static_cast<Gwen::Controls::CheckBox*>(control);
 	demo->gameBindings = cb->IsChecked();
+}
+void DemolisherDemo::setDisableCollisionsBetweenLinkedBodies
+(Gwen::Controls::Base* control){
+	Gwen::Controls::CheckBox* cb =
+		static_cast<Gwen::Controls::CheckBox*>(control);
+	demo->disableCollisionsBetweenLinkedBodies = cb->IsChecked();
 }
 void DemolisherDemo::setLogDir(Gwen::Controls::Base* control){
 	Gwen::Controls::TextBox* cb =
