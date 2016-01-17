@@ -772,6 +772,7 @@ public:
 		m_loadBody->setCenterOfMassTransform(getLoadRaisePoint());
 		m_loadBody->setAngularVelocity(zero);
 		m_loadBody->setLinearVelocity(zero);
+		m_loadBody->activate();
 		raiseLoad = false;
 	}
 
@@ -787,16 +788,14 @@ void PlateDemo::handleRaiseLoad(Gwen::Controls::Base* control){
 	demo->raiseLoad = true;
 }
 void PlateDemo::updateLoadRaiseX(btScalar increment){
-	PlasticityExampleBrowser::setPauseSimulation(true);
 	demo->raiseLoad = true;
 	demo->loadRaiseX += increment;
-	updateLoadRaiseXGc();
+	demo->updateLoadRaiseXGc();
 }
 void PlateDemo::updateLoadRaiseZ(btScalar increment){
-	PlasticityExampleBrowser::setPauseSimulation(true);
 	demo->raiseLoad = true;
 	demo->loadRaiseZ += increment;
-	updateLoadRaiseZGc();
+	demo->updateLoadRaiseZGc();
 }
 
 void PlateDemo::setGameBindings(Gwen::Controls::Base* control){
@@ -1206,6 +1205,12 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 	{
 		switch (key) 
 		{
+		case ' ':
+			{
+				handled = true;
+				demo->raiseLoad = true;
+				break;
+			}
 		case 'a':if (!gameBindings){break;}
 		case B3G_LEFT_ARROW :
 			{
