@@ -7,6 +7,8 @@ Soft body dynamics in which  object are deformable is in many cases still too co
 Finite element method will probably replace other methods by providing general solution at some time but not in very near future.
 In this work focus is on method where rigid bodies are connected by constraints.
 
+
+
 Figure \ref{fig:areas} summarizes branches involved in this work.
 
 \begin{figure}[htb!]
@@ -73,6 +75,7 @@ In \lut simulation of working machines has been active research area, e.g. \cite
 
 Physics engines cannot used in serious structural analysis but using structural analysis in physics engines is not rare.  
 E.g. \cite{Obrien:1999:GMA} used finite element model to analyze crack initiation and propagation.
+\cite{cg1988} used quite similar principles as in this work to handle plasticity. 
 
 \cite{erleben.thesis} provides extensive introduction to physics engines. 
 He uses term Physics-based Animation and does detailed analysis on many areas like
@@ -95,7 +98,7 @@ Few physics engines which have public source
 \end{itemize}
 
 
-\subsection{software engineering}
+\subsection{Software engineering}
 
 Main requirements for software implementation can be summarized
 \begin{itemize}
@@ -117,6 +120,7 @@ Understanding and getting enough knowledge to extend them requires a fair amount
 
 Using calculation methods that have initially planned to be hand calculated gives good starting point for 
 getting fast processing. Lack of clean boundary conditions will require addional logic or accepting larger errors.
+
 
 \subsection{Motivation and objectives of the study}
 

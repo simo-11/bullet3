@@ -42,6 +42,7 @@ http://gimpact.sf.net
 #include "bt6DofElasticPlastic2Constraint.h"
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 #include "LinearMath/btTransformUtil.h"
+#include "LinearMath/btIDebugDraw.h"
 #include <new>
 #include "../plasticity/PlasticityData.h"
 
@@ -1258,6 +1259,13 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 }
 void bt6DofElasticPlastic2Constraint::debugDraw(btIDebugDraw* debugDrawer)
 {
+	btVector3 color(1, 0, 0);
+	btVector3 from = m_rbA.getCenterOfMassPosition();
+	btVector3 to = from + m_frameInA.getOrigin();
+	debugDrawer->drawLine(from, to, color);
+	from = m_rbB.getCenterOfMassPosition();
+	to = from + m_frameInB.getOrigin();
+	debugDrawer->drawLine(from, to, color);
 }
 
 
