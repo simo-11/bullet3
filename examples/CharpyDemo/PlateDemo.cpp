@@ -612,7 +612,7 @@ public:
 			for (int i = 0; i < cx - 1; i++){
 				for (int j = 0; j < cz; j++){
 					btGeneric6DofConstraint *sc =
-						new btGeneric6DofConstraint(*ha[cx*i + j], *ha[cx*(i + 1) + j],
+						new btGeneric6DofConstraint(*ha[cz*i + j], *ha[cz*(i + 1) + j],
 						tra, trb, true);
 					prepareAndAdd(sc);
 				}
@@ -631,7 +631,7 @@ public:
 			for (int i = 0; i < cx ; i++){
 				for (int j = 0; j < cz-1; j++){
 					btGeneric6DofConstraint *sc =
-						new btGeneric6DofConstraint(*ha[cx*i + j], *ha[cx*i + j+1],
+						new btGeneric6DofConstraint(*ha[cz*i + j], *ha[cz*i + j+1],
 						tra, trb, true);
 					prepareAndAdd(sc);
 				}
@@ -677,7 +677,7 @@ public:
 				for (int j = 0; j < cz; j++){
 					bt6DofElasticPlastic2Constraint *sc =
 						new bt6DofElasticPlastic2Constraint
-						(*ha[cx*i + j], *ha[cx*(i + 1) + j],
+						(*ha[cz*i + j], *ha[cz*(i + 1) + j],
 						tra, trb);
 					sc->setMaxPlasticRotation(maxPlasticRotation);
 					sc->setMaxPlasticStrain(maxPlasticStrain);
@@ -717,7 +717,7 @@ public:
 				for (int j = 0; j < cz - 1; j++){
 					bt6DofElasticPlastic2Constraint *sc =
 						new bt6DofElasticPlastic2Constraint
-						(*ha[cx*i + j], *ha[cx*i + j+1],
+						(*ha[cz*i + j], *ha[cz*i + j+1],
 						tra, trb);
 					sc->setMaxPlasticRotation(maxPlasticRotation);
 					sc->setMaxPlasticStrain(maxPlasticStrain);
@@ -1097,24 +1097,21 @@ void PlateDemo::renderScene()
 	if (raiseLoad){
 		raiseLoadAction();
 	}
-	m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
 	updatePitch();
 	updateYaw();
 	updatePauseButtonText();
 	setDumpFilename();
-	m_guiHelper->render(m_dynamicsWorld);
-	btVector3 wheelColor(1,0,0);
-	btVector3	worldBoundsMin,worldBoundsMax;
-	getDynamicsWorld()->getBroadphase()->getBroadphaseAabb(worldBoundsMin,worldBoundsMax);
-	btScalar idleTime = idleClock.getTimeSeconds();
-	if ( idleTime> 10){
 #ifdef _WIN32
+	btScalar idleTime = idleClock.getTimeSeconds();
+	if (idleTime> 10){
 		if (displayWait>0){
 			BT_PROFILE(PROFILE_PLATE_SLEEP);
 			Sleep(displayWait);
 		}
-#endif
 	}
+#endif
+	m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
+	m_guiHelper->render(m_dynamicsWorld);
 }
 
 void PlateDemo::stepSimulation(float deltaTime)

@@ -748,12 +748,8 @@ void PlasticityExampleBrowser::update(float deltaTime)
 		s_instancingRenderer->init();
         DrawGridData dg;
         dg.upAxis = s_app->getUpAxis();
-
         {
             BT_PROFILE("Update Camera and Light");
-
-	
-
             s_instancingRenderer->updateCamera(dg.upAxis);
         }
 
@@ -763,7 +759,6 @@ void PlasticityExampleBrowser::update(float deltaTime)
 			glPolygonOffset(3.0, 3);
 			glEnable(GL_POLYGON_OFFSET_FILL);
             s_app->drawGrid(dg);
-			
         }
 		static int frameCount = 0;
 		frameCount++;
@@ -799,9 +794,9 @@ void PlasticityExampleBrowser::update(float deltaTime)
                 sCurrentDemo->renderScene();
             }
             {
-				
 				glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-                sCurrentDemo->physicsDebugDraw(gDebugDrawFlags);
+				BT_PROFILE("physicsDebugDraw");
+				sCurrentDemo->physicsDebugDraw(gDebugDrawFlags);
             }
 		}
 
