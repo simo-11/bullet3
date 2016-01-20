@@ -80,10 +80,10 @@ public:
 	btScalar breakingImpulseThreshold;
 	btScalar density;
 	btScalar loadMass, loadRaise, loadRaiseX, loadRaiseZ;
-	btScalar steelArea;
 	btScalar maxPlasticRotation;
 	btScalar maxPlasticStrain;
 	bool gameBindings = true;
+	bool solidPlate = true;
 	bool disableCollisionsBetweenLinkedBodies = true;
 	bool dumpPng = false;
 	char *logDir = _strdup("d:/wrk");
@@ -278,10 +278,10 @@ public:
 	void setLoadRaiseZ(Gwen::Controls::Base* control);
 	void setDefaultBreakingForce(Gwen::Controls::Base* control);
 	void setMaxEngineForce(Gwen::Controls::Base* control);
-	void setSteelArea(Gwen::Controls::Base* control);
 	void setMaxPlasticStrain(Gwen::Controls::Base* control);
 	void setMaxPlasticRotation(Gwen::Controls::Base* control);
 	void setGameBindings(Gwen::Controls::Base* control);
+	void setSolidPlate(Gwen::Controls::Base* control);
 	void setDisableCollisionsBetweenLinkedBodies(Gwen::Controls::Base* control);
 	void setLogDir(Gwen::Controls::Base* control);
 	void setDumpPng(Gwen::Controls::Base* control);
@@ -305,6 +305,15 @@ public:
 		gc->SetChecked(gameBindings);
 		gy += gyInc;
 		gc->onCheckChanged.Add(pPage, &PlateDemo::setGameBindings);
+	}
+	void addSolidPlate(){
+		Gwen::Controls::Label* label = addLabel("solidPlate");
+		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
+		gc->SetToolTip("solid steel plate instead of enforced concrete");
+		gc->SetPos(gxi, gy);
+		gc->SetChecked(solidPlate);
+		gy += gyInc;
+		gc->onCheckChanged.Add(pPage, &PlateDemo::setSolidPlate);
 	}
 	Gwen::Controls::CheckBox* dumpPngGc;
 	void addDumpPng(){
@@ -448,15 +457,6 @@ public:
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setMaxPlasticRotation);
 	}
-	void addSteelArea(){
-		addLabel("steelArea");
-		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(steelArea, "%.5f");
-		gc->SetToolTip("Area of enforcement steel [m2]");
-		gc->SetText(text);
-		place(gc);
-		gc->onReturnPressed.Add(pPage, &PlateDemo::setSteelArea);
-	}
 	void addLoadMass(){
 		addLabel("load mass");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
@@ -560,7 +560,6 @@ public:
 		case ElasticPlastic:
 			addMaxPlasticRotation();
 			addMaxPlasticStrain();
-			addSteelArea();
 			addCollisionBetweenLinkedBodies();
 			break;
 		}
@@ -653,27 +652,46 @@ public:
 		m_dynamicsWorld->addAction(sc);
 	}
 	void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha){
+#if 0	
+		btElasticPlasticMaterial material;
+		material.setE(btScalar(200E9));
+		material.setNu(btScalar(0.3));
+		material.setFy(btScalar(200E6));
+		material.setMaxPlasticStrain(btScalar(0.25));
+		{ // x-direction
+			for (int i = 0; i < cx - 1; i++){
+				for (int j = 0; j < cz; j++){
+					btElasticPlasticPlate *sc =
+						new btElasticPlasticPlate
+						(*ha[cz*i + j], *ha[cz*(i + 1) + j],
+						material);
+					prepareAndAdd(sc);
+				}
+			}
+		}
+#endif
 		btScalar E(200E9);
 		btScalar G(80E9);
 		btScalar fy(200E6);
 		bool limitIfNeeded = true;
 		{ // x-direction
-			btScalar halfLength = lsx / cx / 2;
+			btScalar hlz = lsz / cz / 2;
+			btScalar hlx = lsz / cx / 2;
 			btTransform tra;
 			btTransform trb;
 			tra.setIdentity();
 			trb.setIdentity();
-			btVector3 cpos(halfLength, 0, 0);
+			btVector3 cpos(hlx, 0, 0);
 			tra.setOrigin(cpos);
 			trb.setOrigin(-cpos);
-			btScalar k0(E*steelArea / 0.2);
-			btScalar k1(E*steelArea*thickness / 2.5);
-			btScalar k2(E*steelArea*thickness / 2.5);
+			btScalar k0(E * 2 * hlx*thickness / hlz);
+			btScalar k1(G * 2 * hlx*thickness / hlx);
+			btScalar k2(G * 2 * hlx);
 			btScalar m(fy / E);
 			btScalar w0(k0*m);
 			btScalar w1(k1*fy / E);
 			btScalar w2(k2*fy / E);
-			for (int i = 0; i < cx - 1; i++){
+			for (int i = 0; i < (cx-1); i++){
 				for (int j = 0; j < cz; j++){
 					bt6DofElasticPlastic2Constraint *sc =
 						new bt6DofElasticPlastic2Constraint
@@ -681,10 +699,10 @@ public:
 						tra, trb);
 					sc->setMaxPlasticRotation(maxPlasticRotation);
 					sc->setMaxPlasticStrain(maxPlasticStrain);
-					sc->setStiffness(2, k0, limitIfNeeded);
-					sc->setMaxForce(2, w0);
-					sc->setStiffness(0, k1, limitIfNeeded);
-					sc->setMaxForce(0, w0 / 2);
+					sc->setStiffness(0, k0, limitIfNeeded);
+					sc->setMaxForce(0, w0);
+					sc->setStiffness(2, k1, limitIfNeeded);
+					sc->setMaxForce(2, w0 / 2);
 					sc->setStiffness(1, k2, limitIfNeeded);
 					sc->setMaxForce(1, w0 / 2);
 					sc->setStiffness(5, k0, limitIfNeeded);
@@ -696,19 +714,20 @@ public:
 					prepareAndAdd(sc);
 				}
 			}
-		}	
+		}
 		{ // z-direction
-			btScalar halfLength = lsz / cz / 2;
+			btScalar hlz = lsz / cz / 2;
+			btScalar hlx = lsz / cx / 2;
 			btTransform tra;
 			btTransform trb;
 			tra.setIdentity();
 			trb.setIdentity();
-			btVector3 cpos(0, 0, halfLength);
+			btVector3 cpos(0, 0, hlz);
 			tra.setOrigin(cpos);
 			trb.setOrigin(-cpos);
-			btScalar k0(E*steelArea / 0.2);
-			btScalar k1(E*steelArea*thickness / 2.5);
-			btScalar k2(E*steelArea*thickness / 2.5);
+			btScalar k0(E*2*hlx*thickness / hlz);
+			btScalar k1(G * 2 * hlx*thickness / hlx);
+			btScalar k2(G*2*hlx);
 			btScalar m(fy / E);
 			btScalar w0(k0*m);
 			btScalar w1(k1*fy / E);
@@ -819,6 +838,11 @@ void PlateDemo::setGameBindings(Gwen::Controls::Base* control){
 		static_cast<Gwen::Controls::CheckBox*>(control);
 	demo->gameBindings = cb->IsChecked();
 }
+void PlateDemo::setSolidPlate(Gwen::Controls::Base* control){
+	Gwen::Controls::CheckBox* cb =
+		static_cast<Gwen::Controls::CheckBox*>(control);
+	demo->solidPlate = cb->IsChecked();
+}
 void PlateDemo::setDisableCollisionsBetweenLinkedBodies
 	(Gwen::Controls::Base* control){
 	Gwen::Controls::CheckBox* cb =
@@ -885,10 +909,6 @@ void PlateDemo::setLoadRaiseZ(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->loadRaiseZ));
 	restartHandler(control);
 }
-void PlateDemo::setSteelArea(Gwen::Controls::Base* control){
-	setScalar(control, &(demo->steelArea));
-	restartHandler(control);
-}
 void PlateDemo::setMaxPlasticStrain(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->maxPlasticStrain));
 	restartHandler(control);
@@ -902,22 +922,27 @@ void PlateDemo::restartHandler(Gwen::Controls::Base* control){
 	demo->restartRequested = true;
 }
 void PlateDemo::reinit(){
-	cx = 6;
-	cz = 6;
-	lsx = 6;
-	lsz = 6;
+	cx = 5;
+	cz = 5;
+	lsx = 5;
+	lsz = 5;
 	thickness = 0.1;
-	density = 2000;
 	breakingImpulseThreshold = 1000;
-	loadMass = 5000;
+	loadMass = 40000;
 	loadRaise = 5;
 	loadRaiseX = 0;
 	loadRaiseZ = 0;
-	steelArea = 0.001;
 	maxPlasticStrain = 0.1;
 	maxPlasticRotation = 1;
 	driveClock.reset();
 	gameBindings = true;
+	solidPlate = true;
+	if (solidPlate){
+		density = 7800;
+	}
+	else{
+		density = 2000;
+	}
 }
 void PlateDemo::resetHandler(Gwen::Controls::Base* control){
 	demo->reinit();
@@ -1013,15 +1038,15 @@ void PlateDemo::initPhysics()
 {
 	int upAxis = 1;	
 	m_guiHelper->setUpAxis(upAxis);
-	btScalar xm(lsx/2);
-	btScalar zm(lsz/2);
+	btScalar xm(0.4*lsx);
+	btScalar zm(0.4*lsz);
 	btVector3 groundExtents(9, 0.5, 9);
 	btCollisionShape* groundShape = new btBoxShape(groundExtents);
 	m_collisionShapes.push_back(groundShape);
-	btVector3 supportExtentsX(lsx / 2, thickness, lsz/20);
+	btVector3 supportExtentsX(lsx / 2, thickness, lsz/10);
 	btCollisionShape* supportShapeX = new btBoxShape(supportExtentsX);
 	m_collisionShapes.push_back(supportShapeX);
-	btVector3 supportExtentsZ(lsx/20, thickness, lsz/2);
+	btVector3 supportExtentsZ(lsx/10, thickness, lsz/2);
 	btCollisionShape* supportShapeZ = new btBoxShape(supportExtentsZ);
 	m_collisionShapes.push_back(supportShapeZ);
 	m_collisionConfiguration = new btDefaultCollisionConfiguration();
@@ -1227,14 +1252,14 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 		case 'a':if (!gameBindings){break;}
 		case B3G_LEFT_ARROW :
 			{
-				updateLoadRaiseX(1);
+				updateLoadRaiseX(lsx / cx);
 				handled = true;
 				break;
 			}
 		case 'd':if (!gameBindings){ break; }
 		case B3G_RIGHT_ARROW:
 			{
-				updateLoadRaiseX(-1);
+				updateLoadRaiseX(-lsx/cx);
 				handled = true;
 				break;
 			}
@@ -1242,14 +1267,14 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 		case B3G_UP_ARROW:
 			{
 				handled = true;
-				updateLoadRaiseZ(1);
+				updateLoadRaiseZ(lsz/cz);
 				break;
 			}
 		case 's':if (!gameBindings){ break; }
 		case B3G_DOWN_ARROW:
 			{
 				handled = true;
-				updateLoadRaiseZ(-1);
+				updateLoadRaiseZ(-lsz / cz);
 				break;
 			}
 		case B3G_F7:
