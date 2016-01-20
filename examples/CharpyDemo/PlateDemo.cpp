@@ -755,6 +755,22 @@ public:
 	btScalar xhl = 0.5, zhl = 0.5;
 	btScalar yhl;
 	btBoxShape * getLoadShape(){
+		switch (cz % 2){
+		case 0:
+			zhl = lsz /cz;
+			break;
+		case 1:
+			zhl = lsz /cz/2;
+			break;
+		}
+		switch (cx % 2){
+		case 0:
+			xhl = lsx /cz;
+			break;
+		case 1:
+			xhl = lsx /cx/2;
+			break;
+		}
 		yhl = loadMass / density / 2 / (2 * xhl) / (2 * zhl);
 		return new btBoxShape(btVector3(xhl, yhl, zhl));
 	}
