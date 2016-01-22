@@ -21,13 +21,17 @@ Simo Nikula 2016- while studying plasticity
 
 #include "LinearMath/btVector3.h"
 #include "bt6DofElasticPlastic2Constraint.h"
+#include "btElasticPlasticMaterial.h"
 
 ATTRIBUTE_ALIGNED16(class) btElasticPlasticPlate : public bt6DofElasticPlastic2Constraint
 {
 protected:
-
+	btElasticPlasticMaterial* m_material;
 public:
 	BT_DECLARE_ALIGNED_ALLOCATOR();
     btElasticPlasticPlate(btRigidBody& rbA, btRigidBody& rbB);
+	void updateConstraint();
+	void setMaterial(btElasticPlasticMaterial* material);
+	btElasticPlasticMaterial * getMaterial(){ return m_material; }
 };
 #endif //BT_ELASTIC_PLASTIC_PLATE_H

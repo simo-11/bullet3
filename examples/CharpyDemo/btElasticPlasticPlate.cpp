@@ -37,4 +37,18 @@ btElasticPlasticPlate::btElasticPlasticPlate(btRigidBody& rbA, btRigidBody& rbB)
 {
 }
 
+void btElasticPlasticPlate::setMaterial(btElasticPlasticMaterial* material) {
+	m_material = material;
+	updateConstraint();
+}
+
+void btElasticPlasticPlate::updateConstraint() {
+	btVector3 pA = m_rbA.getCenterOfMassPosition();
+	btVector3 pB = m_rbB.getCenterOfMassPosition();
+	btQuaternion qA = m_rbA.getCenterOfMassTransform().getRotation();
+	btQuaternion qB = m_rbB.getCenterOfMassTransform().getRotation();
+	btBoxShape* sA = static_cast<btBoxShape*>(m_rbA.getCollisionShape());
+	btBoxShape* sB = static_cast<btBoxShape*>(m_rbB.getCollisionShape());
+}
+
 
