@@ -25,6 +25,7 @@ Simo Nikula 2016- while studying plasticity
 ATTRIBUTE_ALIGNED16(class) btElasticPlasticMaterial
 {
 protected:
+	btScalar m_density = 7800;//
 	btScalar m_E=21E10; // steel as default
 	btScalar m_nu=0.3; // steel as default
 	btScalar m_G=m_E/(2*(1+m_nu)); // isotropic as default
@@ -33,11 +34,13 @@ protected:
 public:
 	BT_DECLARE_ALIGNED_ALLOCATOR();
     btElasticPlasticMaterial();
+	const btScalar getDensity() { return m_density; }
 	const btScalar getE() { return m_E; }
 	const btScalar getNu() { return m_nu; }
 	const btScalar getG() { return m_G; }
 	const btScalar getFy() { return m_fy; }
 	const btScalar getMaxPlasticStrain() { return m_maxPlasticStrain; }
+	void setDensity(btScalar v){ m_density = v; }
 	void setE(btScalar v){ m_E = v; }
 	void setNu(btScalar v){ m_nu = v; }
 	void setG(btScalar v){ m_G = v; }

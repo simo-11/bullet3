@@ -20,18 +20,51 @@ Simo Nikula 2016- while studying plasticity
 #define BT_ELASTIC_PLASTIC_PLATE_H
 
 #include "LinearMath/btVector3.h"
+#include "btBulletDynamicsCommon.h"
 #include "bt6DofElasticPlastic2Constraint.h"
 #include "btElasticPlasticMaterial.h"
 
-ATTRIBUTE_ALIGNED16(class) btElasticPlasticPlate : public bt6DofElasticPlastic2Constraint
+/**
+* Provides high level interface to plate that is internally subdivided
+* so that subparts have constrains between them.
+*/
+ATTRIBUTE_ALIGNED16(class) btElasticPlasticPlate: public btActionInterface
 {
 protected:
+	btBoxShape *m_mainShape;
+	int m_lc=4; // how many objects for longest dimension
+	int m_mc; // how many objects for middle dimension
+	btScalar m_thickness;
+	btBoxShape *m_subShape=0;
+	btTransform m_mainTransform;
+	/**
+	* store all sequentially m-direction in inner loop
+	*/
+	btAlignedObjectArray<btRigidBody*> m_rb;
+	btAlignedObjectArray<bt6DofElasticPlastic2Constraint*> m_constraints;
 	btElasticPlasticMaterial* m_material;
+	virtual void initSubShape();
+	virtual void initRigidBodies(btDiscreteDynamicsWorld& dw);
+	virtual void initConstraints(btDiscreteDynamicsWorld& dw);
+	virtual const btTransform getConnectingFrame(btRigidBody& rbA, btRigidBody& rbB);
+	virtual void updateConstraint(bt6DofElasticPlastic2Constraint &constraint);
 public:
 	BT_DECLARE_ALIGNED_ALLOCATOR();
-    btElasticPlasticPlate(btRigidBody& rbA, btRigidBody& rbB);
-	void updateConstraint();
-	void setMaterial(btElasticPlasticMaterial* material);
-	btElasticPlasticMaterial * getMaterial(){ return m_material; }
+	btElasticPlasticPlate(){};
+	~btElasticPlasticPlate();
+	void setLongCount(int v){ m_lc = v; }
+	void setMiddleCount(int v){ m_mc = v; }
+	int getLongCount(){ return m_lc; }
+	int getMiddleCount(){ return m_mc; }
+	virtual void join(btDiscreteDynamicsWorld& dw);
+	virtual btScalar getThickness(){ return m_thickness; }
+	virtual void setMaterial(btElasticPlasticMaterial* material);
+	btElasticPlasticMaterial* getMaterial(){ return m_material; }
+	virtual void setTransform(btTransform& transform);
+	btTransform getTransform(){ return m_mainTransform; }
+	virtual void setShape(btBoxShape* shape);
+	btBoxShape* getShape(){ return m_mainShape; }
+	virtual void updateAction(btCollisionWorld* collisionWorld, btScalar step);
+	virtual void debugDraw(btIDebugDraw* debugDrawer);
 };
 #endif //BT_ELASTIC_PLASTIC_PLATE_H
