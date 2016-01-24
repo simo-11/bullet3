@@ -54,11 +54,11 @@ void btElasticPlasticPlate::updateConstraint(bt6DofElasticPlastic2Constraint &co
 	// transform to world coordinate system
 }
 
-void btElasticPlasticPlate::join(btDiscreteDynamicsWorld & dw){
+void btElasticPlasticPlate::join(btDiscreteDynamicsWorld* dw){
 	initSubShape();
 	initRigidBodies(dw);
 	initConstraints(dw);
-	dw.addAction(this);
+	dw->addAction(this);
 }
 /**
 Select longest and divide by m_lc
@@ -67,24 +67,50 @@ shortest is used as thickness
 */
 void btElasticPlasticPlate::initSubShape(){
 	btVector3 v = m_mainShape->getImplicitShapeDimensions();
-	int maxAxis = v.maxAxis();
-	int minAxis = v.minAxis();
-	if (minAxis == maxAxis){
-		minAxis = 2 ^ maxAxis;
+	m_maxAxis = v.maxAxis();
+	m_minAxis = v.minAxis();
+	if (m_minAxis == m_maxAxis){
+		m_minAxis = 2 ^ m_maxAxis;
 	}
-	int middleAxis = 3 ^ (maxAxis | minAxis);
+	m_middleAxis = 3 ^ (m_maxAxis | m_minAxis);
 	if (0 == m_mc){
-		m_mc = (int)v[maxAxis] / v[middleAxis] * m_lc;
+		m_mc = (int)(v[m_middleAxis] / v[m_maxAxis]) * m_lc;
 	}
+	m_ll = v[m_maxAxis];
+	m_ml = v[m_middleAxis];
 	btVector3 sv=v;
-	sv[maxAxis] /= m_lc;
-	sv[middleAxis] /= m_mc;
-	m_thickness = v[minAxis];
+	sv[m_maxAxis] /= m_lc;
+	sv[m_middleAxis] /= m_mc;
+	m_thickness = v[m_minAxis];
 	m_subShape = new btBoxShape(sv);
 }
-void btElasticPlasticPlate::initRigidBodies(btDiscreteDynamicsWorld & dw){
+
+void btElasticPlasticPlate::initRigidBodies(btDiscreteDynamicsWorld* dw){
+	btScalar lLen(m_ll/m_lc),mLen(m_ml/m_mc);
+	btScalar mass = lLen*mLen*m_thickness*m_material->getDensity();
+	btScalar lloc = (lLen - m_ll) / 2;
+	btVector3 localInertia(0, 0, 0);
+	m_subShape->calculateLocalInertia(mass, localInertia);
+	for (int i = 0; i < m_lc; i++){
+		btScalar mloc = (mLen - m_ml) / 2;
+		for (int j = 0; j < m_mc; j++){
+			btTransform lTrans=m_mainTransform;
+			btVector3 pos = lTrans.getOrigin();
+			pos[m_maxAxis] += lloc;
+			pos[m_middleAxis] += mloc;
+			btDefaultMotionState* mState = 
+				new btDefaultMotionState(lTrans);
+			btRigidBody::btRigidBodyConstructionInfo 
+				cInfo(mass, mState, m_subShape, localInertia);
+			btRigidBody* body = new btRigidBody(cInfo);
+			dw->addRigidBody(body);
+			m_rb.push_back(body);
+			mloc += mLen;
+		}
+		lloc += lLen;
+	}
 }
-void btElasticPlasticPlate::initConstraints(btDiscreteDynamicsWorld & dw){
+void btElasticPlasticPlate::initConstraints(btDiscreteDynamicsWorld* dw){
 }
 
 void btElasticPlasticPlate::setTransform(btTransform& transform){

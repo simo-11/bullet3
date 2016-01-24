@@ -34,7 +34,8 @@ protected:
 	btBoxShape *m_mainShape;
 	int m_lc=4; // how many objects for longest dimension
 	int m_mc; // how many objects for middle dimension
-	btScalar m_thickness;
+	btScalar m_ll,m_ml,m_thickness;
+	int m_maxAxis, m_middleAxis, m_minAxis;
 	btBoxShape *m_subShape=0;
 	btTransform m_mainTransform;
 	/**
@@ -44,8 +45,8 @@ protected:
 	btAlignedObjectArray<bt6DofElasticPlastic2Constraint*> m_constraints;
 	btElasticPlasticMaterial* m_material;
 	virtual void initSubShape();
-	virtual void initRigidBodies(btDiscreteDynamicsWorld& dw);
-	virtual void initConstraints(btDiscreteDynamicsWorld& dw);
+	virtual void initRigidBodies(btDiscreteDynamicsWorld* dw);
+	virtual void initConstraints(btDiscreteDynamicsWorld* dw);
 	virtual const btTransform getConnectingFrame(btRigidBody& rbA, btRigidBody& rbB);
 	virtual void updateConstraint(bt6DofElasticPlastic2Constraint &constraint);
 public:
@@ -56,7 +57,7 @@ public:
 	void setMiddleCount(int v){ m_mc = v; }
 	int getLongCount(){ return m_lc; }
 	int getMiddleCount(){ return m_mc; }
-	virtual void join(btDiscreteDynamicsWorld& dw);
+	virtual void join(btDiscreteDynamicsWorld* dw);
 	virtual btScalar getThickness(){ return m_thickness; }
 	virtual void setMaterial(btElasticPlasticMaterial* material);
 	btElasticPlasticMaterial* getMaterial(){ return m_material; }
