@@ -38,6 +38,8 @@ protected:
 	int m_maxAxis, m_middleAxis, m_minAxis;
 	btBoxShape *m_subShape=0;
 	btTransform m_mainTransform;
+	bool disableCollisionsBetweenLinkedBodies;
+	btScalar damping=0.1;
 	/**
 	* store all sequentially m-direction in inner loop
 	*/
@@ -49,6 +51,8 @@ protected:
 	virtual void initConstraints(btDiscreteDynamicsWorld* dw);
 	virtual const btTransform getConnectingFrame(btRigidBody& rbA, btRigidBody& rbB);
 	virtual void updateConstraint(bt6DofElasticPlastic2Constraint &constraint);
+	virtual void prepareAndAdd
+		(bt6DofElasticPlastic2Constraint *sc, btDiscreteDynamicsWorld* dw);
 public:
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 	btElasticPlasticPlate(){};

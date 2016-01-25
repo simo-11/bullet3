@@ -22,7 +22,8 @@ Simo Nikula 2016- while studying plasticity
 /**
 It is assumed that rbA and rbB have same size and link is wanted between them
 */
-const btTransform btElasticPlasticPlate::getConnectingFrame(btRigidBody& rbA, btRigidBody& rbB){
+const btTransform btElasticPlasticPlate::getConnectingFrame
+	(btRigidBody& rbA, btRigidBody& rbB){
 	btTransform tr;
 	tr.setIdentity();
 	btVector3 pA = rbA.getCenterOfMassPosition();
@@ -113,7 +114,35 @@ void btElasticPlasticPlate::initRigidBodies(btDiscreteDynamicsWorld* dw){
 		lloc += lLen;
 	}
 }
+
+void btElasticPlasticPlate::prepareAndAdd
+	(bt6DofElasticPlastic2Constraint *sc, btDiscreteDynamicsWorld* dw){
+	dw->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
+	for (int i = 0; i < 6; i++)
+	{
+		sc->enableSpring(i, true);
+	}
+	for (int i = 0; i < 6; i++)
+	{
+		sc->setDamping(i, damping);
+	}
+	sc->setEquilibriumPoint();
+}
+
 void btElasticPlasticPlate::initConstraints(btDiscreteDynamicsWorld* dw){
+	{ // longer direction
+		for (int i = 0; i < m_lc - 1; i++){
+			for (int j = 0; j < m_mc; j++){
+				btRigidBody *rbA = m_rb[m_mc*i + j];
+				btRigidBody *rbB = m_rb[m_mc*(i + 1) + j];
+				btTransform tra=getConnectingFrame(*rbA,*rbB);
+				btTransform trb = getConnectingFrame(*rbB, *rbA);
+				bt6DofElasticPlastic2Constraint *sc =
+					new bt6DofElasticPlastic2Constraint(*rbA, *rbB, tra, trb);
+				prepareAndAdd(sc,dw);
+			}
+		}
+	}
 }
 
 void btElasticPlasticPlate::setTransform(btTransform& transform){
