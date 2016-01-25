@@ -74,7 +74,10 @@ void btElasticPlasticPlate::initSubShape(){
 	}
 	m_middleAxis = 3 ^ (m_maxAxis | m_minAxis);
 	if (0 == m_mc){
-		m_mc = (int)(v[m_middleAxis] / v[m_maxAxis]) * m_lc;
+		m_mc = (int)(m_lc*v[m_middleAxis]/ v[m_maxAxis]);
+		if (0 == m_mc){
+			m_mc = 1;
+		}
 	}
 	m_ll = v[m_maxAxis];
 	m_ml = v[m_middleAxis];
