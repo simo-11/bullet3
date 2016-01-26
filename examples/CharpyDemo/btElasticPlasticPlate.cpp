@@ -130,17 +130,28 @@ void btElasticPlasticPlate::prepareAndAdd
 }
 
 void btElasticPlasticPlate::initConstraints(btDiscreteDynamicsWorld* dw){
-	{ // longer direction
-		for (int i = 0; i < m_lc - 1; i++){
-			for (int j = 0; j < m_mc; j++){
-				btRigidBody *rbA = m_rb[m_mc*i + j];
-				btRigidBody *rbB = m_rb[m_mc*(i + 1) + j];
-				btTransform tra=getConnectingFrame(*rbA,*rbB);
-				btTransform trb = getConnectingFrame(*rbB, *rbA);
-				bt6DofElasticPlastic2Constraint *sc =
-					new bt6DofElasticPlastic2Constraint(*rbA, *rbB, tra, trb);
-				prepareAndAdd(sc,dw);
-			}
+	// longer direction
+	for (int i = 0; i < m_lc - 1; i++){
+		for (int j = 0; j < m_mc; j++){
+			btRigidBody *rbA = m_rb[m_mc*i + j];
+			btRigidBody *rbB = m_rb[m_mc*(i + 1) + j];
+			btTransform tra=getConnectingFrame(*rbA,*rbB);
+			btTransform trb = getConnectingFrame(*rbB, *rbA);
+			bt6DofElasticPlastic2Constraint *sc =
+				new bt6DofElasticPlastic2Constraint(*rbA, *rbB, tra, trb);
+			prepareAndAdd(sc,dw);
+		}
+	}
+	// shorter direction
+	for (int i = 0; i < m_lc; i++){
+		for (int j = 0; j < (m_mc - 1); j++){
+			btRigidBody *rbA = m_rb[m_mc*i + j];
+			btRigidBody *rbB = m_rb[m_mc*i + 1 + j];
+			btTransform tra = getConnectingFrame(*rbA, *rbB);
+			btTransform trb = getConnectingFrame(*rbB, *rbA);
+			bt6DofElasticPlastic2Constraint *sc =
+				new bt6DofElasticPlastic2Constraint(*rbA, *rbB, tra, trb);
+			prepareAndAdd(sc, dw);
 		}
 	}
 }

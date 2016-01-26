@@ -26,6 +26,8 @@ Based on DemolisherDemo by Simo Nikula 2016-
 #include "btBulletDynamicsCommon.h"
 #include "BulletCollision/CollisionShapes/btHeightfieldTerrainShape.h"
 #include "bt6DofElasticPlastic2Constraint.h"
+#include "btElasticPlasticPlate.h"
+#include "btElasticPlasticMaterial.h"
 #include "../plasticity/PlasticityExampleBrowser.h"
 
 class btCollisionShape;
@@ -61,6 +63,7 @@ public:
 	int m_wheelInstances[4];
 
 	bool m_useDefaultCamera;
+
 	btAlignedObjectArray<btCollisionShape*> m_collisionShapes;
 
 	class btBroadphaseInterface*	m_overlappingPairCache;
@@ -155,6 +158,7 @@ public:
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 	btClock idleClock;
 	btClock driveClock;
+	btElasticPlasticPlate *elasticPlasticPlate=0;
 	long displayWait = 50;
 	/** Gwen controls handling.
 	Just flag changes to avoid need to specify all parent references
@@ -971,8 +975,13 @@ m_maxCameraDistance(10.f)
 
 void PlateDemo::exitPhysics()
 {
-		//cleanup in the reverse order of creation/initialization
-
+	//cleanup in the reverse order of creation/initialization
+	if (elasticPlasticPlate){
+		delete elasticPlasticPlate->getMaterial();
+		delete elasticPlasticPlate->getShape();
+		delete elasticPlasticPlate;
+		elasticPlasticPlate = 0;
+	}
 	//remove the rigidbodies from the dynamics world and delete them
 	int i;
 	for (i=m_dynamicsWorld->getNumCollisionObjects()-1; i>=0 ;i--)
@@ -1079,7 +1088,24 @@ void PlateDemo::initPhysics()
 	btTransform localTrans;
 	localTrans.setIdentity();
 	/// create plates
+	switch (constraintType){
+	case ElasticPlastic:
 	{
+		btElasticPlasticMaterial* steel = new btElasticPlasticMaterial();
+		btTransform localTrans;
+		localTrans.setIdentity();
+		btBoxShape* plateShape =
+			new btBoxShape(btVector3(lsx / 2, thickness / 2, lsz / 2));
+		elasticPlasticPlate = new btElasticPlasticPlate();
+		elasticPlasticPlate->setMaterial(steel);
+		elasticPlasticPlate->setShape(plateShape);
+		elasticPlasticPlate->setLongCount(cx);
+		elasticPlasticPlate->setMiddleCount(cz);
+		elasticPlasticPlate->setTransform(localTrans);
+		elasticPlasticPlate->join(m_dynamicsWorld);
+	}
+	break;
+	default:
 		/**
 		* store all sequentially z-direction in inner loop
 		*/
@@ -1087,7 +1113,8 @@ void PlateDemo::initPhysics()
 		ha.reserve(cx*cz);
 		btScalar xlen = lsx / cx;
 		btScalar zlen = lsz / cz;
-		btCollisionShape* loadShape = new btBoxShape(btVector3(xlen/2, thickness, zlen / 2));
+		btCollisionShape* loadShape = 
+			new btBoxShape(btVector3(xlen / 2, thickness/2, zlen / 2));
 		btScalar mass;
 		switch (constraintType){
 		case Rigid:
@@ -1098,13 +1125,13 @@ void PlateDemo::initPhysics()
 			break;
 		}
 		m_collisionShapes.push_back(loadShape);
-		btScalar xloc = (xlen-lsx)/2;
+		btScalar xloc = (xlen - lsx) / 2;
 		for (int i = 0; i < cx; i++){
 			btScalar zloc = (zlen - lsz) / 2;
 			for (int j = 0; j < cz; j++){
 				btTransform plateTrans;
 				plateTrans.setIdentity();
-				btVector3 pos = btVector3(xloc, thickness/ 2, zloc);
+				btVector3 pos = btVector3(xloc, thickness / 2, zloc);
 				plateTrans.setOrigin(pos);
 				ha.push_back(localCreateRigidBody(mass, plateTrans, loadShape));
 				zloc += zlen;
@@ -1114,9 +1141,6 @@ void PlateDemo::initPhysics()
 		switch (constraintType){
 		case Impulse:
 			addFixedConstraint(ha);
-			break;
-		case ElasticPlastic:
-			addElasticPlasticConstraint(ha);
 			break;
 		}
 	}

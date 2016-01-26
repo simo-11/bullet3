@@ -33,7 +33,7 @@ protected:
 	btScalar m_maxPlasticStrain=0.25; //
 public:
 	BT_DECLARE_ALIGNED_ALLOCATOR();
-    btElasticPlasticMaterial();
+	btElasticPlasticMaterial(){};
 	const btScalar getDensity() { return m_density; }
 	const btScalar getE() { return m_E; }
 	const btScalar getNu() { return m_nu; }
