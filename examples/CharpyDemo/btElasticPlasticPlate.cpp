@@ -67,7 +67,7 @@ middle is divived by m_mc
 shortest is used as thickness
 */
 void btElasticPlasticPlate::initSubShape(){
-	btVector3 v = m_mainShape->getImplicitShapeDimensions();
+	btVector3 v = m_mainShape->getHalfExtentsWithMargin();
 	m_maxAxis = v.maxAxis();
 	m_minAxis = v.minAxis();
 	if (m_minAxis == m_maxAxis){
@@ -102,6 +102,7 @@ void btElasticPlasticPlate::initRigidBodies(btDiscreteDynamicsWorld* dw){
 			btVector3 pos = lTrans.getOrigin();
 			pos[m_maxAxis] += lloc;
 			pos[m_middleAxis] += mloc;
+			lTrans.setOrigin(pos);
 			btDefaultMotionState* mState = 
 				new btDefaultMotionState(lTrans);
 			btRigidBody::btRigidBodyConstructionInfo 
