@@ -123,8 +123,8 @@ public:
 	float	m_minCameraDistance;
 	float	m_maxCameraDistance;
 	bool useMCLPSolver = true;
-	float	wheelRadius = 0.5f;
-	float	wheelWidth = 0.4f;
+	float	wheelRadius = 1;
+	float	wheelWidth = 0.6;
 	float	rollInfluence = 0.1f;//1.0f;
 
 	DemolisherDemo(CommonExampleOptions & options);
@@ -1191,7 +1191,7 @@ tr.setOrigin(btVector3(0,-3,0));
 
 	const float position[4]={0,10,10,0};
 	const float quaternion[4]={0,0,0,1};
-	const float color[4]={0,1,0,1};
+	const float color[4]={0.4,0.4,0.4,1};
 	const float scaling[4] = {1,1,1,1};
 
 	for (int i=0;i<4;i++)
@@ -1255,7 +1255,7 @@ tr.setOrigin(btVector3(0,-3,0));
 		m_vehicle->setCoordinateSystem(rightIndex, upIndex, forwardIndex);
 
 		btVector3 connectionPointCS0(xhl-(0.3*wheelWidth),
-			connectionHeight,zhl-wheelRadius);
+			connectionHeight,zhl-2*wheelRadius);
 		btScalar caster = 0.05;
 		btScalar camber = 0.05;
 		btVector3 wheelDirectionCS0(camber, -1, caster);
@@ -1265,14 +1265,14 @@ tr.setOrigin(btVector3(0,-3,0));
 			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
 
 		connectionPointCS0 = btVector3(-xhl+(0.3*wheelWidth),
-			connectionHeight,zhl-wheelRadius);
+			connectionHeight,zhl-2*wheelRadius);
 		wheelDirectionCS0 = btVector3(-camber, -1, caster);
 		// right front
 		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
 			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
 
 		connectionPointCS0 = btVector3(-xhl+(0.3*wheelWidth),
-			connectionHeight,-zhl+wheelRadius);
+			connectionHeight,-zhl+2*wheelRadius);
 		wheelDirectionCS0 = btVector3(-camber, -1, -caster);
 		isFrontWheel = false;
 		// right rear
@@ -1280,7 +1280,7 @@ tr.setOrigin(btVector3(0,-3,0));
 			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
 
 		connectionPointCS0 = btVector3(xhl-(0.3*wheelWidth),
-			connectionHeight,-zhl+wheelRadius);
+			connectionHeight,-zhl+2*wheelRadius);
 		wheelDirectionCS0 = btVector3(camber, -1, -caster);
 		// leaft rear
 		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
