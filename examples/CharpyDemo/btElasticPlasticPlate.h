@@ -36,9 +36,13 @@ protected:
 	int m_mc; // how many objects for middle dimension
 	btScalar m_ll,m_ml,m_thickness;
 	int m_maxAxis, m_middleAxis, m_minAxis;
-	btBoxShape *m_subShape=0;
+	btScalar m_maxForceL[6], m_maxForceM[6];
+	btScalar m_stiffnessL[6], m_stiffnessM[6];
+	btScalar m_maxPlasticRotation, m_maxPlasticStrain;
+	btBoxShape *m_subShape = 0;
 	btTransform m_mainTransform;
-	bool disableCollisionsBetweenLinkedBodies;
+	bool m_disableCollisionsBetweenLinkedBodies;
+	bool m_limitIfNeedeed;
 	btScalar damping=0.1;
 	/**
 	* store all sequentially m-direction in inner loop
@@ -47,10 +51,17 @@ protected:
 	btAlignedObjectArray<bt6DofElasticPlastic2Constraint*> m_constraints;
 	btElasticPlasticMaterial* m_material;
 	virtual void initSubShape();
+	virtual void initStiffnesses
+		(btScalar* v, btScalar l, btScalar b, btScalar t);
+	virtual void initMaxForces
+		(btScalar* v, btScalar l, btScalar b, btScalar t);
+	virtual void initStiffnesses(), initMaxForces(),initMaterialBasedLimits();
 	virtual void initRigidBodies(btDiscreteDynamicsWorld* dw);
 	virtual void initConstraints(btDiscreteDynamicsWorld* dw);
-	virtual const btTransform getConnectingFrame(btRigidBody& rbA, btRigidBody& rbB);
-	virtual void updateConstraint(bt6DofElasticPlastic2Constraint &constraint);
+	virtual const btTransform getConnectingFrame
+		(btRigidBody& rbA, btRigidBody& rbB);
+	virtual void updateConstraint
+		(bt6DofElasticPlastic2Constraint &constraint);
 	virtual void prepareAndAdd
 		(bt6DofElasticPlastic2Constraint *sc, btDiscreteDynamicsWorld* dw);
 public:
@@ -62,6 +73,8 @@ public:
 	int getLongCount(){ return m_lc; }
 	int getMiddleCount(){ return m_mc; }
 	virtual void join(btDiscreteDynamicsWorld* dw);
+	bool getLimitIfNeeded(){ return m_limitIfNeedeed; }
+	void setLimitIfNeeded(bool v){ m_limitIfNeedeed = v; }
 	virtual btScalar getThickness(){ return m_thickness; }
 	virtual void setMaterial(btElasticPlasticMaterial* material);
 	btElasticPlasticMaterial* getMaterial(){ return m_material; }

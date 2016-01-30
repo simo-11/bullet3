@@ -15,10 +15,12 @@ subject to the following restrictions:
 /*
 Simo Nikula 2016- while studying plasticity
 */
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
 
 #include "btElasticPlasticPlate.h"
 #include "btBulletDynamicsCommon.h"
-
 /**
 It is assumed that rbA and rbB have same size and link is wanted between them
 */
@@ -37,12 +39,65 @@ void btElasticPlasticPlate::setMaterial(btElasticPlasticMaterial* material) {
 	m_material = material;
 }
 
+void btElasticPlasticPlate::initStiffnesses
+(btScalar* v, btScalar l, btScalar b, btScalar t){
+	btScalar E(m_material->getE());
+	btScalar G(m_material->getG());
+	btScalar A(b*t);
+	btScalar I1(b*t*t*t / 12);
+	btScalar I2(t*b*b*b / 12);
+	btScalar It(b*t*t*t/7);
+	btScalar k0(E*A/l);
+	btScalar k1(12 * E*I1 / l / l / l);
+	btScalar k2(12 * E*I2 / l / l/ l);
+	v[0] = k0;
+	v[1] = k1;
+	v[2] = k2;
+	v[3] = G*It / l;
+	v[4] = 3 * E*I1 / l;
+	v[5] = 3 * E*I2 / l;
+}
+
+void btElasticPlasticPlate::initMaxForces
+(btScalar* v, btScalar l, btScalar b, btScalar t){
+	btScalar fy = m_material->getFy();
+	btScalar w1 = fy*b*t*t / 4;
+	btScalar w2(fy*b*b*t / 4);
+	v[0] = fy*b*t;
+	v[1] = v[0]/2;
+	v[2] = v[0] / 2;
+	v[3] = w1;
+	v[4] = w1;
+	v[5] = w2;
+}
+
+
+void btElasticPlasticPlate::initMaterialBasedLimits(){
+	btScalar mps = m_material->getMaxPlasticStrain();
+	m_maxPlasticStrain = m_ml / m_mc*mps;
+	m_maxPlasticRotation = mps * 10;
+}
+
+void btElasticPlasticPlate::initStiffnesses(){
+	initStiffnesses(m_stiffnessL, btScalar(m_ll / m_lc), 
+			btScalar(m_ml / m_mc), m_thickness);
+	initStiffnesses(m_stiffnessM, btScalar(m_ml / m_mc), 
+		btScalar(m_ll / m_lc), m_thickness);
+
+}
+void btElasticPlasticPlate::initMaxForces(){
+	initMaxForces(m_maxForceL, btScalar(m_ll / m_lc), 
+		btScalar(m_ml / m_mc), m_thickness);
+	initMaxForces(m_maxForceM, btScalar(m_ml / m_mc), 
+		btScalar(m_ll / m_lc), m_thickness);
+}
+
 /**
 */
 void btElasticPlasticPlate::updateConstraint(bt6DofElasticPlastic2Constraint &constraint) {
 	BT_PROFILE("updateConstraint");
-	btRigidBody rbA = constraint.getRigidBodyA();
-	btRigidBody rbB = constraint.getRigidBodyB();
+	btRigidBody& rbA = constraint.getRigidBodyA();
+	btRigidBody& rbB = constraint.getRigidBodyB();
 	btVector3 pA = rbA.getCenterOfMassPosition();
 	btVector3 pB = rbB.getCenterOfMassPosition();
 	btQuaternion qA = rbA.getCenterOfMassTransform().getRotation();
@@ -50,9 +105,13 @@ void btElasticPlasticPlate::updateConstraint(bt6DofElasticPlastic2Constraint &co
 	btBoxShape* sA = static_cast<btBoxShape*>(rbA.getCollisionShape());
 	btBoxShape* sB = static_cast<btBoxShape*>(rbB.getCollisionShape());
 	// figure out local coordinate system (lcs)
-	// calculate spring constants in lcs
-	// calculate maximum forces in lcs 
 	// transform to world coordinate system
+	for (int i = 0; i < 6; i++){
+		btScalar stiffness = m_stiffnessL[i];
+		btScalar maxForce = m_maxForceL[i];
+		constraint.setStiffness(i, stiffness, m_limitIfNeedeed);
+		constraint.setMaxForce(i, maxForce);
+	}
 }
 
 void btElasticPlasticPlate::join(btDiscreteDynamicsWorld* dw){
@@ -118,7 +177,10 @@ void btElasticPlasticPlate::initRigidBodies(btDiscreteDynamicsWorld* dw){
 
 void btElasticPlasticPlate::prepareAndAdd
 	(bt6DofElasticPlastic2Constraint *sc, btDiscreteDynamicsWorld* dw){
-	dw->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
+	sc->setMaxPlasticRotation(m_maxPlasticRotation);
+	sc->setMaxPlasticStrain(m_maxPlasticStrain);
+	updateConstraint(*sc);
+	dw->addConstraint(sc, m_disableCollisionsBetweenLinkedBodies);
 	for (int i = 0; i < 6; i++)
 	{
 		sc->enableSpring(i, true);
@@ -131,6 +193,9 @@ void btElasticPlasticPlate::prepareAndAdd
 }
 
 void btElasticPlasticPlate::initConstraints(btDiscreteDynamicsWorld* dw){
+	initStiffnesses();
+	initMaxForces();
+	initMaterialBasedLimits();
 	// longer direction
 	for (int i = 0; i < m_lc - 1; i++){
 		for (int j = 0; j < m_mc; j++){

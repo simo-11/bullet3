@@ -75,7 +75,7 @@ public:
 	void setStiffness(int index, btScalar stiffness);
 	void setDamping(int index, btScalar damping);
 	// bcc
-	void setMaxForce(int index, btScalar damping);
+	void setMaxForce(int index, btScalar value);
 	void setMaxPlasticStrain(btScalar value);
 	void setMaxPlasticRotation(btScalar value);
 	void scalePlasticity(btScalar scale);
