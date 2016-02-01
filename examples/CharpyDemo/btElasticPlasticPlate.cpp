@@ -139,12 +139,12 @@ void btElasticPlasticPlate::initSubShape(){
 			m_mc = 1;
 		}
 	}
-	m_ll = v[m_maxAxis];
-	m_ml = v[m_middleAxis];
+	m_ll = 2*v[m_maxAxis];
+	m_ml = 2*v[m_middleAxis];
 	btVector3 sv=v;
 	sv[m_maxAxis] /= m_lc;
 	sv[m_middleAxis] /= m_mc;
-	m_thickness = v[m_minAxis];
+	m_thickness = 2*v[m_minAxis];
 	m_subShape = new btBoxShape(sv);
 }
 
@@ -181,6 +181,7 @@ void btElasticPlasticPlate::prepareAndAdd
 	sc->setMaxPlasticStrain(m_maxPlasticStrain);
 	updateConstraint(*sc);
 	dw->addConstraint(sc, m_disableCollisionsBetweenLinkedBodies);
+	m_constraints.push_back(sc);
 	for (int i = 0; i < 6; i++)
 	{
 		sc->enableSpring(i, true);
