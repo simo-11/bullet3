@@ -1,0 +1,141 @@
+\section{Simulation of Charpy impact test using \bullet}
+\label{sec:bullet-plasticity}
+
+In following sections various methods for handling plasticity are described.
+As physics engines have not been traditional area of research for plasticity, 
+well known Charpy impact test was selected to be used as primary scenario
+although it is against first two tips in \bullet Manual.
+
+\begin{itemize}
+\item Avoid very small and very larger collision shapes
+\item Avoid large mass ratios
+\end{itemize}
+
+\subsection{Introduction to constraint processing in \bullet}
+Constraint processing in \bullet is based on \cite{ode}.
+ Mathematical background and detailed examples are available in \cite{ode.joints}.
+Main parameters are described in table.
+
+\subsection{Common data}
+
+\subsubsection{Material}
+
+Material is steel. Density is 7800 $kg\over{m^{3}}$. Young’s modulus is 200 GPa. Yield stress is initially 400 MPa but it can be modified.
+
+\subsubsection{Coordinate system}
+
+X axis is horizontal, positive to direction where hammer comes from (left)\\
+Y axis is vertical, positive up\\
+Z axis is horizontal and Z=0 is symmetry plane
+
+\subsubsection{Specimen}
+Specimen dimensions can modified. Basic measures are 10x10x55 mm with 2 mm notch in middle which is taken into account in calculations. Specimen is positioned symmetrically around z=0, bottom at y=0.2 m and backside at x=0. 
+Expected energy loss is product of plastic moment of section, hinge angle needed for specimen to go through supports and 
+ultimate tensile strength of specimen. For hinge angle of 1.9 radians and ultimate tensile strength of 400 MPa expected energy 
+loss is 122 J. Mass is about 40 g and in most cases it is modelled as two 20 g items. In laboratory tests variation for similar 
+specimens is roughly about 10 %; see e.g. http://www.npl.co.uk/upload/pdf/cop06.pdf
+Specimen can be subdivided to multiple parts.
+
+\subsubsection{Support anvils}
+Support anvils initially have 40 mm open space between them. Their width is 40 mm. 
+If specimen bends about 1.9 radians (108 degrees) it will go between anvils. Space between anvils can be changed.
+
+\subsubsection{Hammer}
+Hammer is 0.5 m wide and 0.25 m high, thickness is 0.02 m. Mass is 19.5 kg. Hammer and hinge are positioned so that 
+impact is horizontal  (global x-direction). Hammer arm is 40x40x500 mm. Hammer thickness can be changed.
+Setting it to zero causes hammer not to get added to model. Hammer has modifiable draft. Default value is 0.04 m. 
+Arm and draft are not taken into account for mass and inertia calculation.
+
+\subsubsection{Energy calculation}
+
+Energy for whole system is calculated so that potential energy and kinetic energy are calculated in updateEnergy. 
+When hammer is resting in low position, energy is 64 J. 
+
+\subsubsection{Breaking of constraints between objects}
+For standard \bullet constraints breakingImpulseThreshold (BITh) can be defined. If impulse is larger than set limit constraint is activated. 
+This allows object breaking to be simulated with very cheap calculation. 
+This method is too simplified for ductile material and developing more precise methods in main objective of this work.  
+
+\subsubsection{Timestep}
+
+Usually bullet simulations are done using fixed time step of 1/60 s i.e. 16.67 ms. 
+For this case 17 ms is too large timestep even to keep system stable. For impact time much smaller timestep is needed. 
+Real time simulation was tried as option but was removed from code as it did not provide good results.  
+Default time step was selected to be 5 ms outside impact time and 0.1 ms during impact. 
+Automatic time stepping routine changes timestep so that at angles higher than 0.2 5 ms time step is
+used and adjusts it linearly to selected time step between angles of 0.2 and 0.05. If specimen is no
+longer at anvil larger timestep is also used.
+
+\subsection{Single rigid body}
+This is basic reference case without plasticity. Specimen should stop hammer.
+
+\subsection{SpringConstraint}
+This shows how btGeneric6DofSpringConstraints act in case like this. 
+Specimen can absorb very little elastic energy so rotational spring constants are calculated using plastic state i.e.
+$W=bh^2/4$ where h=b-0.002m and yield stress is used instead of Young’s modulus for rotational springs.
+
+\subsection{Constraint with zero limits}
+In this case btGeneric6DofConstraint is used with high and low limits set to zero. 
+Constraint forces are obtained using JointFeedback feature. Plastic moment is 64 Nm for default dimensions
+
+\subsection{Spring2Constraint}
+This basically same as SpringConstraint but uses newer btGeneric6DofSpring2Constraint which has recently appeared in
+\bullet. 
+Automatic stiffness limitation helps to avoid instability but may make constraint too soft.
+
+\subsection{Hinge constraint with motors}
+In this case btHingeConstraint is used.
+Idea is to enable angular motor in which has target velocity of 0 and maximum motor impulse to 
+be plastic moment multiplied by timestep so that motor resists any rotation.
+
+\subsection{PlasticHingeConstraint}
+In this case new btPlasticHingeConstraint is used.
+It is modification of btHingeConstraint and was is developed during this work.
+PlasticHingeConstraint has additional fields for plasticMoment and previousHingeAngle and 
+getAbsorbedEnergy method which returns product of plasticMoment and hingeAngle change.
+
+\subsubsection{MaxPlasticRotation}
+MaxPlasticRotation is new term which was introduced to allow efficient way to express ultimate strain in bending.
+Implemented constraint has additional fields for maxPlasticRotation and currentPlasticRotation. 
+After each step in which rotation angle changes, absolute value of 
+angle change is accumulated to currentPlasticRotation. As currentPlasticRotation 
+reaches maxPlasticRotation constraint is inactivated and specimen breaks. 
+For ductile behaviour maxPlasticRotation could be set to e.g. 3-6 (radians) and for brittle
+ behaviour to e.g.0.01-0.1 radians. MaxPlasticRotation is basically rotational stretch under bending moment.
+ Basic sample can be tried using paperclip. It can typically handle two bend overs before breaking. 
+Sewing machine needle or tooth pick which has same diameter is much harder to bend and it 
+often breaks before plastic deformation takes place. 
+
+\subsubsection{Limiting maximum moment in constraint}
+btPlasticHingeConstraint::getInfo2InternalUsingFrameOffset is modified so that in case of lostop=histop, 
+plasticMoment*timeStep is used as upper and lower limit instead of SIMD\_INFINITY. 
+
+\subsection{ElasticPlasticConstraint}
+In this case new bt6DofElasticPlasticConstraint is used.
+It is based on DofSpringConstraints with some modifications
+
+\begin{itemize}
+\item internalUpdateSprings is modified so that nonlinear relation between displacements and forces can be defined. 
+ If force is smaller than maximum force or moment for given degree of freedom,
+  elastic behavior is handled in similar way as spring works. 
+  If force is larger, maximum force is used. InternalUpdateSprings is called by getInfo2.
+\item constraint breaks if active forces are high enough and plastic reserve has been used
+\item frequency ratio of lowest mode and integration is used to limit spring functionality to avoid stability issues. 
+ Ratio defines how many steps are needed for one period. 
+ If number of integration steps is too low, spring is modified to ignore elastic part.
+\end{itemize}
+
+
+\subsection{ElasticPlastic2Constraint}
+This is basically same as elasticPlasticConstraint but uses new bt6DofElasticPlastic2Constraint 
+which is based on btGeneric6DofSpring2Constraint.
+Get\_limit\_motor\_info2, setAngularLimits and setLinearLimits which are called by getInfo2 are modified. 
+SIMD\_INFINITY values are replaced by maximum force values which are transformed to
+corresponding impulsed by multiplying forces by integration interval.
+btGeneric6DofSpring2Constraint has option limitIfNeeded for stiffness and damping to avoid issues. 
+Spring is softened so that 4 steps are used for one step. This is not realistic for typical steel structures. 
+In elasticPlasticConstraint2 plasticity code is activated if frequency is too high for stable solution.
+If plasticity is activated due to large spring force or due to high frequency forces constraint error is 
+calculated in similar way as for limited case (m\_currentLimit==3).
+
+\cleardoublepage
