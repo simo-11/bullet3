@@ -112,7 +112,9 @@ $W=bh^2/4$ where h=b-0.002m and yield stress is used instead of Young’s modulu
 
 \subsection{Constraint with zero limits}
 In this case btGeneric6DofConstraint is used with high and low limits set to zero. 
-Constraint forces are obtained using JointFeedback feature. Plastic moment is 64 Nm for default dimensions
+Constraint is made breakable by setting breakingImpulseThreshold.
+This is common technique to provide breakable objects in games and provides visually accetable results for brittle materials.
+Constraint forces are obtained using JointFeedback feature. Plastic moment is 64 Nm for default dimensions.
 
 \subsection{Spring2Constraint}
 This basically same as SpringConstraint but uses newer btGeneric6DofSpring2Constraint which has recently appeared in
@@ -121,7 +123,7 @@ Automatic stiffness limitation helps to avoid instability but may make constrain
 
 \subsection{Hinge constraint with motors}
 In this case btHingeConstraint is used.
-Idea is to enable angular motor in which has target velocity of 0 and maximum motor impulse to 
+Angular motor is enabled with target velocity of 0 and maximum motor impulse is set to
 be plastic moment multiplied by timestep so that motor resists any rotation.
 
 \subsection{PlasticHingeConstraint}
@@ -148,13 +150,13 @@ plasticMoment*timeStep is used as upper and lower limit instead of SIMD\_INFINIT
 
 \subsection{ElasticPlasticConstraint}
 In this case new bt6DofElasticPlasticConstraint is used.
-It is based on DofSpringConstraints with some modifications
+It is based on SpringConstraint with some modifications
 
 \begin{itemize}
 \item internalUpdateSprings is modified so that nonlinear relation between displacements and forces can be defined. 
  If force is smaller than maximum force or moment for given degree of freedom,
   elastic behavior is handled in similar way as spring works. 
-  If force is larger, maximum force is used. InternalUpdateSprings is called by getInfo2.
+  If force is larger, maximum force is used. 
 \item constraint breaks if active forces are high enough and plastic reserve has been used
 \item frequency ratio of lowest mode and integration is used to limit spring functionality to avoid stability issues. 
  Ratio defines how many steps are needed for one period. 
@@ -170,8 +172,8 @@ SIMD\_INFINITY values are replaced by maximum force values which are transformed
 corresponding impulsed by multiplying forces by integration interval.
 btGeneric6DofSpring2Constraint has option limitIfNeeded for stiffness and damping to avoid issues. 
 Spring is softened so that 4 steps are used for one step. This is not realistic for typical steel structures. 
-In elasticPlasticConstraint2 plasticity code is activated if frequency is too high for stable solution.
+In bt6DofElasticPlastic2Constraint plasticity code is activated if frequency is too high for stable solution.
 If plasticity is activated due to large spring force or due to high frequency forces constraint error is 
-calculated in similar way as for limited case (m\_currentLimit==3).
+calculated in similar way as for case where upper limit equals lower limit. (m\_currentLimit==3).
 
 \cleardoublepage
