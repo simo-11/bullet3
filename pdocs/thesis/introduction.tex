@@ -47,8 +47,19 @@ more widespread in future as more computing capacity and memory will be availabl
 In this work all theories in area of structural analysis are quite old and e.g. 
 \cite{timoshenko} is typical reference. Main focus is on elastic and 
 linear plastic parts of stress-strain curve and elastic and plastic section modulus.
+
+Typical stress strain curve of ductile steel is shown in \ref{fig:areas}.
+Stress-strain curve is not drawn to scale as elastic strain could not be seen as it is typically 0.001 to 0.005.
 Straing hardening is taken into account mainly by assuming that plasticity in bending expands.
-This can be seen e.g. by bending paperclip. It does not break at low angles but can take few full bends.
+This can be seen e.g. by bending paperclip. It does not break at low angles but can take few full bends. 
+
+Difference between elastic and plastic modulus is shown in \ref{fig:wp}. 
+If stress is below yield limit, stress and strain are linear within cross section.
+If cross section is fully plastic, stress is assumed to be at yield level over whole cross section and 
+so plastic modulus is higher than elastic modulus.
+
+Elastic part is often ignored in this work as displacements due to to elastic deformation are so small and 
+related frequencies are so high.
 
 \begin{figure}[htb!]
 \centering
@@ -64,6 +75,31 @@ This can be seen e.g. by bending paperclip. It does not break at low angles but 
 \label{fig:areas}
 \end{figure}
 
+\begin{figure}[htb!]
+\centering
+\begin{tikzpicture}
+\coordinate (S) at (2.5,5);
+\draw (0,5) -- (4,5) ;
+\draw (0,0) -- (4,0) ;
+\draw (2,0) -- (2,5) ;
+\draw (1.5,0) -- (S); 
+\node[above] at (S) [align=center] {\large{$\sigma<f_y$}};
+\end{tikzpicture}
+\hspace{1cm}
+\begin{tikzpicture}
+\coordinate (S) at (3,5);
+\draw (0,5) -- (4,5) ;
+\draw (0,0) -- (4,0) ;
+\draw (2,0) -- (2,5) ;
+\draw (1,0) -- (1,2.5) -- (3,2.5) -- (S); 
+\node[above] at (S) [align=center] {\large{$\sigma=f_y$}};
+\end{tikzpicture}
+\caption{Stress distribution under elastic and plastic loads.}
+\label{fig:wp}
+\end{figure}
+
+
+
 E.g. \cite{camp} is good example of university cource providing needed information about plasticity.
 
 \subsection{Physics engine}
@@ -75,7 +111,7 @@ In \lut simulation of working machines has been active research area, e.g. \cite
 
 Physics engines cannot used in serious structural analysis but using structural analysis in physics engines is not rare.  
 E.g. \cite{Obrien:1999:GMA} used finite element model to analyze crack initiation and propagation.
-\cite{cg1988} used quite similar principles as in this work to handle plasticity. 
+Already \cite{cg1988} used quite similar principles as in this work to handle plasticity. 
 
 \cite{erleben.thesis} provides extensive introduction to physics engines. 
 He uses term Physics-based Animation and does detailed analysis on many areas like
@@ -119,7 +155,7 @@ Getting and compiling complicated software packages is currently quite easy.
 Understanding and getting enough knowledge to extend them requires a fair amount of hard work.
 
 Using calculation methods that have initially planned to be hand calculated gives good starting point for 
-getting fast processing. Lack of clean boundary conditions will require addional logic or accepting larger errors.
+getting fast processing. Lack of clean boundary conditions will require additional logic or accepting larger errors.
 
 
 \subsection{Motivation and objectives of the study}
