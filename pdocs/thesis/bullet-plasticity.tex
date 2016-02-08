@@ -1,5 +1,5 @@
 \section{Simulation of Charpy impact test using \bullet}
-\label{sec:bullet-plasticity}
+\label{sec:bullet-charpy}
 
 In following sections various methods for handling plasticity are described.
 As physics engines have not been traditional area of research for plasticity, 
@@ -105,16 +105,15 @@ longer at anvil larger timestep is also used.
 \subsection{Single rigid body}
 This is basic reference case without plasticity. Specimen should stop hammer.
 
-\subsection{SpringConstraint}
-This shows how btGeneric6DofSpringConstraints act in case like this. 
-Specimen can absorb very little elastic energy so rotational spring constants are calculated using plastic state i.e.
-$W=bh^2/4$ where h=b-0.002m and yield stress is used instead of Young’s modulus for rotational springs.
-
 \subsection{Constraint with zero limits}
 In this case btGeneric6DofConstraint is used with high and low limits set to zero. 
 Constraint is made breakable by setting breakingImpulseThreshold.
 This is common technique to provide breakable objects in games and provides visually accetable results for brittle materials.
-Constraint forces are obtained using JointFeedback feature. Plastic moment is 64 Nm for default dimensions.
+
+\subsection{SpringConstraint}
+This shows how btGeneric6DofSpringConstraints act in case like this. 
+Specimen can absorb very little elastic energy so rotational spring constants are calculated using plastic state i.e.
+$W=bh^2/4$ where h=b-0.002m and yield stress is used instead of Young’s modulus for rotational springs.
 
 \subsection{Spring2Constraint}
 This basically same as SpringConstraint but uses newer btGeneric6DofSpring2Constraint which has recently appeared in
@@ -163,7 +162,6 @@ It is based on SpringConstraint with some modifications
  If number of integration steps is too low, spring is modified to ignore elastic part.
 \end{itemize}
 
-
 \subsection{ElasticPlastic2Constraint}
 This is basically same as elasticPlasticConstraint but uses new bt6DofElasticPlastic2Constraint 
 which is based on btGeneric6DofSpring2Constraint.
@@ -175,5 +173,30 @@ Spring is softened so that 4 steps are used for one step. This is not realistic 
 In bt6DofElasticPlastic2Constraint plasticity code is activated if frequency is too high for stable solution.
 If plasticity is activated due to large spring force or due to high frequency forces constraint error is 
 calculated in similar way as for case where upper limit equals lower limit, (m\_currentLimit==3).
+
+\section{Charpy impact test results using \bullet}
+\label{sec:bullet-charpy-results}
+
+\subsection{Results for single rigid body}
+Timestep of 0.1 ms provides expeced results and specimen bounces hammer back.
+Larger timesteps produce various kinds of unexpected results like
+\begin{itemize}
+\item Specimen goes trough anvil and penetrates hammer
+\item Specimen moves sideways and stays on anvil. This can be seen e.g. by setting timestep to 17 ms and leaving hammer draft away.
+\end{itemize}
+
+\subsection{Results for constraint with zero limits}
+This technique provides effective and stable way to simulate breaking into two objects. 
+Required energy to break constraint can be controlled using
+breakingImpulseThreshold. 
+
+\subsection{Results for springConstraint}
+Energy loss is in right scale but visual feedback is not realistic as specimen gets back to initial shape.
+Unstable simulation can be seen by setting yield stress to e.g. 800 MPa.
+
+\subsection{Results for spring2Constraint}
+Results are quite similar as for springConstraint but automatic parameter tuning helps in avoiding unstable simulations.
+
+
 
 \cleardoublepage
