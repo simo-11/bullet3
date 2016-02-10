@@ -197,6 +197,36 @@ Unstable simulation can be seen by setting yield stress to e.g. 800 MPa.
 \subsection{Results for spring2Constraint}
 Results are quite similar as for springConstraint but automatic parameter tuning helps in avoiding unstable simulations.
 
+\subsection{Results for hinge constraint with motors}
+Results are very good although sensitive to parameters changes. Energy loss is in right scale. 
+Specimen bends and keeps deformed shape.
+
+\subsection{Results for plasticHingeConstraint}
+Results are quite similar as for hinge constraint with motors. 
+Breaking point can be configured based on rotation angle which makes material behaviour more realistic.
+
+\subsection{Results for elasticPlasticConstraint}
+Results are quite similar as for plasticHingeConstraint as this case is dominated by plastic bending.
+Additional logic helps to avoid stablity issues.
+
+\subsection{Results for elasticPlastic2Constraint}
+Results are quite similar as for elasticPlasticConstraint and this constraint seems to best candidate for further development.
+Table \ref{tab:ep2ts} shows energy loss for few timesteps as example to demonstrate sensitivity of solution.
+
+\begin {table}[htb!]
+\begin{center}
+\begin{tabular}{| c| c|}
+\hline
+{\bf Timestep[ms]} & {\bf Energy loss [J]}\\  \hline
+ 0.100001 &  120 \\ \hline
+ 0.1 &  110 \\ \hline
+ 0.09999 &  140 \\ \hline
+ 0.08 &  170 \\ \hline
+ 0.05 &  215 \\ \hline
+\end {tabular}
+\end{center}
+\caption {Energy loss for few timesteps} \label{tab:ep2ts} 
+\end {table}
 
 
 \cleardoublepage
