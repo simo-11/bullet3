@@ -57,6 +57,7 @@ $h$ & high limit for constraint force & m\_upperLimit \\ \hline
 \subsubsection{Material}
 
 Material is steel. Density is 7800 $kg\over{m^{3}}$. Young’s modulus is 200 GPa. Yield stress is initially 400 MPa but it can be modified.
+Coefficient of restitution can be modified and has value of 0 unless otherwise staten.
 
 \subsubsection{Coordinate system}
 
@@ -178,17 +179,45 @@ calculated in similar way as for case where upper limit equals lower limit, (m\_
 \label{sec:bullet-charpy-results}
 
 \subsection{Results for single rigid body}
-Timestep of 0.1 ms provides expeced results and specimen bounces hammer back.
-Larger timesteps produce various kinds of unexpected results like
-\begin{itemize}
-\item Specimen goes trough anvil and penetrates hammer
-\item Specimen moves sideways and stays on anvil. This can be seen e.g. by setting timestep to 17 ms and leaving hammer draft away.
-\end{itemize}
+
+Timestep of 0.1 ms provides expeced results and specimen bounces hammer back as seen in figure \ref{fig:f1-ok-results}.
+
+\begin{figure}[htb!]
+\centering
+\includegraphics[height=3cm]{figs/f1-18-01-1}
+\includegraphics[height=3cm]{figs/f1-18-01-2}
+\caption{Specimen bounces hammer back with timestep of 0.1 ms}
+\label{fig:f1-ok-results}
+\end{figure}
+
+Larger timesteps produce various kinds of unrealistic results seen in figure \ref{fig:f1-nok-results}.
+In these cases timestep is 17 ms. Specimen penetrates hammer and anvils.
+Without draft specimen stays on anvil.
+
+\begin{figure}[htb!]
+\centering
+\includegraphics[height=3cm]{figs/f1-18-17-1}
+\includegraphics[height=3cm]{figs/f1-18-17-2}
+\includegraphics[height=3cm]{figs/f1-18-17-3}
+\caption{Results with timestep of 17 ms}
+\label{fig:f1-nok-results}
+\end{figure}
 
 \subsection{Results for constraint with zero limits}
-This technique provides effective and stable way to simulate breaking into two objects. 
+This technique provides effective and stable way to simulate breaking of brittle material 
+but does not provide realistic results for ductile material as can be seen in figure \ref{fig:f3-results}.
 Required energy to break constraint can be controlled using
 breakingImpulseThreshold. 
+
+\begin{figure}[htb!]
+\centering
+\includegraphics[height=2.5cm]{figs/f3-18-01-1}
+\includegraphics[height=2.5cm]{figs/f3-18-01-2}
+\includegraphics[height=2.5cm]{figs/f3-18-01-3}
+\caption{Specimen breaks in brittle way}
+\label{fig:f3-results}
+\end{figure}
+
 
 \subsection{Results for springConstraint}
 Energy loss is in right scale but visual feedback is not realistic as specimen gets back to initial shape.
