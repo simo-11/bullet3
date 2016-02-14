@@ -53,14 +53,6 @@ Stress-strain curve is not drawn to scale as elastic strain could not be seen as
 Straing hardening is taken into account mainly by assuming that plasticity in bending expands.
 This can be seen e.g. by bending paperclip. It does not break at low angles but can take few full bends. 
 
-Difference between elastic and plastic modulus is shown in \ref{fig:wp}. 
-If stress is below yield limit, stress and strain are linear within cross section.
-If cross section is fully plastic, stress is assumed to be at yield level over whole cross section and 
-so plastic modulus is higher than elastic modulus.
-
-Elastic part is often ignored in this work as displacements due to to elastic deformation are so small and 
-related frequencies are so high.
-
 \begin{figure}[htb!]
 \centering
 \begin{tikzpicture}
@@ -74,6 +66,8 @@ related frequencies are so high.
 \caption{Stress-strain curve of ductile steel (not to scale).}
 \label{fig:areas}
 \end{figure}
+
+Difference between elastic and plastic section modulus is shown in \ref{fig:wp}. 
 
 \begin{figure}[htb!]
 \centering
@@ -98,7 +92,12 @@ related frequencies are so high.
 \label{fig:wp}
 \end{figure}
 
+If stress is below yield limit, stress and strain are linear within cross section.
+If cross section is fully plastic, stress is assumed to be at yield level over whole cross section and 
+so plastic section modulus is higher than elastic section modulus.
 
+Elastic part is often ignored in this work as displacements due to to elastic deformation are small and 
+related frequencies are high.
 
 E.g. \cite{camp} is good example of university cource providing needed information about plasticity.
 
