@@ -57,7 +57,7 @@ $h$ & high limit for constraint force & m\_upperLimit \\ \hline
 \subsubsection{Material}
 
 Material is steel. Density is 7800 $kg\over{m^{3}}$. Young’s modulus is 200 GPa. Yield stress is initially 400 MPa but it can be modified.
-Coefficient of restitution can be modified and has value of 0 unless otherwise staten.
+Coefficient of restitution can be modified and has value of 0 (fully plastic) unless otherwise staten.
 
 \subsubsection{Coordinate system}
 
@@ -68,9 +68,9 @@ Z axis is horizontal and Z=0 is symmetry plane
 \subsubsection{Specimen}
 Specimen dimensions can modified. Basic measures are 10x10x55 mm with 2 mm notch in middle which is taken into account in calculations. Specimen is positioned symmetrically around z=0, bottom at y=0.2 m and backside at x=0. 
 Expected energy loss is product of plastic moment of section, hinge angle needed for specimen to go through supports and 
-ultimate tensile strength of specimen. For hinge angle of 1.9 radians and ultimate tensile strength of 400 MPa expected energy 
+ultimate tensile strength of specimen. For hinge angle of 1.9 radians and yields stress of 400 MPa expected energy 
 loss is 122 J. Mass is about 40 g and in most cases it is modelled as two 20 g items. In laboratory tests variation for similar 
-specimens is roughly about 10 %; see e.g. http://www.npl.co.uk/upload/pdf/cop06.pdf
+specimens is roughly about 10 %; see e.g. \cite{ct2000}.
 Specimen can be subdivided to multiple parts.
 
 \subsubsection{Support anvils}
@@ -91,7 +91,7 @@ When hammer is resting in low position, energy is 64 J.
 \subsubsection{Breaking of constraints between objects}
 For standard \bullet constraints breakingImpulseThreshold (BITh) can be defined. If impulse is larger than set limit constraint is activated. 
 This allows object breaking to be simulated with very cheap calculation. 
-This method is too simplified for ductile material and developing more precise methods in main objective of this work.  
+This method is too simplified for ductile material and developing more precise and realistic methods is main objective of this work.  
 
 \subsubsection{Timestep}
 
@@ -132,14 +132,14 @@ It is modification of btHingeConstraint and was is developed during this work.
 PlasticHingeConstraint has additional fields for plasticMoment and previousHingeAngle and 
 getAbsorbedEnergy method which returns product of plasticMoment and hingeAngle change.
 
-\subsubsection{MaxPlasticRotation}
-MaxPlasticRotation is new term which was introduced to allow efficient way to express ultimate strain in bending.
+\subsubsection{Maximum plastic rotation}
+Maximum plastic rotation is new term which was introduced to allow efficient way to express ultimate strain in bending.
 Implemented constraint has additional fields for maxPlasticRotation and currentPlasticRotation. 
 After each step in which rotation angle changes, absolute value of 
 angle change is accumulated to currentPlasticRotation. As currentPlasticRotation 
 reaches maxPlasticRotation constraint is inactivated and specimen breaks. 
-For ductile behaviour maxPlasticRotation could be set to e.g. 3-6 (radians) and for brittle
- behaviour to e.g.0.01-0.1 radians. MaxPlasticRotation is basically rotational stretch under bending moment.
+For ductile behaviour maxPlasticRotation could be set to e.g. 1-6 (radians) and for brittle
+ behaviour to e.g.0.01-0.1 radians. Maxium plastic rotation is basically rotational stretch under bending moment.
  Basic sample can be tried using paperclip. It can typically handle two bend overs before breaking. 
 Sewing machine needle or tooth pick which has same diameter is much harder to bend and it 
 often breaks before plastic deformation takes place. 
@@ -177,6 +177,12 @@ calculated in similar way as for case where upper limit equals lower limit, (m\_
 
 \section{Charpy impact test results using \bullet}
 \label{sec:bullet-charpy-results}
+Results are quite sensitive and obtained in February 2016 using following processes
+\begin{itemize}
+\item single precision debug build is used
+\item sequential impulse constraint solver with 10 iterations is used
+\item energy loss values are rounded to nearest 10 joules 
+\end{itemize}
 
 \subsection{Results for single rigid body}
 
@@ -220,19 +226,62 @@ breakingImpulseThreshold.
 
 
 \subsection{Results for springConstraint}
-Energy loss is in right scale but visual feedback is not realistic as specimen gets back to initial shape.
+Energy loss is about 50 J.
+Visual feedback is not realistic as specimen gets back to initial shape as seen in figure \ref{fig:f3-results}.
+
+\begin{figure}[htb!]
+\centering
+\includegraphics[height=2.5cm]{figs/f2-18-01-1}
+\includegraphics[height=2.5cm]{figs/f2-18-01-2}
+\caption{Spring constraint brings specimen back to initial shape}
+\label{fig:f3-results}
+\end{figure}
+
 Unstable simulation can be seen by setting yield stress to e.g. 800 MPa.
+Few frames of such simulation can be seen in figure \ref{fig:f3-us-results}.
+Unstable behaviour starts immediately at start of simulation and is triggered without impact from hammer.
+\begin{figure}[htb!]
+\centering
+\includegraphics[height=2.2cm]{figs/f2-18-01-us-1}
+\includegraphics[height=2.2cm]{figs/f2-18-01-us-2}
+\includegraphics[height=2.2cm]{figs/f2-18-01-us-3}
+\caption{Unstable simulation with stiff spring contstaints}
+\label{fig:f3-us-results}
+\end{figure}
+
 
 \subsection{Results for spring2Constraint}
-Results are quite similar as for springConstraint but automatic parameter tuning helps in avoiding unstable simulations.
+Results are quite similar as for springConstraint but automatic parameter tuning prevents unstable simulations.
+Energy loss is about 40 J.
 
 \subsection{Results for hinge constraint with motors}
-Results are very good although sensitive to parameters changes. Energy loss is in right scale. 
-Specimen bends and keeps deformed shape.
+Energy loss is about 110 J.
+Visual feedback is realistic as specimen keeps deformed shape as seen in figure \ref{fig:f5-results}.
+
+\begin{figure}[htb!]
+\centering
+\includegraphics[height=2.5cm]{figs/f5-18-01-1}
+\includegraphics[height=2.5cm]{figs/f5-18-01-2}
+\includegraphics[height=2.5cm]{figs/f5-18-01-3}
+\caption{Hinge constraint with motors}
+\label{fig:f5-results}
+\end{figure}
+
 
 \subsection{Results for plasticHingeConstraint}
 Results are quite similar as for hinge constraint with motors. 
 Breaking point can be configured based on rotation angle which makes material behaviour more realistic.
+In figure \ref{fig:f6-results} maximum plastic rotation is limited to 1.5 and energy loss is about 95 J.
+
+\begin{figure}[htb!]
+\centering
+\includegraphics[height=2.5cm]{figs/f6-18-01-1}
+\includegraphics[height=2.5cm]{figs/f6-18-01-2}
+\includegraphics[height=2.5cm]{figs/f6-18-01-3}
+\caption{PlasticHingeConstraint with maximum plastic rotation set to 1.5}
+\label{fig:f6-results}
+\end{figure}
+
 
 \subsection{Results for elasticPlasticConstraint}
 Results are quite similar as for plasticHingeConstraint as this case is dominated by plastic bending.
@@ -247,15 +296,24 @@ Table \ref{tab:ep2ts} shows energy loss for few timesteps as example to demonstr
 \begin{tabular}{| c| c|}
 \hline
 {\bf Timestep[ms]} & {\bf Energy loss [J]}\\  \hline
- 0.100001 &  120 \\ \hline
+ 0.1001 &  100 \\ \hline
  0.1 &  110 \\ \hline
- 0.09999 &  140 \\ \hline
- 0.08 &  170 \\ \hline
- 0.05 &  215 \\ \hline
+ 0.099 &  90 \\ \hline
+ 0.08 &  130 \\ \hline
+ 0.05 &  150 \\ \hline
 \end {tabular}
 \end{center}
 \caption {Energy loss for few timesteps} \label{tab:ep2ts} 
 \end {table}
 
+\subsection{Summary and evaluation of results}
+Suggested methods for handling plasticity are well suited for cases where simulation of ductile failure is desired.
+It requires only slightly more computational effort than methods that are used for simulation of brittle failures.
+Hinge constraint with motors method can be used without introducing any additional code to most existing dynamic engine
+as it is based on widely used motor-codes. 
+Additional features are quite simple to implement and make spring based constraints even more usable than currently by 
+allowing stiff constraints to be used without instability.
+
+Suggested methods cannot at least currently be used if exact results are needed but are well suited for educational and entertainment scenarios.
 
 \cleardoublepage
