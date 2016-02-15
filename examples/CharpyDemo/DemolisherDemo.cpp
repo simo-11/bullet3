@@ -233,16 +233,19 @@ public:
 	btVector3 speedometerLocation = lastLocation;
 	float updateInterval = 0.3;
 	int updateViewCount = 0;
+	void resetClocks(){
+		driveClock.reset();
+		speedometerUpdated = 0;
+	}
 	void updateView(){
 		updateViewCount++;
 		float now = driveClock.getTimeSeconds();
-		float timeDelta = now - lastClock;
 		lastClock = currentClock;
 		currentClock = now;
 		lastLocation = currentLocation;
 		currentLocation = m_carChassis->getCenterOfMassPosition();
 		updateCameraLocation();
-		timeDelta = now - speedometerUpdated;
+		float timeDelta = now - speedometerUpdated;
 		if (timeDelta < updateInterval){
 			return;
 		}
@@ -802,6 +805,7 @@ public:
 		exitPhysics();
 		PlasticityExampleBrowser::getRenderer()->removeAllInstances();
 		initParameterUi();
+		resetClocks();
 		initPhysics();
 	}
 	void addFixedConstraint(btAlignedObjectArray<btRigidBody*> ha){
@@ -1027,10 +1031,10 @@ void DemolisherDemo::reinit(){
 	steelArea = 0.001;
 	maxPlasticStrain = 0.1;
 	maxPlasticRotation = 1;
-	driveClock.reset();
-	speedometerUpdated = 0;
 	gameBindings = true;
+	resetClocks();
 }
+
 void DemolisherDemo::resetHandler(Gwen::Controls::Base* control){
 	demo->reinit();
 	restartHandler(control);
@@ -1177,13 +1181,18 @@ tr.setOrigin(btVector3(0,-3,0));
 
 	btCompoundShape* compound = new btCompoundShape();
 	m_collisionShapes.push_back(compound);
+	btScalar sy = suspensionRestLength - 10 * carMass / suspensionStiffness / 4;
+	if (sy < 0){
+		sy = 0.06;
+	}
 	btTransform localTrans;
 	localTrans.setIdentity();
-	//localTrans effectively shifts the center of mass with respect to the chassis
-	localTrans.setOrigin(btVector3(0,suspensionRestLength+yhl,0));
-	compound->addChildShape(localTrans,chassisShape);
-	tr.setOrigin(btVector3(0,0.f,0));
-	m_carChassis = localCreateRigidBody(carMass,tr,compound);//chassisShape);	
+	localTrans.setOrigin(btVector3(0, yhl, 0));
+	compound->addChildShape(localTrans, chassisShape);
+	btTransform startTrans;
+	startTrans.setIdentity();
+	startTrans.setOrigin(btVector3(0, sy + yhl, 0));
+	m_carChassis = localCreateRigidBody(carMass, startTrans, compound);
 	m_wheelShape = new btCylinderShapeX(btVector3(wheelWidth,wheelRadius,wheelRadius));
 
 	m_guiHelper->createCollisionShapeGraphicsObject(m_wheelShape);
