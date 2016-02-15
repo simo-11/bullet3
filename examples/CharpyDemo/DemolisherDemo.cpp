@@ -85,6 +85,7 @@ public:
 	btScalar lsx, lsy, lsz;
 	int lpc;
 	btScalar breakingImpulseThreshold;
+	btScalar bridgeSteelScale=10,steelScale;
 	btScalar density;
 	btScalar carMass;
 	btScalar suspensionStiffness, suspensionMaxForce;
@@ -822,7 +823,7 @@ public:
 			btGeneric6DofConstraint *sc =
 				new btGeneric6DofConstraint(*ha[i], *ha[i + 1],
 				tra, trb, true);
-			sc->setBreakingImpulseThreshold(breakingImpulseThreshold);
+			sc->setBreakingImpulseThreshold(steelScale*breakingImpulseThreshold);
 			m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
 			for (int i = 0; i < 6; i++){
 				sc->setLimit(i, 0, 0); // make fixed
@@ -845,9 +846,9 @@ public:
 		btVector3 cpos(halfLength, 0, 0);
 		tra.setOrigin(cpos);
 		trb.setOrigin(-cpos);
-		btScalar k0(E*steelArea/ 0.2); 
-		btScalar k1(E*steelArea*lsy/2.5);
-		btScalar k2(E*steelArea*lsz/2.5);
+		btScalar k0(E*steelArea*steelScale / 0.2);
+		btScalar k1(E*steelArea*steelScale*lsy / 2.5);
+		btScalar k2(E*steelArea*steelScale*lsz / 2.5);
 		btScalar m(fy / E);
 		btScalar w0(k0*m);
 		btScalar w1(k1*fy/E);
@@ -1017,7 +1018,7 @@ void DemolisherDemo::reinit(){
 	defaultBreakingForce = 1000;
 	wheelFriction = 0.8;
 	lpc = 5;
-	lsx = 10;
+	lsx = 30;
 	lsy = 3;
 	lsz = 2;
 	density = 2000;
@@ -1211,6 +1212,7 @@ tr.setOrigin(btVector3(0,-3,0));
 
 	/// create load parts
 	{
+		steelScale = btScalar(1);
 		btAlignedObjectArray<btRigidBody*> ha;
 		btScalar xlen = lsx / lpc;
 		btCollisionShape* loadShape = new btBoxShape(btVector3(xlen/2, lsy / 2, lsz / 2));
@@ -1231,6 +1233,51 @@ tr.setOrigin(btVector3(0,-3,0));
 			btVector3 pos = btVector3(xloc, lsy / 2, 5);
 			loadTrans.setOrigin(pos);
 			ha.push_back(localCreateRigidBody(mass, loadTrans, loadShape));
+			xloc += xlen;
+		}
+		switch (constraintType){
+		case Impulse:
+			addFixedConstraint(ha);
+			break;
+		case ElasticPlastic:
+			addElasticPlasticConstraint(ha);
+			break;
+		}
+	}
+	/// create bridge parts
+	{
+		steelScale = btScalar(bridgeSteelScale);
+		btScalar yScale = 0.3;
+		btScalar zScale = 3;
+		btAlignedObjectArray<btRigidBody*> ha;
+		btScalar xlen = lsx / lpc;
+		btCollisionShape* partShape = new btBoxShape(btVector3(xlen / 2, yScale*lsy / 2, zScale*lsz / 2));
+		btCollisionShape* supportShape = new btBoxShape(btVector3(xlen / 2, lsy / 2, zScale*lsz / 2));
+		btScalar mass;
+		switch (constraintType){
+		case Rigid:
+			mass = 0;
+			break;
+		default:
+			mass = lsx*yScale*lsy*zScale*lsz*density / lpc;
+			break;
+		}
+		m_collisionShapes.push_back(partShape);
+		btScalar xloc = (xlen - lsx) / 2;
+		for (int i = 0; i < lpc; i++){
+			btTransform tr;
+			tr.setIdentity();
+			btVector3 pos = btVector3(xloc, (1+yScale/2)*lsy, 40);
+			tr.setOrigin(pos);
+			ha.push_back(localCreateRigidBody(mass, tr, partShape));
+			// end supports do not move
+			if (i == 0 || i == (lpc - 1)){
+				btTransform tr;
+				tr.setIdentity();
+				btVector3 pos = btVector3(xloc, lsy/2, 40);
+				tr.setOrigin(pos);
+				localCreateRigidBody(0, tr, supportShape);
+			}
 			xloc += xlen;
 		}
 		switch (constraintType){
