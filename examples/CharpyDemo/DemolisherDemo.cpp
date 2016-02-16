@@ -83,9 +83,12 @@ public:
 	btScalar	defaultBreakingForce;
 	btScalar	wheelFriction;
 	btScalar lsx, lsy, lsz;
+	btScalar bridgeLsx,bridgeLsy, bridgeLsz;
+	btScalar bridgeZ=40;
+	btScalar yhl=1;
 	int lpc;
 	btScalar breakingImpulseThreshold;
-	btScalar bridgeSteelScale=10,steelScale;
+	btScalar bridgeSteelScale=30,steelScale;
 	btScalar density;
 	btScalar carMass;
 	btScalar suspensionStiffness, suspensionMaxForce;
@@ -809,9 +812,9 @@ public:
 		resetClocks();
 		initPhysics();
 	}
-	void addFixedConstraint(btAlignedObjectArray<btRigidBody*> ha){
+	void addFixedConstraint(btAlignedObjectArray<btRigidBody*> ha, btScalar xlen){
 		int loopSize = ha.size() - 1;
-		btScalar halfLength = lsx / lpc / 2;
+		btScalar halfLength = xlen / 2;
 		btTransform tra;
 		btTransform trb;
 		tra.setIdentity();
@@ -830,14 +833,14 @@ public:
 			}
 		}
 	}
-	void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha){
+	void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha, btScalar xlen){
 		int loopSize = ha.size() - 1;
 		btScalar E(200E9);
 		btScalar G(80E9);
 		btScalar fy(200E6);
 		bool limitIfNeeded = true;
 		btScalar damping(0.1);
-		btScalar l4s = lsx / lpc;
+		btScalar l4s = xlen;
 		btScalar halfLength = l4s / 2;
 		btTransform tra;
 		btTransform trb;
@@ -898,6 +901,51 @@ public:
 			app->dumpNextFrameToPng(NULL);
 		}
     }
+	/**
+	*/
+	void addRamp(btScalar xloc, btScalar zloc){
+		btScalar z = bridgeLsz/2;
+		btScalar x = bridgeLsx;
+		btScalar y = bridgeLsy+lsy;
+		btConvexHullShape* draft = new btConvexHullShape();
+		draft->addPoint(btVector3(0, y, z));
+		draft->addPoint(btVector3(0, y, -z));
+		draft->addPoint(btVector3(0, 0, -z));
+		draft->addPoint(btVector3(0, 0, z));
+		draft->addPoint(btVector3(x, 0, z));
+		draft->addPoint(btVector3(x, 0, -z));
+		btTransform tr;
+		tr.setIdentity();
+		btVector3 pos = btVector3(xloc, 0, zloc);
+		tr.setOrigin(pos);
+		if (xloc < 0){
+			btQuaternion q(btVector3(0,1,0),SIMD_PI);
+			tr.setRotation(q);
+		}
+		localCreateRigidBody(0, tr, draft);
+	}
+	btTransform getCarStartPosition(boolean chassis){
+		btScalar sy = suspensionRestLength - 10 * carMass / suspensionStiffness / 4;
+		if (sy < 0){
+			sy = 0.06;
+		}
+		btScalar yStart = sy + yhl;
+		if (!chassis){
+			yStart+=lsy + bridgeLsy;
+		}
+		btScalar zStart;
+		if (chassis){
+			zStart = 0;
+		}
+		else{
+			zStart = bridgeZ;
+		}
+		btTransform startTrans;
+		startTrans.setIdentity();
+		startTrans.setOrigin(btVector3(0, yStart, zStart));
+		return startTrans;
+	}
+
 };
 DemolisherDemo *demo = 0;
 
@@ -1021,6 +1069,9 @@ void DemolisherDemo::reinit(){
 	lsx = 30;
 	lsy = 3;
 	lsz = 2;
+	bridgeLsx = 2 * lsx;
+	bridgeLsy = 0.3*lsy;
+	bridgeLsz = 6 * lsz;
 	density = 2000;
 	breakingImpulseThreshold = 50000;
 	carMass = 50000;
@@ -1175,25 +1226,17 @@ tr.setIdentity();
 tr.setOrigin(btVector3(0,-3,0));
 	//create ground object
 	localCreateRigidBody(0,tr,groundShape);
-	float xhl = 1.66, yhl = 1., zhl = 3.37;
+	float xhl = 1.66, zhl = 3.37;
 	halfAreaForDrag = xhl*yhl * 2;
 	btCollisionShape* chassisShape = new btBoxShape(btVector3(xhl,yhl,zhl));
 	m_collisionShapes.push_back(chassisShape);
-
 	btCompoundShape* compound = new btCompoundShape();
 	m_collisionShapes.push_back(compound);
-	btScalar sy = suspensionRestLength - 10 * carMass / suspensionStiffness / 4;
-	if (sy < 0){
-		sy = 0.06;
-	}
 	btTransform localTrans;
 	localTrans.setIdentity();
 	localTrans.setOrigin(btVector3(0, yhl, 0));
 	compound->addChildShape(localTrans, chassisShape);
-	btTransform startTrans;
-	startTrans.setIdentity();
-	startTrans.setOrigin(btVector3(0, sy + yhl, 0));
-	m_carChassis = localCreateRigidBody(carMass, startTrans, compound);
+	m_carChassis = localCreateRigidBody(carMass, getCarStartPosition(false), compound);
 	m_wheelShape = new btCylinderShapeX(btVector3(wheelWidth,wheelRadius,wheelRadius));
 
 	m_guiHelper->createCollisionShapeGraphicsObject(m_wheelShape);
@@ -1237,55 +1280,62 @@ tr.setOrigin(btVector3(0,-3,0));
 		}
 		switch (constraintType){
 		case Impulse:
-			addFixedConstraint(ha);
+			addFixedConstraint(ha,xlen);
 			break;
 		case ElasticPlastic:
-			addElasticPlasticConstraint(ha);
+			addElasticPlasticConstraint(ha,xlen);
 			break;
 		}
 	}
 	/// create bridge parts
 	{
 		steelScale = btScalar(bridgeSteelScale);
-		btScalar yScale = 0.3;
-		btScalar zScale = 3;
 		btAlignedObjectArray<btRigidBody*> ha;
-		btScalar xlen = lsx / lpc;
-		btCollisionShape* partShape = new btBoxShape(btVector3(xlen / 2, yScale*lsy / 2, zScale*lsz / 2));
-		btCollisionShape* supportShape = new btBoxShape(btVector3(xlen / 2, lsy / 2, zScale*lsz / 2));
+		btScalar xlen = bridgeLsx / lpc;
+		btCollisionShape* partShape = new btBoxShape(btVector3(xlen/ 2, bridgeLsy / 2, bridgeLsz / 2));
+		btCollisionShape* supportShape = new btBoxShape(btVector3(xlen / 2, lsy / 2, bridgeLsz / 2));
 		btScalar mass;
 		switch (constraintType){
 		case Rigid:
 			mass = 0;
 			break;
 		default:
-			mass = lsx*yScale*lsy*zScale*lsz*density / lpc;
+			mass = bridgeLsx*bridgeLsy*bridgeLsz*density / lpc;
 			break;
 		}
 		m_collisionShapes.push_back(partShape);
-		btScalar xloc = (xlen - lsx) / 2;
+		btScalar xloc = (xlen - bridgeLsx) / 2;
 		for (int i = 0; i < lpc; i++){
 			btTransform tr;
 			tr.setIdentity();
-			btVector3 pos = btVector3(xloc, (1+yScale/2)*lsy, 40);
+			btVector3 pos = btVector3(xloc, lsy + bridgeLsy / 2, bridgeZ);
 			tr.setOrigin(pos);
 			ha.push_back(localCreateRigidBody(mass, tr, partShape));
 			// end supports do not move
 			if (i == 0 || i == (lpc - 1)){
+				btScalar rxloc;
+				switch (i){
+				case 0: rxloc = xloc - xlen / 2;
+					break;
+				default:
+					rxloc = xloc + xlen / 2;
+					break;
+				}
 				btTransform tr;
 				tr.setIdentity();
-				btVector3 pos = btVector3(xloc, lsy/2, 40);
+				btVector3 pos = btVector3(rxloc, lsy / 2, bridgeZ);
 				tr.setOrigin(pos);
 				localCreateRigidBody(0, tr, supportShape);
+				addRamp(rxloc, bridgeZ);
 			}
 			xloc += xlen;
 		}
 		switch (constraintType){
 		case Impulse:
-			addFixedConstraint(ha);
+			addFixedConstraint(ha,xlen);
 			break;
 		case ElasticPlastic:
-			addElasticPlasticConstraint(ha);
+			addElasticPlasticConstraint(ha,xlen);
 			break;
 		}
 	}
@@ -1479,7 +1529,7 @@ void DemolisherDemo::resetDemolisher()
 	gEngineForce = 0.f;
 	clas = 0;
 	clai = 0;
-	m_carChassis->setCenterOfMassTransform(btTransform::getIdentity());
+	m_carChassis->setCenterOfMassTransform(getCarStartPosition(false));
 	m_carChassis->setLinearVelocity(btVector3(0,0,0));
 	m_carChassis->setAngularVelocity(btVector3(0,0,0));
 	m_dynamicsWorld->getBroadphase()->getOverlappingPairCache()->
