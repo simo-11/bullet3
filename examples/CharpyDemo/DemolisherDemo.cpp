@@ -16,6 +16,7 @@ subject to the following restrictions:
 /**
 Based on ForkLiftDemo by Simo Nikula 2015-
 */
+#define _CRT_SECURE_NO_WARNINGS
 #include "DemolisherDemo.h"
 #include "LinearMath/btQuickprof.h"
 #include <stdio.h> 
@@ -48,7 +49,6 @@ class btCollisionShape;
 #include "../CommonInterfaces/CommonGraphicsAppInterface.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenUserInterface.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenInternalData.h"
-
 const char * PROFILE_DEMOLISHER_SLEEP = "DemolisherDemo::Sleep";
 
 class DemolisherDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
@@ -88,7 +88,7 @@ public:
 	btScalar yhl=1;
 	int lpc;
 	btScalar breakingImpulseThreshold;
-	btScalar bridgeSteelScale=30,steelScale;
+	btScalar bridgeSteelScale=300,steelScale;
 	btScalar density;
 	btScalar carMass;
 	btScalar suspensionStiffness, suspensionMaxForce;
@@ -169,8 +169,8 @@ public:
 
 	virtual void resetCamera()
 	{
-		float dist = 16;
-		float pitch = -45;
+		float dist = 30;
+		float pitch = 85;
 		float yaw = 32;
 		float targetPos[3] = { -0.33, -0.72, 4.5 };
 		m_guiHelper->resetCamera(dist, pitch, yaw, targetPos[0], targetPos[1], targetPos[2]);
@@ -210,7 +210,12 @@ public:
 	int clas = 0;
 	void updateCameraLocation(){
 		if (clas > 0){
-			scl = scl + currentLocation / clas;
+			if (clas < CAM_SMOOTH_SIZE){
+				scl = (scl + currentLocation) / 2;
+			}
+			else{
+				scl = scl + currentLocation / clas;
+			}
 		}
 		else{
 			scl = currentLocation;
@@ -925,25 +930,27 @@ public:
 		localCreateRigidBody(0, tr, draft);
 	}
 	btTransform getCarStartPosition(boolean chassis){
-		btScalar sy = suspensionRestLength - 10 * carMass / suspensionStiffness / 4;
+		btScalar sy = suspensionRestLength - 
+			10 * carMass / suspensionStiffness / 4;
 		if (sy < 0){
 			sy = 0.06;
 		}
 		btScalar yStart = sy + yhl;
-		if (!chassis){
-			yStart+=lsy + bridgeLsy;
-		}
-		btScalar zStart;
+		btScalar zStart, xStart;
+		btTransform tr;
+		tr.setIdentity();
 		if (chassis){
+			xStart = 0;
 			zStart = 0;
 		}
 		else{
+			btQuaternion q(btVector3(0, 1, 0), SIMD_HALF_PI);
+			tr.setRotation(q);
+			xStart = -bridgeLsx/2-3;
 			zStart = bridgeZ;
 		}
-		btTransform startTrans;
-		startTrans.setIdentity();
-		startTrans.setOrigin(btVector3(0, yStart, zStart));
-		return startTrans;
+		tr.setOrigin(btVector3(xStart, yStart, zStart));
+		return tr;
 	}
 
 };
@@ -1293,7 +1300,7 @@ tr.setOrigin(btVector3(0,-3,0));
 		btAlignedObjectArray<btRigidBody*> ha;
 		btScalar xlen = bridgeLsx / lpc;
 		btCollisionShape* partShape = new btBoxShape(btVector3(xlen/ 2, bridgeLsy / 2, bridgeLsz / 2));
-		btCollisionShape* supportShape = new btBoxShape(btVector3(xlen / 2, lsy / 2, bridgeLsz / 2));
+		btCollisionShape* supportShape = new btBoxShape(btVector3(xlen / 4, lsy / 2, bridgeLsz / 2));
 		btScalar mass;
 		switch (constraintType){
 		case Rigid:
@@ -1323,7 +1330,7 @@ tr.setOrigin(btVector3(0,-3,0));
 				}
 				btTransform tr;
 				tr.setIdentity();
-				btVector3 pos = btVector3(rxloc, lsy / 2, bridgeZ);
+				btVector3 pos = btVector3(xloc, lsy / 2, bridgeZ);
 				tr.setOrigin(pos);
 				localCreateRigidBody(0, tr, supportShape);
 				addRamp(rxloc, bridgeZ);
