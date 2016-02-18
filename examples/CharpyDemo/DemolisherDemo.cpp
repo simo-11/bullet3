@@ -85,6 +85,7 @@ public:
 	btScalar lsx, lsy, lsz;
 	btScalar bridgeLsx,bridgeLsy, bridgeLsz;
 	btScalar bridgeZ=40;
+	btScalar tolerance;
 	btScalar yhl=1;
 	int lpc;
 	btScalar breakingImpulseThreshold;
@@ -1077,6 +1078,7 @@ void DemolisherDemo::reinit(){
 	lsy = 3;
 	lsz = 2;
 	bridgeLsx = 2 * lsx;
+	tolerance = 0.002*bridgeLsx;
 	bridgeLsy = 0.3*lsy;
 	bridgeLsz = 6 * lsz;
 	density = 2000;
@@ -1322,10 +1324,10 @@ tr.setOrigin(btVector3(0,-3,0));
 			if (i == 0 || i == (lpc - 1)){
 				btScalar rxloc;
 				switch (i){
-				case 0: rxloc = xloc - xlen / 2;
+				case 0: rxloc = xloc - xlen / 2 -tolerance;
 					break;
 				default:
-					rxloc = xloc + xlen / 2;
+					rxloc = xloc + xlen / 2+tolerance;
 					break;
 				}
 				btTransform tr;
