@@ -31,6 +31,8 @@ Based on ForkLiftDemo by Simo Nikula 2015-
 #include "BulletDynamics/MLCPSolvers/btMLCPSolver.h"
 #include "bt6DofElasticPlastic2Constraint.h"
 #include "../plasticity/PlasticityExampleBrowser.h"
+#include "../plasticity/PlasticityData.h"
+#include "../plasticity/PlasticityStatistics.h"
 
 class btVehicleTuning;
 struct btVehicleRaycaster;
@@ -866,6 +868,7 @@ public:
 			bt6DofElasticPlastic2Constraint *sc =
 				new bt6DofElasticPlastic2Constraint(*ha[i], *ha[i + 1],
 				tra, trb);
+			sc->setUserConstraintType(BPT_EP2);
 			sc->setMaxPlasticRotation(maxPlasticRotation);
 			sc->setMaxPlasticStrain(maxPlasticStrain);
 			sc->setStiffness(2, k0, limitIfNeeded);
@@ -953,7 +956,53 @@ public:
 		tr.setOrigin(btVector3(xStart, yStart, zStart));
 		return tr;
 	}
-
+	list<PlasticityData> pData;
+	PlasticityData getPlasticityData(char* buf){
+		PlasticityData pd(buf);
+		return pd;
+	}
+	void addPData(char * buf){
+		pData.push_back(getPlasticityData(buf));
+	}
+	void infoMsg(char * buf){
+		addPData(buf);
+	}
+	// Buffer length for sprintfs
+	#define B_LEN 100
+	void showMessage()
+	{
+		if (!PlasticityData::getCollect()){
+			return;
+		}
+		if (restartRequested){
+			return;
+		}
+		pData.clear();
+		char buf[B_LEN];
+		btDiscreteDynamicsWorld *dw = m_dynamicsWorld;
+		int numConstraints=dw->getNumConstraints();
+		sprintf_s(buf, B_LEN, "%9s %9s %9s %9s %9s %9s",
+			"uid","#","mpr","cpr","mps","cps");
+		infoMsg(buf);
+		for (int i = 0; i < numConstraints; i++){
+			btTypedConstraint* sc = dw->getConstraint(i);
+			int uid = sc->getUid();
+			int type = sc->getUserConstraintType();
+			if (type != BPT_EP2){
+				continue;
+			}
+			bt6DofElasticPlastic2Constraint *epc=
+				static_cast<bt6DofElasticPlastic2Constraint*>(sc);
+			btScalar mpr = epc->getMaxPlasticRotation(),
+				cpr = epc->getCurrentPlasticRotation(),
+				mps = epc->getMaxPlasticStrain(), 
+				cps = epc->getCurrentPlasticStrain();
+			sprintf_s(buf, B_LEN, "%9d %9d %9.3g %9.3g %9.3g %9.3g",
+				uid,i,mpr,cpr,mps,cps);
+			infoMsg(buf);
+		}
+		PlasticityData::setData(&pData);
+	}
 };
 DemolisherDemo *demo = 0;
 
@@ -1448,6 +1497,10 @@ void DemolisherDemo::renderScene()
 	updatePauseButtonText();
 	updateDashboards();
 	setDumpFilename();
+	{
+		BT_PROFILE("CharpyDemo::showMessage");
+		showMessage();
+	}
 	m_guiHelper->render(m_dynamicsWorld);
 	ATTRIBUTE_ALIGNED16(btScalar) m[16];
 	int i;
