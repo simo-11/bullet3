@@ -38,7 +38,7 @@ http://gimpact.sf.net
 */
 
 
-
+#define _CRT_SECURE_NO_WARNINGS
 #include "bt6DofElasticPlastic2Constraint.h"
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 #include "LinearMath/btTransformUtil.h"
@@ -1211,7 +1211,18 @@ void bt6DofElasticPlastic2Constraint::scalePlasticity(btScalar scale){
 	m_maxPlasticStrain *= scale;
 	m_maxPlasticRotation *= scale;
 }
+btScalar bt6DofElasticPlastic2Constraint::getMaxRatio(){
+	return m_maxRatio;
+}
+int bt6DofElasticPlastic2Constraint::getMaxRatioDof(){
+	return m_maxRatioDof;
+}
 void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
+	if (!isEnabled()){
+		return;
+	}
+	m_maxRatio = 0;
+	m_maxRatioDof = -1;
 	int i;
 	for (i = 0; i < 3; i++)
 	{
@@ -1220,7 +1231,13 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 			btScalar currPos = m_calculatedLinearDiff[i];
 			btScalar delta = currPos - m_linearLimits.m_equilibriumPoint[i];
 			btScalar force = forces.m_appliedForceBodyA[i];
-			if (btFabs(force)>m_maxForce[i]){
+			btScalar absForce = btFabs(force);
+			btScalar ratio = absForce / m_maxForce[i];
+			if (ratio > m_maxRatio){
+				m_maxRatio = ratio;
+				m_maxRatioDof = i;
+			}
+			if (absForce>m_maxForce[i]){
 				btScalar elasticPart = m_maxForce[i] / m_linearLimits.m_springStiffness[i];
 				btScalar newVal = currPos;
 				if (btFabs(elasticPart)<btFabs(currPos)){
@@ -1242,7 +1259,13 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 			btScalar currPos = m_calculatedAxisAngleDiff[i];
 			btScalar delta = currPos - m_angularLimits[i].m_equilibriumPoint;
 			btScalar force = forces.m_appliedTorqueBodyA[i];
-			if (btFabs(force)>m_maxForce[i + 3]){
+			btScalar absForce = btFabs(force);
+			btScalar ratio = absForce / m_maxForce[i+3];
+			if (ratio > m_maxRatio){
+				m_maxRatio = ratio;
+				m_maxRatioDof = i+3;
+			}
+			if (absForce>m_maxForce[i + 3]){
 				btScalar elasticPart = m_maxForce[i + 3] / m_angularLimits[i].m_springStiffness;
 				btScalar newVal = currPos;
 				if (btFabs(elasticPart)<btFabs(currPos)){

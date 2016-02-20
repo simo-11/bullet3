@@ -281,6 +281,8 @@ public:
 	btScalar    m_maxPlasticStrain;
 	btScalar    m_maxPlasticRotation = 3;
 	btScalar    m_currentPlasticRotation = 0;
+	btScalar m_maxRatio;
+	int m_maxRatioDof;
 	btJointFeedback jointFeedback;
 	void setMaxForce(int index, btScalar value);
 	void setMaxPlasticStrain(btScalar value);
@@ -290,6 +292,8 @@ public:
 	btScalar getMaxPlasticRotation();
 	btScalar getCurrentPlasticStrain();
 	btScalar getCurrentPlasticRotation();
+	btScalar getMaxRatio();
+	int getMaxRatioDof();
 	void initPlasticity();
 	void updatePlasticity(btJointFeedback& forces);
 	///btActionInterface interface

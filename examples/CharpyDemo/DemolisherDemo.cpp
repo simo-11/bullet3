@@ -969,6 +969,8 @@ public:
 	}
 	// Buffer length for sprintfs
 	#define B_LEN 100
+	// clean small value
+#define CSV(x) ((x)<1e-6?0:(x))
 	void showMessage()
 	{
 		if (!PlasticityData::getCollect()){
@@ -978,15 +980,14 @@ public:
 			return;
 		}
 		pData.clear();
-		char buf[B_LEN];
+		char buf[B_LEN*2];
 		btDiscreteDynamicsWorld *dw = m_dynamicsWorld;
 		int numConstraints=dw->getNumConstraints();
-		sprintf_s(buf, B_LEN, "%9s %9s %9s %9s %9s %9s",
-			"uid","#","mpr","cpr","mps","cps");
+		sprintf_s(buf, B_LEN, "%2s %8s %5s %5s %5s %5s %5s %5s",
+			"#", "max%", "m%dof","mpr", "cpr", "mps", "cps" );
 		infoMsg(buf);
 		for (int i = 0; i < numConstraints; i++){
 			btTypedConstraint* sc = dw->getConstraint(i);
-			int uid = sc->getUid();
 			int type = sc->getUserConstraintType();
 			if (type != BPT_EP2){
 				continue;
@@ -995,10 +996,12 @@ public:
 				static_cast<bt6DofElasticPlastic2Constraint*>(sc);
 			btScalar mpr = epc->getMaxPlasticRotation(),
 				cpr = epc->getCurrentPlasticRotation(),
-				mps = epc->getMaxPlasticStrain(), 
-				cps = epc->getCurrentPlasticStrain();
-			sprintf_s(buf, B_LEN, "%9d %9d %9.3g %9.3g %9.3g %9.3g",
-				uid,i,mpr,cpr,mps,cps);
+				mps = epc->getMaxPlasticStrain(),
+				cps = epc->getCurrentPlasticStrain(),
+				maxr = epc->getMaxRatio();
+			int	maxrd = epc->getMaxRatioDof();
+				sprintf_s(buf, B_LEN*2, "%2d %8.3f %5d %5.3f %5.3f %5.3f %5.3f",
+					i, maxr * 100, maxrd, CSV(mpr), CSV(cpr), CSV(mps), CSV(cps));
 			infoMsg(buf);
 		}
 		PlasticityData::setData(&pData);
@@ -1126,10 +1129,6 @@ void DemolisherDemo::reinit(){
 	lsx = 30;
 	lsy = 3;
 	lsz = 2;
-	bridgeLsx = 2 * lsx;
-	tolerance = 0.002*bridgeLsx;
-	bridgeLsy = 0.3*lsy;
-	bridgeLsz = 6 * lsz;
 	density = 2000;
 	breakingImpulseThreshold = 50000;
 	carMass = 50000;
@@ -1248,6 +1247,10 @@ DemolisherDemo::~DemolisherDemo()
 
 void DemolisherDemo::initPhysics()
 {
+	bridgeLsx = 2 * lsx;
+	tolerance = 0.002*bridgeLsx;
+	bridgeLsy = 0.3*lsy;
+	bridgeLsz = 6 * lsz;
 	int upAxis = 1;	
 	m_guiHelper->setUpAxis(upAxis);
 	btVector3 groundExtents(200,200,200);

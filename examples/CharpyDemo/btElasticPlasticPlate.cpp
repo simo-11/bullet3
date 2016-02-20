@@ -15,10 +15,7 @@ subject to the following restrictions:
 /*
 Simo Nikula 2016- while studying plasticity
 */
-#ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS
-#endif
-
 #include "btElasticPlasticPlate.h"
 #include "btBulletDynamicsCommon.h"
 /**
