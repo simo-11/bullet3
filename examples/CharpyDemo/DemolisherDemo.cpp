@@ -873,9 +873,9 @@ public:
 			sc->setMaxPlasticStrain(maxPlasticStrain);
 			sc->setStiffness(2, k0, limitIfNeeded);
 			sc->setMaxForce(2, w0);
-			sc->setStiffness(0, k1, limitIfNeeded);
+			sc->setStiffness(0, k0, limitIfNeeded);
 			sc->setMaxForce(0, w0/2);
-			sc->setStiffness(1, k2, limitIfNeeded);
+			sc->setStiffness(1, k0, limitIfNeeded);
 			sc->setMaxForce(1, w0/2);
 			sc->setStiffness(5, k0); 
 			sc->setMaxForce(5, w0); 
@@ -983,7 +983,7 @@ public:
 		char buf[B_LEN*2];
 		btDiscreteDynamicsWorld *dw = m_dynamicsWorld;
 		int numConstraints=dw->getNumConstraints();
-		sprintf_s(buf, B_LEN, "%2s %8s %5s %5s %5s %5s %5s %5s",
+		sprintf_s(buf, B_LEN, "%2s %8s %5s %5s %5s %5s %5s",
 			"#", "max%", "m%dof","mpr", "cpr", "mps", "cps" );
 		infoMsg(buf);
 		for (int i = 0; i < numConstraints; i++){
