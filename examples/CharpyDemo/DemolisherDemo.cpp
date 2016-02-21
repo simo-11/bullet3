@@ -94,6 +94,13 @@ public:
 	btScalar bridgeSteelScale=300,steelScale;
 	btScalar density;
 	btScalar carMass;
+	boolean calculateMaxEngineForce = true,
+		calculateDefaultBreakingForce = true,
+		calculateSuspensionStiffness=true,
+		calculateMaxSuspensionForce = true,
+		calculateSuspensionDamping = true,
+		calculateSuspensionCompression = true,
+		calculateSuspensionRestLength = true;
 	btScalar suspensionStiffness, suspensionMaxForce;
 	btScalar suspensionDamping;
 	btScalar suspensionCompression;
@@ -788,13 +795,27 @@ public:
 			break;
 		}
 		addCarMass();
-		addSuspensionStiffness();
-		addSuspensionMaxForce();
-		addSuspensionDamping();
-		addSuspensionCompression();
-		addSuspensionRestLength();
-		addMaxEngineForce();
-		addDefaultBreakingForce();
+		if (!calculateSuspensionStiffness){
+			addSuspensionStiffness();
+		}
+		if (!calculateMaxSuspensionForce){
+			addSuspensionMaxForce();
+		}
+		if (!calculateSuspensionDamping){
+			addSuspensionDamping();
+		}
+		if (!calculateSuspensionCompression){
+			addSuspensionCompression();
+		}
+		if (!calculateSuspensionRestLength){
+			addSuspensionRestLength();
+		}
+		if (!calculateMaxEngineForce){
+			addMaxEngineForce();
+		}
+		if (!calculateDefaultBreakingForce){
+			addDefaultBreakingForce();
+		}
 		addWheelFriction();
 		addGameBindings();
 		addDumpPng();
@@ -1122,8 +1143,6 @@ void DemolisherDemo::restartHandler(Gwen::Controls::Base* control){
 	demo->restartRequested = true;
 }
 void DemolisherDemo::reinit(){
-	maxEngineForce = 100000;
-	defaultBreakingForce = 1000;
 	wheelFriction = 0.8;
 	lpc = 5;
 	lsx = 30;
@@ -1132,14 +1151,16 @@ void DemolisherDemo::reinit(){
 	density = 2000;
 	breakingImpulseThreshold = 50000;
 	carMass = 50000;
-	suspensionStiffness=30;
+	maxEngineForce = 100000;
+	defaultBreakingForce = 1000;
+	suspensionStiffness = 30;
 	suspensionMaxForce = 2000000; // allows static load of 800 tons
 	suspensionDamping = .5;
 	suspensionCompression=0.3;
 	suspensionRestLength=0.8;
 	steelArea = 0.001;
-	maxPlasticStrain = 0.1;
-	maxPlasticRotation = 1;
+	maxPlasticStrain = 0.2;
+	maxPlasticRotation = 3;
 	gameBindings = true;
 	resetClocks();
 }
@@ -1246,7 +1267,29 @@ DemolisherDemo::~DemolisherDemo()
 }
 
 void DemolisherDemo::initPhysics()
-{
+{	
+	if (calculateMaxEngineForce){
+		maxEngineForce = 2*carMass;
+	}
+	if (calculateMaxEngineForce){
+		defaultBreakingForce = 0.01*carMass;
+	}
+	if (calculateSuspensionStiffness){
+		suspensionStiffness = 30;
+	}
+	if (calculateMaxSuspensionForce){
+		// 4 wheels, so car can take additional load of 5 time of own mass
+		suspensionMaxForce = 15 * carMass;
+	}
+	if (calculateSuspensionDamping){
+		suspensionDamping = .5;
+	}
+	if (calculateSuspensionCompression){
+		suspensionCompression = suspensionDamping-0.2;
+	}
+	if (calculateSuspensionRestLength){
+		suspensionRestLength = 0.8;
+	}
 	bridgeLsx = 2 * lsx;
 	tolerance = 0.002*bridgeLsx;
 	bridgeLsy = 0.3*lsy;
