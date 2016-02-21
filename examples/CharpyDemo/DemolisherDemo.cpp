@@ -91,7 +91,7 @@ public:
 	btScalar yhl=1;
 	int lpc;
 	btScalar breakingImpulseThreshold;
-	btScalar bridgeSteelScale=300,steelScale;
+	btScalar bridgeSteelScale,steelScale;
 	btScalar density;
 	btScalar carMass;
 	boolean calculateMaxEngineForce = true,
@@ -862,7 +862,8 @@ public:
 			}
 		}
 	}
-	void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha, btScalar xlen){
+	void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha, 
+		btScalar xlen, btScalar ylen, btScalar zlen){
 		int loopSize = ha.size() - 1;
 		btScalar E(200E9);
 		btScalar G(80E9);
@@ -879,8 +880,8 @@ public:
 		tra.setOrigin(cpos);
 		trb.setOrigin(-cpos);
 		btScalar k0(E*steelArea*steelScale / 0.2);
-		btScalar k1(E*steelArea*steelScale*lsy / 2.5);
-		btScalar k2(E*steelArea*steelScale*lsz / 2.5);
+		btScalar k1(E*steelArea*steelScale*ylen / 2.5);
+		btScalar k2(E*steelArea*steelScale*zlen / 2.5);
 		btScalar m(fy / E);
 		btScalar w0(k0*m);
 		btScalar w1(k1*fy/E);
@@ -898,8 +899,8 @@ public:
 			sc->setMaxForce(0, w0/2);
 			sc->setStiffness(1, k0, limitIfNeeded);
 			sc->setMaxForce(1, w0/2);
-			sc->setStiffness(5, k0); 
-			sc->setMaxForce(5, w0); 
+			sc->setStiffness(5, k1); 
+			sc->setMaxForce(5, w1); 
 			sc->setStiffness(4, k1); 
 			sc->setMaxForce(4, w1);
 			sc->setStiffness(3, k2, limitIfNeeded); 
@@ -1021,7 +1022,7 @@ public:
 				cps = epc->getCurrentPlasticStrain(),
 				maxr = epc->getMaxRatio();
 			int	maxrd = epc->getMaxRatioDof();
-				sprintf_s(buf, B_LEN*2, "%2d %8.3f %5d %5.3f %5.3f %5.3f %5.3f",
+				sprintf_s(buf, B_LEN*2, "%2d %8.1f %5d %5.3f %5.3f %5.3f %5.3f",
 					i, maxr * 100, maxrd, CSV(mpr), CSV(cpr), CSV(mps), CSV(cps));
 			infoMsg(buf);
 		}
@@ -1144,8 +1145,8 @@ void DemolisherDemo::restartHandler(Gwen::Controls::Base* control){
 }
 void DemolisherDemo::reinit(){
 	wheelFriction = 0.8;
-	lpc = 5;
-	lsx = 30;
+	lpc = 6;
+	lsx = 56;
 	lsy = 3;
 	lsz = 2;
 	density = 2000;
@@ -1290,9 +1291,10 @@ void DemolisherDemo::initPhysics()
 	if (calculateSuspensionRestLength){
 		suspensionRestLength = 0.8;
 	}
-	bridgeLsx = 2 * lsx;
-	tolerance = 0.002*bridgeLsx;
-	bridgeLsy = 0.3*lsy;
+	bridgeSteelScale = 30;
+	bridgeLsx = lsx;
+	tolerance = 0.003*bridgeLsx;
+	bridgeLsy = 0.1*lsy;
 	bridgeLsz = 6 * lsz;
 	int upAxis = 1;	
 	m_guiHelper->setUpAxis(upAxis);
@@ -1384,10 +1386,10 @@ tr.setOrigin(btVector3(0,-3,0));
 		}
 		switch (constraintType){
 		case Impulse:
-			addFixedConstraint(ha,xlen);
+			addFixedConstraint(ha, xlen);
 			break;
 		case ElasticPlastic:
-			addElasticPlasticConstraint(ha,xlen);
+			addElasticPlasticConstraint(ha, xlen, lsy, lsz);
 			break;
 		}
 	}
@@ -1436,10 +1438,10 @@ tr.setOrigin(btVector3(0,-3,0));
 		}
 		switch (constraintType){
 		case Impulse:
-			addFixedConstraint(ha,xlen);
+			addFixedConstraint(ha, xlen);
 			break;
 		case ElasticPlastic:
-			addElasticPlasticConstraint(ha,xlen);
+			addElasticPlasticConstraint(ha, xlen, bridgeLsy, bridgeLsz);
 			break;
 		}
 	}
