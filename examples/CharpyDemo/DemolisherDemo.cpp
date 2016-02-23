@@ -86,12 +86,13 @@ public:
 	btScalar	wheelFriction;
 	btScalar lsx, lsy, lsz;
 	btScalar bridgeLsx,bridgeLsy, bridgeLsz;
-	btScalar bridgeZ=40;
+	btScalar poleLsx, poleLsy, poleLsz;
+	btScalar bridgeZ = 40, poleZ = -20;
 	btScalar tolerance;
 	btScalar yhl=1;
 	int lpc;
 	btScalar breakingImpulseThreshold;
-	btScalar bridgeSteelScale,steelScale;
+	btScalar bridgeSteelScale,poleSteelScale,steelScale;
 	btScalar density;
 	btScalar carMass;
 	boolean calculateMaxEngineForce = true,
@@ -1291,12 +1292,16 @@ void DemolisherDemo::initPhysics()
 	if (calculateSuspensionRestLength){
 		suspensionRestLength = 0.8;
 	}
-	bridgeSteelScale = 30;
-	bridgeLsx = lsx;
 	tolerance = 0.003*bridgeLsx;
+	bridgeSteelScale = 1000;
+	bridgeLsx = lsx;
 	bridgeLsy = 0.1*lsy;
 	bridgeLsz = 6 * lsz;
-	int upAxis = 1;	
+	poleSteelScale = 50;
+	poleLsx = 0.2*lsx;
+	poleLsy = 0.1*lsy;
+	poleLsz = 0.1*lsz;
+	int upAxis = 1;
 	m_guiHelper->setUpAxis(upAxis);
 	btVector3 groundExtents(200,200,200);
 	groundExtents[upAxis]=3;
@@ -1442,6 +1447,57 @@ tr.setOrigin(btVector3(0,-3,0));
 			break;
 		case ElasticPlastic:
 			addElasticPlasticConstraint(ha, xlen, bridgeLsy, bridgeLsz);
+			break;
+		}
+	}
+	/// create pole parts
+	{
+		steelScale = btScalar(poleSteelScale);
+		btAlignedObjectArray<btRigidBody*> ha;
+		btScalar xlen = poleLsx / lpc;
+		btCollisionShape* partShape = new btBoxShape
+			(btVector3(xlen / 2, poleLsy / 2, poleLsz / 2));
+		btCollisionShape* supportShape = new btBoxShape
+			(btVector3(xlen / 8, yhl+2*wheelRadius, poleLsz ));
+		btScalar mass;
+		switch (constraintType){
+		case Rigid:
+			mass = 0;
+			break;
+		default:
+			mass = poleLsx*poleLsy*poleLsz*density / lpc;
+			break;
+		}
+		m_collisionShapes.push_back(partShape);
+		btScalar xloc = (xlen - poleLsx) / 2;
+		for (int i = 0; i < lpc; i++){
+			btTransform tr;
+			tr.setIdentity();
+			btVector3 pos = btVector3(xloc, 0.5*yhl+wheelRadius, poleZ);
+			tr.setOrigin(pos);
+			// first does not move
+			btScalar ppMass;
+			if (i == 0){
+				ppMass = btScalar(0);
+				// add also covering part
+				btTransform tr;
+				tr.setIdentity();
+				btVector3 pos = btVector3(xloc, lsy / 2, poleZ);
+				tr.setOrigin(pos);
+				localCreateRigidBody(0, tr, supportShape);
+			}
+			else{
+				ppMass = mass;
+			}
+			ha.push_back(localCreateRigidBody(ppMass, tr, partShape));
+			xloc += xlen;
+		}
+		switch (constraintType){
+		case Impulse:
+			addFixedConstraint(ha, xlen);
+			break;
+		case ElasticPlastic:
+			addElasticPlasticConstraint(ha, xlen, poleLsy, poleLsz);
 			break;
 		}
 	}
