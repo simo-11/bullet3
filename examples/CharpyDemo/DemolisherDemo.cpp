@@ -89,7 +89,7 @@ public:
 	btScalar poleLsx, poleLsy, poleLsz;
 	btScalar bridgeZ = 40, poleZ = -20;
 	btScalar tolerance;
-	btScalar yhl=1;
+	btScalar yhl = 1,xhl = 1.6, zhl = 3.4;
 	int lpc;
 	btScalar breakingImpulseThreshold;
 	btScalar bridgeSteelScale,poleSteelScale,steelScale;
@@ -127,6 +127,7 @@ public:
 	CommonWindowInterface* window;
 	int m_option;
 	enum Constraint { None = 0, Rigid = 1, Impulse = 2, ElasticPlastic = 3 };
+	enum CarPosition { Fence = 0, Bridge = 1, Pole = 2 };
 	Constraint constraintType;
 	btRaycastVehicle::btVehicleTuning	m_tuning;
 	btVehicleRaycaster*	m_vehicleRayCaster;
@@ -194,10 +195,6 @@ public:
 	btClock idleClock;
 	btClock driveClock;
 	long displayWait = 50;
-	int m_viewMode = 1;
-	void setViewMode(int mode){
-		m_viewMode = mode;
-	}
 	/** Gwen controls handling.
 	Just flag changes to avoid need to specify all parent references
 	if calls come from Gwen
@@ -956,7 +953,11 @@ public:
 		}
 		localCreateRigidBody(0, tr, draft);
 	}
-	btTransform getCarStartPosition(boolean chassis){
+	CarPosition latestCarPosition = Pole;
+	btTransform getCarTransform(){
+		return getCarTransform(latestCarPosition);
+	}
+	btTransform getCarTransform(CarPosition position){
 		btScalar sy = suspensionRestLength - 
 			10 * carMass / suspensionStiffness / 4;
 		if (sy < 0){
@@ -966,18 +967,42 @@ public:
 		btScalar zStart, xStart;
 		btTransform tr;
 		tr.setIdentity();
-		if (chassis){
+		switch (position){
+		default:
+		case Fence:
 			xStart = 0;
 			zStart = 0;
-		}
-		else{
-			btQuaternion q(btVector3(0, 1, 0), SIMD_HALF_PI);
-			tr.setRotation(q);
-			xStart = -bridgeLsx/2-3;
+			break;
+		case Bridge:
+			{
+				btQuaternion q(btVector3(0, 1, 0), SIMD_HALF_PI);
+				tr.setRotation(q);
+			}
+			xStart = -bridgeLsx / 2 - 3;
 			zStart = bridgeZ;
+			yStart += lsy;
+			break;
+		case Pole:
+			xStart = poleLsx-xhl;
+			zStart = poleZ-3*zhl;
+			break;
 		}
 		tr.setOrigin(btVector3(xStart, yStart, zStart));
 		return tr;
+	}
+	void setCarPosition(CarPosition position){
+		latestCarPosition = position;
+		btRigidBody *b = m_carChassis;
+		if (b){
+			btVector3 zero(0, 0, 0);
+			gEngineForce = 0.f;
+			gBreakingForce = defaultBreakingForce;
+			gVehicleSteering = 0.f;
+			b->setLinearVelocity(zero);
+			b->setAngularVelocity(zero);
+			b->setCenterOfMassTransform
+				(getCarTransform(position));
+		}
 	}
 	list<PlasticityData> pData;
 	PlasticityData getPlasticityData(char* buf){
@@ -1147,7 +1172,7 @@ void DemolisherDemo::restartHandler(Gwen::Controls::Base* control){
 void DemolisherDemo::reinit(){
 	wheelFriction = 0.8;
 	lpc = 6;
-	lsx = 56;
+	lsx = 60;
 	lsy = 3;
 	lsz = 2;
 	density = 2000;
@@ -1337,7 +1362,6 @@ tr.setIdentity();
 tr.setOrigin(btVector3(0,-3,0));
 	//create ground object
 	localCreateRigidBody(0,tr,groundShape);
-	float xhl = 1.66, zhl = 3.37;
 	halfAreaForDrag = xhl*yhl * 2;
 	btCollisionShape* chassisShape = new btBoxShape(btVector3(xhl,yhl,zhl));
 	m_collisionShapes.push_back(chassisShape);
@@ -1347,7 +1371,7 @@ tr.setOrigin(btVector3(0,-3,0));
 	localTrans.setIdentity();
 	localTrans.setOrigin(btVector3(0, yhl, 0));
 	compound->addChildShape(localTrans, chassisShape);
-	m_carChassis = localCreateRigidBody(carMass, getCarStartPosition(false), compound);
+	m_carChassis = localCreateRigidBody(carMass, getCarTransform(), compound);
 	m_wheelShape = new btCylinderShapeX(btVector3(wheelWidth,wheelRadius,wheelRadius));
 
 	m_guiHelper->createCollisionShapeGraphicsObject(m_wheelShape);
@@ -1695,7 +1719,7 @@ void DemolisherDemo::resetDemolisher()
 	gEngineForce = 0.f;
 	clas = 0;
 	clai = 0;
-	m_carChassis->setCenterOfMassTransform(getCarStartPosition(false));
+	m_carChassis->setCenterOfMassTransform(getCarTransform());
 	m_carChassis->setLinearVelocity(btVector3(0,0,0));
 	m_carChassis->setAngularVelocity(btVector3(0,0,0));
 	m_dynamicsWorld->getBroadphase()->getOverlappingPairCache()->
@@ -1810,13 +1834,19 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 		case B3G_F1:
 		{
 			handled = true;
-			setViewMode(1);
+			setCarPosition(Fence);
 			break;
 		}
 		case B3G_F2:
 		{
 			handled = true;
-			setViewMode(2);
+			setCarPosition(Bridge);
+			break;
+		}
+		case B3G_F3:
+		{
+			handled = true;
+			setCarPosition(Pole);
 			break;
 		}
 		case B3G_F7:
