@@ -195,8 +195,8 @@ btScalar btRaycastVehicle::rayCast(btWheelInfo& wheel)
 		wheel.m_raycastInfo.m_contactNormalWS  = rayResults.m_hitNormalInWorld;
 		wheel.m_raycastInfo.m_isInContact = true;
 		
-		wheel.m_raycastInfo.m_groundObject = &getFixedBody();///@todo for driving on dynamic/movable objects!;
-		//wheel.m_raycastInfo.m_groundObject = object;
+		//wheel.m_raycastInfo.m_groundObject = &getFixedBody();///@todo for driving on dynamic/movable objects!;
+		wheel.m_raycastInfo.m_groundObject = object;
 
 
 		btScalar hitDistance = param*raylen;
@@ -319,7 +319,14 @@ void btRaycastVehicle::updateVehicle( btScalar step )
 		btVector3 relpos = wheel.m_raycastInfo.m_contactPointWS - getRigidBody()->getCenterOfMassPosition();
 		
 		getRigidBody()->applyImpulse(impulse, relpos);
-	
+		class btRigidBody* groundObject = (class btRigidBody*) m_wheelInfo[i].m_raycastInfo.m_groundObject;
+		//apply impulse on the ground
+		if (groundObject && groundObject->getInvMass() != 0.0){
+			btVector3 relpos2 = wheel.m_raycastInfo.m_contactPointWS -
+				groundObject->getCenterOfMassPosition();
+			groundObject->applyImpulse(-impulse, relpos2);
+		}
+
 	}
 	
 
