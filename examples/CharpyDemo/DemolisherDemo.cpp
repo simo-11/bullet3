@@ -1318,9 +1318,9 @@ void DemolisherDemo::initPhysics()
 		suspensionRestLength = 0.8;
 	}
 	tolerance = 0.003*bridgeLsx;
-	bridgeSteelScale = 1000;
+	bridgeSteelScale = 1200;
 	bridgeLsx = lsx;
-	bridgeLsy = 0.1*lsy;
+	bridgeLsy = 0.005*lsx;
 	bridgeLsz = 6 * lsz;
 	poleSteelScale = 50;
 	poleLsx = 0.2*lsx;
