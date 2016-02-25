@@ -1428,7 +1428,7 @@ tr.setOrigin(btVector3(0,-3,0));
 		btAlignedObjectArray<btRigidBody*> ha;
 		btScalar xlen = bridgeLsx / lpc;
 		btCollisionShape* partShape = new btBoxShape(btVector3(xlen/ 2, bridgeLsy / 2, bridgeLsz / 2));
-		btCollisionShape* supportShape = new btBoxShape(btVector3(xlen / 4, lsy / 2, bridgeLsz / 2));
+		btCollisionShape* supportShape = new btBoxShape(btVector3(xlen / 8, lsy / 2, bridgeLsz / 2));
 		btScalar mass;
 		switch (constraintType){
 		case Rigid:
@@ -1449,16 +1449,20 @@ tr.setOrigin(btVector3(0,-3,0));
 			// end supports do not move
 			if (i == 0 || i == (lpc - 1)){
 				btScalar rxloc;
+				btScalar sloc;
 				switch (i){
-				case 0: rxloc = xloc - xlen / 2 -tolerance;
+				case 0: 
+					rxloc = xloc - xlen / 2 -tolerance;
+					sloc = xloc - xlen / 4;
 					break;
 				default:
 					rxloc = xloc + xlen / 2+tolerance;
+					sloc = xloc + xlen / 4;
 					break;
 				}
 				btTransform tr;
 				tr.setIdentity();
-				btVector3 pos = btVector3(xloc, lsy / 2, bridgeZ);
+				btVector3 pos = btVector3(sloc, lsy / 2, bridgeZ);
 				tr.setOrigin(pos);
 				localCreateRigidBody(0, tr, supportShape);
 				addRamp(rxloc, bridgeZ);
