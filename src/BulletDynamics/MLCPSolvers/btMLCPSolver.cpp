@@ -22,8 +22,7 @@ subject to the following restrictions:
 
 btMLCPSolver::btMLCPSolver(	 btMLCPSolverInterface* solver)
 :m_solver(solver),
-m_fallback(0),
-m_cfm(0.000001)//0.0000001
+m_fallback(0)
 {
 }
 
@@ -437,7 +436,7 @@ void btMLCPSolver::createMLCPFast(const btContactSolverInfo& infoGlobal)
 		// add cfm to the diagonal of m_A
 		for ( int i=0; i<m_A.rows(); ++i) 
 		{
-			m_A.setElem(i,i,m_A(i,i)+ m_cfm / infoGlobal.m_timeStep);
+			m_A.setElem(i,i,m_A(i,i)+ infoGlobal.m_globalCfm/ infoGlobal.m_timeStep);
 		}
 	}
 				   
@@ -565,7 +564,7 @@ void btMLCPSolver::createMLCP(const btContactSolverInfo& infoGlobal)
 		// add cfm to the diagonal of m_A
 		for ( int i=0; i<m_A.rows(); ++i) 
 		{
-			m_A.setElem(i,i,m_A(i,i)+ m_cfm / infoGlobal.m_timeStep);
+			m_A.setElem(i,i,m_A(i,i)+ infoGlobal.m_globalCfm / infoGlobal.m_timeStep);
 		}
 	}
 
