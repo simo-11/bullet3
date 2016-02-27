@@ -87,9 +87,10 @@ public:
 	btScalar lsx, lsy, lsz;
 	btScalar bridgeLsx,bridgeLsy, bridgeLsz;
 	btScalar poleLsx, poleLsy, poleLsz;
-	btScalar bridgeZ = 40, poleZ = -20;
+	btScalar bridgeZ = 40, poleZ = -20, bridgeSupportX=1;
 	btScalar tolerance;
-	btScalar yhl = 1,xhl = 1.6, zhl = 3.4;
+	// vehicle body measures
+	btScalar yhl = 1,xhl = 1.5, zhl = 3;
 	int lpc;
 	btScalar breakingImpulseThreshold;
 	btScalar bridgeSteelScale,poleSteelScale,steelScale;
@@ -934,8 +935,8 @@ public:
 	*/
 	void addRamp(btScalar xloc, btScalar zloc){
 		btScalar z = bridgeLsz/2;
-		btScalar x = bridgeLsx;
 		btScalar y = bridgeLsy+lsy;
+		btScalar x = 10*y;
 		btConvexHullShape* draft = new btConvexHullShape();
 		draft->addPoint(btVector3(0, y, z));
 		draft->addPoint(btVector3(0, y, -z));
@@ -1172,7 +1173,7 @@ void DemolisherDemo::restartHandler(Gwen::Controls::Base* control){
 void DemolisherDemo::reinit(){
 	wheelFriction = 0.8;
 	lpc = 6;
-	lsx = 60;
+	lsx = 20;
 	lsy = 3;
 	lsz = 2;
 	density = 2000;
@@ -1318,12 +1319,12 @@ void DemolisherDemo::initPhysics()
 		suspensionRestLength = 0.8;
 	}
 	tolerance = 0.003*bridgeLsx;
-	bridgeSteelScale = 1200;
+	bridgeSteelScale = 200;
 	bridgeLsx = lsx;
 	bridgeLsy = 0.005*lsx;
 	bridgeLsz = 6 * lsz;
 	poleSteelScale = 50;
-	poleLsx = 0.2*lsx;
+	poleLsx = 0.5*lsx;
 	poleLsy = 0.1*lsy;
 	poleLsz = 0.1*lsz;
 	int upAxis = 1;
@@ -1428,7 +1429,7 @@ tr.setOrigin(btVector3(0,-3,0));
 		btAlignedObjectArray<btRigidBody*> ha;
 		btScalar xlen = bridgeLsx / lpc;
 		btCollisionShape* partShape = new btBoxShape(btVector3(xlen/ 2, bridgeLsy / 2, bridgeLsz / 2));
-		btCollisionShape* supportShape = new btBoxShape(btVector3(xlen / 8, lsy / 2, bridgeLsz / 2));
+		btCollisionShape* supportShape = new btBoxShape(btVector3(bridgeSupportX, lsy / 2, bridgeLsz / 2));
 		btScalar mass;
 		switch (constraintType){
 		case Rigid:
@@ -1453,11 +1454,11 @@ tr.setOrigin(btVector3(0,-3,0));
 				switch (i){
 				case 0: 
 					rxloc = xloc - xlen / 2 -tolerance;
-					sloc = xloc - xlen / 4;
+					sloc = xloc - xlen / 2 + bridgeSupportX/2;
 					break;
 				default:
 					rxloc = xloc + xlen / 2+tolerance;
-					sloc = xloc + xlen / 4;
+					sloc = xloc + xlen / 2-bridgeSupportX/2;
 					break;
 				}
 				btTransform tr;
@@ -1481,12 +1482,14 @@ tr.setOrigin(btVector3(0,-3,0));
 	/// create pole parts
 	{
 		steelScale = btScalar(poleSteelScale);
+		btScalar poleY = 0.5*yhl + wheelRadius;
+		btScalar poleSupportHeight = poleY + poleLsy;
 		btAlignedObjectArray<btRigidBody*> ha;
 		btScalar xlen = poleLsx / lpc;
 		btCollisionShape* partShape = new btBoxShape
 			(btVector3(xlen / 2, poleLsy / 2, poleLsz / 2));
 		btCollisionShape* supportShape = new btBoxShape
-			(btVector3(xlen / 8, yhl+2*wheelRadius, poleLsz ));
+			(btVector3(xlen / 2, poleSupportHeight/2, poleLsz));
 		btScalar mass;
 		switch (constraintType){
 		case Rigid:
@@ -1501,7 +1504,7 @@ tr.setOrigin(btVector3(0,-3,0));
 		for (int i = 0; i < lpc; i++){
 			btTransform tr;
 			tr.setIdentity();
-			btVector3 pos = btVector3(xloc, 0.5*yhl+wheelRadius, poleZ);
+			btVector3 pos = btVector3(xloc, poleY, poleZ);
 			tr.setOrigin(pos);
 			// first does not move
 			btScalar ppMass;
@@ -1510,7 +1513,7 @@ tr.setOrigin(btVector3(0,-3,0));
 				// add also covering part
 				btTransform tr;
 				tr.setIdentity();
-				btVector3 pos = btVector3(xloc, lsy / 2, poleZ);
+				btVector3 pos = btVector3(xloc, poleSupportHeight / 2, poleZ);
 				tr.setOrigin(pos);
 				localCreateRigidBody(0, tr, supportShape);
 			}
@@ -1549,11 +1552,13 @@ tr.setOrigin(btVector3(0,-3,0));
 		int upIndex = 1;
 		int forwardIndex = 2;
 		m_vehicle->setCoordinateSystem(rightIndex, upIndex, forwardIndex);
-
-		btVector3 connectionPointCS0(xhl-(0.3*wheelWidth),
-			connectionHeight,zhl-2*wheelRadius);
+		// <1.2 causes frequently wheel to be seen
+		// >1.5 causes situation where wheels are in air
+		btScalar wheelZLocScale = 1.2;
 		btScalar caster = 0.05;
 		btScalar camber = 0.05;
+		btVector3 connectionPointCS0(xhl - (0.3*wheelWidth),
+			connectionHeight, zhl - wheelZLocScale*wheelRadius);
 		btVector3 wheelDirectionCS0(camber, -1, caster);
 		btVector3 wheelAxleCS(-1, 0, 0);
 		// left front
@@ -1561,14 +1566,14 @@ tr.setOrigin(btVector3(0,-3,0));
 			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
 
 		connectionPointCS0 = btVector3(-xhl+(0.3*wheelWidth),
-			connectionHeight,zhl-2*wheelRadius);
+			connectionHeight, zhl - wheelZLocScale*wheelRadius);
 		wheelDirectionCS0 = btVector3(-camber, -1, caster);
 		// right front
 		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
 			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
 
 		connectionPointCS0 = btVector3(-xhl+(0.3*wheelWidth),
-			connectionHeight,-zhl+2*wheelRadius);
+			connectionHeight, -zhl + wheelZLocScale*wheelRadius);
 		wheelDirectionCS0 = btVector3(-camber, -1, -caster);
 		isFrontWheel = false;
 		// right rear
@@ -1576,7 +1581,7 @@ tr.setOrigin(btVector3(0,-3,0));
 			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
 
 		connectionPointCS0 = btVector3(xhl-(0.3*wheelWidth),
-			connectionHeight,-zhl+2*wheelRadius);
+			connectionHeight, -zhl + wheelZLocScale*wheelRadius);
 		wheelDirectionCS0 = btVector3(camber, -1, -caster);
 		// leaft rear
 		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
