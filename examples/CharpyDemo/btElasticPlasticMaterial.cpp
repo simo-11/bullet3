@@ -16,6 +16,6 @@ subject to the following restrictions:
 /*
 Simo Nikula 2016- while studying plasticity
 */
-
+#define _CRT_SECURE_NO_WARNINGS
 #include "btElasticPlasticMaterial.h"
 #include <new>

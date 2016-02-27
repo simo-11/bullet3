@@ -90,11 +90,12 @@ public:
 	btScalar bridgeZ = 40, poleZ = -20, bridgeSupportX=1;
 	btScalar tolerance;
 	// vehicle body measures
-	btScalar yhl = 1,xhl = 1.5, zhl = 3;
+	btScalar yhl,xhl,zhl;
 	int lpc;
 	btScalar breakingImpulseThreshold;
 	btScalar bridgeSteelScale,poleSteelScale,steelScale;
 	btScalar density;
+	btScalar defaultCarMass = 50000;
 	btScalar carMass;
 	boolean calculateMaxEngineForce = true,
 		calculateDefaultBreakingForce = true,
@@ -106,7 +107,7 @@ public:
 	btScalar suspensionStiffness, suspensionMaxForce;
 	btScalar suspensionDamping;
 	btScalar suspensionCompression;
-	btScalar suspensionRestLength;
+	btScalar suspensionRestLength, connectionHeight;
 	btScalar steelArea;
 	btScalar maxPlasticRotation;
 	btScalar maxPlasticStrain;
@@ -140,8 +141,7 @@ public:
 	float	m_minCameraDistance;
 	float	m_maxCameraDistance;
 	bool useMCLPSolver = true;
-	float	wheelRadius = 1;
-	float	wheelWidth = 0.6;
+	float	wheelRadius,wheelWidth;
 	float	rollInfluence = 0.1f;//1.0f;
 
 	DemolisherDemo(CommonExampleOptions & options);
@@ -878,7 +878,7 @@ public:
 		btVector3 cpos(halfLength, 0, 0);
 		tra.setOrigin(cpos);
 		trb.setOrigin(-cpos);
-		btScalar k0(E*steelArea*steelScale / 0.2);
+		btScalar k0(E*steelArea*steelScale / xlen);
 		btScalar k1(E*steelArea*steelScale*ylen / 2.5);
 		btScalar k2(E*steelArea*steelScale*zlen / 2.5);
 		btScalar m(fy / E);
@@ -972,7 +972,7 @@ public:
 		default:
 		case Fence:
 			xStart = 0;
-			zStart = 0;
+			zStart = -zhl;
 			break;
 		case Bridge:
 			{
@@ -1178,7 +1178,7 @@ void DemolisherDemo::reinit(){
 	lsz = 2;
 	density = 2000;
 	breakingImpulseThreshold = 50000;
-	carMass = 50000;
+	carMass = defaultCarMass;
 	maxEngineForce = 100000;
 	defaultBreakingForce = 1000;
 	suspensionStiffness = 30;
@@ -1315,9 +1315,20 @@ void DemolisherDemo::initPhysics()
 	if (calculateSuspensionCompression){
 		suspensionCompression = suspensionDamping-0.2;
 	}
-	if (calculateSuspensionRestLength){
-		suspensionRestLength = 0.8;
+	{ /* car dimensions are scaled if mass is changed
+	  third root would be correct for homogenous solid
+	  */
+		btScalar mr=pow(carMass / defaultCarMass,0.33);
+		yhl = mr;
+		xhl = 1.5*mr;
+		zhl = 3*mr;
+		wheelRadius = zhl / 3;
+		wheelWidth = xhl / 3;
 	}
+	if (calculateSuspensionRestLength){
+		suspensionRestLength = 0.8*yhl;
+	}
+	connectionHeight = 1.2*yhl;
 	tolerance = 0.003*bridgeLsx;
 	bridgeSteelScale = 200;
 	bridgeLsx = lsx;
@@ -1484,12 +1495,13 @@ tr.setOrigin(btVector3(0,-3,0));
 		steelScale = btScalar(poleSteelScale);
 		btScalar poleY = 0.5*yhl + wheelRadius;
 		btScalar poleSupportHeight = poleY + poleLsy;
+		btScalar poleSupportWidth = poleLsz*2;
 		btAlignedObjectArray<btRigidBody*> ha;
 		btScalar xlen = poleLsx / lpc;
 		btCollisionShape* partShape = new btBoxShape
 			(btVector3(xlen / 2, poleLsy / 2, poleLsz / 2));
 		btCollisionShape* supportShape = new btBoxShape
-			(btVector3(xlen / 2, poleSupportHeight/2, poleLsz));
+			(btVector3(xlen / 2, poleSupportHeight / 2, poleSupportWidth/2));
 		btScalar mass;
 		switch (constraintType){
 		case Rigid:
@@ -1506,21 +1518,16 @@ tr.setOrigin(btVector3(0,-3,0));
 			tr.setIdentity();
 			btVector3 pos = btVector3(xloc, poleY, poleZ);
 			tr.setOrigin(pos);
-			// first does not move
-			btScalar ppMass;
 			if (i == 0){
-				ppMass = btScalar(0);
-				// add also covering part
+				// add poleSupport and connect it to pole
+				btScalar poleSupportMass = 20 * mass*lpc;
 				btTransform tr;
 				tr.setIdentity();
-				btVector3 pos = btVector3(xloc, poleSupportHeight / 2, poleZ);
+				btVector3 pos = btVector3(xloc-xlen, poleSupportHeight / 2, poleZ);
 				tr.setOrigin(pos);
-				localCreateRigidBody(0, tr, supportShape);
+				ha.push_back(localCreateRigidBody(poleSupportMass, tr, supportShape));
 			}
-			else{
-				ppMass = mass;
-			}
-			ha.push_back(localCreateRigidBody(ppMass, tr, partShape));
+			ha.push_back(localCreateRigidBody(mass, tr, partShape));
 			xloc += xlen;
 		}
 		switch (constraintType){
@@ -1539,22 +1546,16 @@ tr.setOrigin(btVector3(0,-3,0));
 		
 		///never deactivate the vehicle
 		m_carChassis->setActivationState(DISABLE_DEACTIVATION);
-
 		m_dynamicsWorld->addAction(m_vehicle);
-
-		float connectionHeight = 1.2f;
-
-	
 		bool isFrontWheel=true;
-
 		//choose coordinate system
 		int rightIndex = 0;
 		int upIndex = 1;
 		int forwardIndex = 2;
 		m_vehicle->setCoordinateSystem(rightIndex, upIndex, forwardIndex);
-		// <1.2 causes frequently wheel to be seen
-		// >1.5 causes situation where wheels are in air
-		btScalar wheelZLocScale = 1.2;
+		// <2 causes frequently wheel to be seen
+		// >1.1 causes situation where wheels are in air
+		btScalar wheelZLocScale = 0.8;
 		btScalar caster = 0.05;
 		btScalar camber = 0.05;
 		btVector3 connectionPointCS0(xhl - (0.3*wheelWidth),
