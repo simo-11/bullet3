@@ -85,7 +85,7 @@ public:
 	btScalar	defaultBreakingForce;
 	btScalar	wheelFriction;
 	btScalar lsx, lsy, lsz;
-	btScalar bridgeLsx,bridgeLsy, bridgeLsz;
+	btScalar bridgeLsx, bridgeLsy, bridgeLsz, bridgeSupportY;
 	btScalar poleLsx, poleLsy, poleLsz;
 	btScalar bridgeZ = 40, poleZ = -20, bridgeSupportX=1;
 	btScalar tolerance;
@@ -935,7 +935,7 @@ public:
 	*/
 	void addRamp(btScalar xloc, btScalar zloc){
 		btScalar z = bridgeLsz/2;
-		btScalar y = bridgeLsy+lsy;
+		btScalar y = bridgeLsy + bridgeSupportY;
 		btScalar x = 10*y;
 		btConvexHullShape* draft = new btConvexHullShape();
 		draft->addPoint(btVector3(0, y, z));
@@ -984,7 +984,7 @@ public:
 			yStart += lsy;
 			break;
 		case Pole:
-			xStart = poleLsx-xhl;
+			xStart = 0;
 			zStart = poleZ-3*zhl;
 			break;
 		}
@@ -1437,10 +1437,11 @@ tr.setOrigin(btVector3(0,-3,0));
 	/// create bridge parts
 	{
 		steelScale = btScalar(bridgeSteelScale);
+		bridgeSupportY = 1.2*lsy;
 		btAlignedObjectArray<btRigidBody*> ha;
 		btScalar xlen = bridgeLsx / lpc;
 		btCollisionShape* partShape = new btBoxShape(btVector3(xlen/ 2, bridgeLsy / 2, bridgeLsz / 2));
-		btCollisionShape* supportShape = new btBoxShape(btVector3(bridgeSupportX, lsy / 2, bridgeLsz / 2));
+		btCollisionShape* supportShape = new btBoxShape(btVector3(bridgeSupportX, bridgeSupportY / 2, bridgeLsz / 2));
 		btScalar mass;
 		switch (constraintType){
 		case Rigid:
@@ -1455,7 +1456,7 @@ tr.setOrigin(btVector3(0,-3,0));
 		for (int i = 0; i < lpc; i++){
 			btTransform tr;
 			tr.setIdentity();
-			btVector3 pos = btVector3(xloc, lsy + bridgeLsy / 2, bridgeZ);
+			btVector3 pos = btVector3(xloc, bridgeSupportY + bridgeLsy / 2, bridgeZ);
 			tr.setOrigin(pos);
 			ha.push_back(localCreateRigidBody(mass, tr, partShape));
 			// end supports do not move
@@ -1474,7 +1475,7 @@ tr.setOrigin(btVector3(0,-3,0));
 				}
 				btTransform tr;
 				tr.setIdentity();
-				btVector3 pos = btVector3(sloc, lsy / 2, bridgeZ);
+				btVector3 pos = btVector3(sloc, bridgeSupportY / 2, bridgeZ);
 				tr.setOrigin(pos);
 				localCreateRigidBody(0, tr, supportShape);
 				addRamp(rxloc, bridgeZ);
@@ -1523,7 +1524,7 @@ tr.setOrigin(btVector3(0,-3,0));
 				btScalar poleSupportMass = 20 * mass*lpc;
 				btTransform tr;
 				tr.setIdentity();
-				btVector3 pos = btVector3(xloc-xlen, poleSupportHeight / 2, poleZ);
+				btVector3 pos = btVector3(xloc-xlen, poleY, poleZ);
 				tr.setOrigin(pos);
 				ha.push_back(localCreateRigidBody(poleSupportMass, tr, supportShape));
 			}
@@ -1844,19 +1845,19 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 		case B3G_F1:
 		{
 			handled = true;
-			setCarPosition(Fence);
+			setCarPosition(Pole);
 			break;
 		}
 		case B3G_F2:
 		{
 			handled = true;
-			setCarPosition(Bridge);
+			setCarPosition(Fence);
 			break;
 		}
 		case B3G_F3:
 		{
 			handled = true;
-			setCarPosition(Pole);
+			setCarPosition(Bridge);
 			break;
 		}
 		case B3G_F7:
