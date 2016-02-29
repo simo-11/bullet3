@@ -51,7 +51,7 @@ public:
 		list<PlasticityData>::iterator psIterator;
 		string txt;
 		list<PlasticityData> *pData = PlasticityData::getData();
-		if (!pData){
+		if (!pData || pData->size()==0){
 			pStat->Hide();
 			return;
 		}

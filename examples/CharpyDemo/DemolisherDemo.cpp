@@ -879,10 +879,10 @@ public:
 		tra.setOrigin(cpos);
 		trb.setOrigin(-cpos);
 		btScalar k0(E*steelArea*steelScale / xlen);
-		btScalar k1(E*steelArea*steelScale*ylen / 2.5);
-		btScalar k2(E*steelArea*steelScale*zlen / 2.5);
+		btScalar k1(E*steelArea*steelScale*(ylen / 2.5));
+		btScalar k2(E*steelArea*steelScale*(zlen / 2.5));
 		btScalar m(fy / E);
-		btScalar w0(k0*m);
+		btScalar w0(fy*steelArea*steelScale);
 		btScalar w1(k1*fy/E);
 		btScalar w2(k2*fy/E);
 		for (int i = 0; i < loopSize; i++){
@@ -893,9 +893,9 @@ public:
 			sc->setMaxPlasticRotation(maxPlasticRotation);
 			sc->setMaxPlasticStrain(maxPlasticStrain);
 			sc->setStiffness(2, k0, limitIfNeeded);
-			sc->setMaxForce(2, w0);
+			sc->setMaxForce(2, w0/2);
 			sc->setStiffness(0, k0, limitIfNeeded);
-			sc->setMaxForce(0, w0/2);
+			sc->setMaxForce(0, w0);
 			sc->setStiffness(1, k0, limitIfNeeded);
 			sc->setMaxForce(1, w0/2);
 			sc->setStiffness(5, k1); 
@@ -1031,17 +1031,21 @@ public:
 		pData.clear();
 		char buf[B_LEN*2];
 		btDiscreteDynamicsWorld *dw = m_dynamicsWorld;
+		bool headerDone = false;
 		int numConstraints=dw->getNumConstraints();
-		sprintf_s(buf, B_LEN, "%2s %8s %5s %5s %5s %5s %5s",
-			"#", "max%", "m%dof","mpr", "cpr", "mps", "cps" );
-		infoMsg(buf);
 		for (int i = 0; i < numConstraints; i++){
 			btTypedConstraint* sc = dw->getConstraint(i);
 			int type = sc->getUserConstraintType();
 			if (type != BPT_EP2){
 				continue;
 			}
-			bt6DofElasticPlastic2Constraint *epc=
+			if (!headerDone){
+				sprintf_s(buf, B_LEN, "%2s %8s %5s %5s %5s %5s %5s",
+					"#", "max%", "m%dof", "mpr", "cpr", "mps", "cps");
+				infoMsg(buf);
+				headerDone = true;
+			}
+			bt6DofElasticPlastic2Constraint *epc =
 				static_cast<bt6DofElasticPlastic2Constraint*>(sc);
 			btScalar mpr = epc->getMaxPlasticRotation(),
 				cpr = epc->getCurrentPlasticRotation(),
@@ -1094,7 +1098,7 @@ public:
 		btAlignedObjectArray<btRigidBody*> ha;
 		btScalar xlen = bridgeLsx / lpc;
 		btCollisionShape* partShape = new btBoxShape(btVector3(xlen / 2, bridgeLsy / 2, bridgeLsz / 2));
-		btCollisionShape* supportShape = new btBoxShape(btVector3(bridgeSupportX, bridgeSupportY / 2, bridgeLsz / 2));
+		btCollisionShape* supportShape = new btBoxShape(btVector3(bridgeSupportX/2, bridgeSupportY / 2, bridgeLsz / 2));
 		btScalar mass;
 		switch (constraintType){
 		case Rigid:
@@ -1119,11 +1123,11 @@ public:
 				switch (i){
 				case 0:
 					rxloc = xloc - xlen / 2 - tolerance;
-					sloc = xloc - xlen / 2 + bridgeSupportX / 2;
+					sloc = xloc - xlen / 2 + bridgeSupportX / 2-tolerance;
 					break;
 				default:
 					rxloc = xloc + xlen / 2 + tolerance;
-					sloc = xloc + xlen / 2 - bridgeSupportX / 2;
+					sloc = xloc + xlen / 2 - bridgeSupportX / 2+tolerance;
 					break;
 				}
 				btTransform tr;
@@ -1471,8 +1475,8 @@ void DemolisherDemo::initPhysics()
 	bridgeLsx = lsx;
 	bridgeLsy = 0.005*lsx;
 	bridgeLsz = 6 * lsz;
-	gateSteelScale = 1;
-	gateLsx = 0.5*lsx;
+	gateSteelScale = 5;
+	gateLsx = 0.25*lsx;
 	gateLsy = 0.1*lsy;
 	gateLsz = 0.1*lsz;
 	int upAxis = 1;
