@@ -1050,10 +1050,147 @@ public:
 				maxr = epc->getMaxRatio();
 			int	maxrd = epc->getMaxRatioDof();
 				sprintf_s(buf, B_LEN*2, "%2d %8.1f %5d %5.3f %5.3f %5.3f %5.3f",
-					i, maxr * 100, maxrd, CSV(mpr), CSV(cpr), CSV(mps), CSV(cps));
+					i, maxr * 100, maxrd, mpr, cpr, mps, cps);
 			infoMsg(buf);
 		}
 		PlasticityData::setData(&pData);
+	}
+	void addFence(){
+		steelScale = btScalar(1);
+		btAlignedObjectArray<btRigidBody*> ha;
+		btScalar xlen = lsx / lpc;
+		btCollisionShape* loadShape = new btBoxShape(btVector3(xlen / 2, lsy / 2, lsz / 2));
+		btScalar mass;
+		switch (constraintType){
+		case Rigid:
+			mass = 0;
+			break;
+		default:
+			mass = lsx*lsy*lsz*density / lpc;
+			break;
+		}
+		m_collisionShapes.push_back(loadShape);
+		btScalar xloc = (xlen - lsx) / 2;
+		for (int i = 0; i < lpc; i++){
+			btTransform loadTrans;
+			loadTrans.setIdentity();
+			btVector3 pos = btVector3(xloc, lsy / 2, 5);
+			loadTrans.setOrigin(pos);
+			ha.push_back(localCreateRigidBody(mass, loadTrans, loadShape));
+			xloc += xlen;
+		}
+		switch (constraintType){
+		case Impulse:
+			addFixedConstraint(ha, xlen);
+			break;
+		case ElasticPlastic:
+			addElasticPlasticConstraint(ha, xlen, lsy, lsz);
+			break;
+		}
+	}
+	void addBridge(){
+		steelScale = btScalar(bridgeSteelScale);
+		bridgeSupportY = 1.2*lsy;
+		btAlignedObjectArray<btRigidBody*> ha;
+		btScalar xlen = bridgeLsx / lpc;
+		btCollisionShape* partShape = new btBoxShape(btVector3(xlen / 2, bridgeLsy / 2, bridgeLsz / 2));
+		btCollisionShape* supportShape = new btBoxShape(btVector3(bridgeSupportX, bridgeSupportY / 2, bridgeLsz / 2));
+		btScalar mass;
+		switch (constraintType){
+		case Rigid:
+			mass = 0;
+			break;
+		default:
+			mass = bridgeLsx*bridgeLsy*bridgeLsz*density / lpc;
+			break;
+		}
+		m_collisionShapes.push_back(partShape);
+		btScalar xloc = (xlen - bridgeLsx) / 2;
+		for (int i = 0; i < lpc; i++){
+			btTransform tr;
+			tr.setIdentity();
+			btVector3 pos = btVector3(xloc, bridgeSupportY + bridgeLsy / 2, bridgeZ);
+			tr.setOrigin(pos);
+			ha.push_back(localCreateRigidBody(mass, tr, partShape));
+			// end supports do not move
+			if (i == 0 || i == (lpc - 1)){
+				btScalar rxloc;
+				btScalar sloc;
+				switch (i){
+				case 0:
+					rxloc = xloc - xlen / 2 - tolerance;
+					sloc = xloc - xlen / 2 + bridgeSupportX / 2;
+					break;
+				default:
+					rxloc = xloc + xlen / 2 + tolerance;
+					sloc = xloc + xlen / 2 - bridgeSupportX / 2;
+					break;
+				}
+				btTransform tr;
+				tr.setIdentity();
+				btVector3 pos = btVector3(sloc, bridgeSupportY / 2, bridgeZ);
+				tr.setOrigin(pos);
+				localCreateRigidBody(0, tr, supportShape);
+				addRamp(rxloc, bridgeZ);
+			}
+			xloc += xlen;
+		}
+		switch (constraintType){
+		case Impulse:
+			addFixedConstraint(ha, xlen);
+			break;
+		case ElasticPlastic:
+			addElasticPlasticConstraint(ha, xlen, bridgeLsy, bridgeLsz);
+			break;
+		}
+	}
+	void addGate ()	{
+		steelScale = btScalar(gateSteelScale);
+		btScalar gateY = 0.5*yhl + wheelRadius;
+		btScalar gateSupportHeight = gateY + gateLsy;
+		btScalar gateSupportWidth = gateLsz * 2;
+		btAlignedObjectArray<btRigidBody*> ha;
+		btScalar xlen = gateLsx / lpc;
+		btCollisionShape* partShape = new btBoxShape
+			(btVector3(xlen / 2, gateLsy / 2, gateLsz / 2));
+		btCollisionShape* supportShape = new btBoxShape
+			(btVector3(xlen / 2, gateSupportHeight / 2, gateSupportWidth / 2));
+		btScalar mass;
+		switch (constraintType){
+		case Rigid:
+			mass = 0;
+			break;
+		default:
+			mass = gateLsx*gateLsy*gateLsz*density / lpc;
+			break;
+		}
+		m_collisionShapes.push_back(partShape);
+		btScalar xloc = (xlen - gateLsx) / 2;
+		for (int i = 0; i < lpc; i++){
+			btTransform tr;
+			tr.setIdentity();
+			btVector3 pos = btVector3(xloc, gateY, gateZ);
+			tr.setOrigin(pos);
+			if (i == 0){
+				// add gateSupport and connect it to gate
+				btScalar gateSupportMass = 20 * mass*lpc;
+				btTransform tr;
+				tr.setIdentity();
+				btVector3 pos = btVector3(xloc - xlen, gateY, gateZ);
+				tr.setOrigin(pos);
+				ha.push_back(localCreateRigidBody(gateSupportMass, tr, supportShape));
+			}
+			ha.push_back(localCreateRigidBody(mass, tr, partShape));
+			xloc += xlen;
+		}
+		switch (constraintType){
+		case Impulse:
+			addFixedConstraint(ha, xlen);
+			break;
+		case ElasticPlastic:
+			addElasticPlasticConstraint(ha, xlen, gateLsy, gateLsz);
+			break;
+		}
 	}
 };
 DemolisherDemo *demo = 0;
@@ -1399,147 +1536,9 @@ tr.setOrigin(btVector3(0,-3,0));
 		m_wheelInstances[i] = m_guiHelper->registerGraphicsInstance
 			(wheelGraphicsIndex, position, quaternion, color, scaling);
 	}
-
-	/// create load parts
-	{
-		steelScale = btScalar(1);
-		btAlignedObjectArray<btRigidBody*> ha;
-		btScalar xlen = lsx / lpc;
-		btCollisionShape* loadShape = new btBoxShape(btVector3(xlen/2, lsy / 2, lsz / 2));
-		btScalar mass;
-		switch (constraintType){
-		case Rigid:
-			mass = 0;
-			break;
-		default:
-			mass = lsx*lsy*lsz*density / lpc;
-			break;
-		}
-		m_collisionShapes.push_back(loadShape);
-		btScalar xloc = (xlen-lsx)/2;
-		for (int i = 0; i < lpc; i++){
-			btTransform loadTrans;
-			loadTrans.setIdentity();
-			btVector3 pos = btVector3(xloc, lsy / 2, 5);
-			loadTrans.setOrigin(pos);
-			ha.push_back(localCreateRigidBody(mass, loadTrans, loadShape));
-			xloc += xlen;
-		}
-		switch (constraintType){
-		case Impulse:
-			addFixedConstraint(ha, xlen);
-			break;
-		case ElasticPlastic:
-			addElasticPlasticConstraint(ha, xlen, lsy, lsz);
-			break;
-		}
-	}
-	/// create bridge parts
-	{
-		steelScale = btScalar(bridgeSteelScale);
-		bridgeSupportY = 1.2*lsy;
-		btAlignedObjectArray<btRigidBody*> ha;
-		btScalar xlen = bridgeLsx / lpc;
-		btCollisionShape* partShape = new btBoxShape(btVector3(xlen/ 2, bridgeLsy / 2, bridgeLsz / 2));
-		btCollisionShape* supportShape = new btBoxShape(btVector3(bridgeSupportX, bridgeSupportY / 2, bridgeLsz / 2));
-		btScalar mass;
-		switch (constraintType){
-		case Rigid:
-			mass = 0;
-			break;
-		default:
-			mass = bridgeLsx*bridgeLsy*bridgeLsz*density / lpc;
-			break;
-		}
-		m_collisionShapes.push_back(partShape);
-		btScalar xloc = (xlen - bridgeLsx) / 2;
-		for (int i = 0; i < lpc; i++){
-			btTransform tr;
-			tr.setIdentity();
-			btVector3 pos = btVector3(xloc, bridgeSupportY + bridgeLsy / 2, bridgeZ);
-			tr.setOrigin(pos);
-			ha.push_back(localCreateRigidBody(mass, tr, partShape));
-			// end supports do not move
-			if (i == 0 || i == (lpc - 1)){
-				btScalar rxloc;
-				btScalar sloc;
-				switch (i){
-				case 0: 
-					rxloc = xloc - xlen / 2 -tolerance;
-					sloc = xloc - xlen / 2 + bridgeSupportX/2;
-					break;
-				default:
-					rxloc = xloc + xlen / 2+tolerance;
-					sloc = xloc + xlen / 2-bridgeSupportX/2;
-					break;
-				}
-				btTransform tr;
-				tr.setIdentity();
-				btVector3 pos = btVector3(sloc, bridgeSupportY / 2, bridgeZ);
-				tr.setOrigin(pos);
-				localCreateRigidBody(0, tr, supportShape);
-				addRamp(rxloc, bridgeZ);
-			}
-			xloc += xlen;
-		}
-		switch (constraintType){
-		case Impulse:
-			addFixedConstraint(ha, xlen);
-			break;
-		case ElasticPlastic:
-			addElasticPlasticConstraint(ha, xlen, bridgeLsy, bridgeLsz);
-			break;
-		}
-	}
-	/// create gate parts
-	{
-		steelScale = btScalar(gateSteelScale);
-		btScalar gateY = 0.5*yhl + wheelRadius;
-		btScalar gateSupportHeight = gateY + gateLsy;
-		btScalar gateSupportWidth = gateLsz*2;
-		btAlignedObjectArray<btRigidBody*> ha;
-		btScalar xlen = gateLsx / lpc;
-		btCollisionShape* partShape = new btBoxShape
-			(btVector3(xlen / 2, gateLsy / 2, gateLsz / 2));
-		btCollisionShape* supportShape = new btBoxShape
-			(btVector3(xlen / 2, gateSupportHeight / 2, gateSupportWidth/2));
-		btScalar mass;
-		switch (constraintType){
-		case Rigid:
-			mass = 0;
-			break;
-		default:
-			mass = gateLsx*gateLsy*gateLsz*density / lpc;
-			break;
-		}
-		m_collisionShapes.push_back(partShape);
-		btScalar xloc = (xlen - gateLsx) / 2;
-		for (int i = 0; i < lpc; i++){
-			btTransform tr;
-			tr.setIdentity();
-			btVector3 pos = btVector3(xloc, gateY, gateZ);
-			tr.setOrigin(pos);
-			if (i == 0){
-				// add gateSupport and connect it to gate
-				btScalar gateSupportMass = 20 * mass*lpc;
-				btTransform tr;
-				tr.setIdentity();
-				btVector3 pos = btVector3(xloc-xlen, gateY, gateZ);
-				tr.setOrigin(pos);
-				ha.push_back(localCreateRigidBody(gateSupportMass, tr, supportShape));
-			}
-			ha.push_back(localCreateRigidBody(mass, tr, partShape));
-			xloc += xlen;
-		}
-		switch (constraintType){
-		case Impulse:
-			addFixedConstraint(ha, xlen);
-			break;
-		case ElasticPlastic:
-			addElasticPlasticConstraint(ha, xlen, gateLsy, gateLsz);
-			break;
-		}
-	}
+	addGate();
+	addFence();
+	addBridge();
 	/// create vehicle
 	{
 		m_vehicleRayCaster = new btDefaultVehicleRaycaster(m_dynamicsWorld);
