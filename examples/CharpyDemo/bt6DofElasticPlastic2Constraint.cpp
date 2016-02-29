@@ -852,8 +852,9 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			
 			bool usePlasticity=false;
 			bool frequencyLimited = false;
+			btScalar afdt = angularfreq * dt;
 			//limit stiffness (the spring should not be sampled faster that the quarter of its angular frequency)
-			if(limot->m_springStiffnessLimited && 0.25 < angularfreq * dt)
+			if(limot->m_springStiffnessLimited && 0.25 < afdt)
 			{
 				// bcc
 				if (maxForce < SIMD_INFINITY){
