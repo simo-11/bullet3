@@ -16,6 +16,7 @@ subject to the following restrictions:
 /**
 Based on DemolisherDemo by Simo Nikula 2016-
 */
+#define _CRT_SECURE_NO_WARNINGS
 #include "PlateDemo.h"
 #include "LinearMath/btQuickprof.h"
 #include <stdio.h> 
