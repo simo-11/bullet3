@@ -86,14 +86,14 @@ public:
 	btScalar	wheelFriction;
 	btScalar lsx, lsy, lsz;
 	btScalar bridgeLsx, bridgeLsy, bridgeLsz, bridgeSupportY;
-	btScalar poleLsx, poleLsy, poleLsz;
-	btScalar bridgeZ = 40, poleZ = -20, bridgeSupportX=1;
+	btScalar gateLsx, gateLsy, gateLsz;
+	btScalar bridgeZ = 40, gateZ = -20, bridgeSupportX=1;
 	btScalar tolerance;
 	// vehicle body measures
 	btScalar yhl,xhl,zhl;
 	int lpc;
 	btScalar breakingImpulseThreshold;
-	btScalar bridgeSteelScale,poleSteelScale,steelScale;
+	btScalar bridgeSteelScale,gateSteelScale,steelScale;
 	btScalar density;
 	btScalar defaultCarMass = 50000;
 	btScalar carMass;
@@ -129,7 +129,7 @@ public:
 	CommonWindowInterface* window;
 	int m_option;
 	enum Constraint { None = 0, Rigid = 1, Impulse = 2, ElasticPlastic = 3 };
-	enum CarPosition { Fence = 0, Bridge = 1, Pole = 2 };
+	enum CarPosition { Gate, Fence, Bridge};
 	Constraint constraintType;
 	btRaycastVehicle::btVehicleTuning	m_tuning;
 	btVehicleRaycaster*	m_vehicleRayCaster;
@@ -954,7 +954,7 @@ public:
 		}
 		localCreateRigidBody(0, tr, draft);
 	}
-	CarPosition latestCarPosition = Pole;
+	CarPosition latestCarPosition = Gate;
 	btTransform getCarTransform(){
 		return getCarTransform(latestCarPosition);
 	}
@@ -983,9 +983,9 @@ public:
 			zStart = bridgeZ;
 			yStart += lsy;
 			break;
-		case Pole:
+		case Gate:
 			xStart = 0;
-			zStart = poleZ-3*zhl;
+			zStart = gateZ-3*zhl;
 			break;
 		}
 		tr.setOrigin(btVector3(xStart, yStart, zStart));
@@ -1334,10 +1334,10 @@ void DemolisherDemo::initPhysics()
 	bridgeLsx = lsx;
 	bridgeLsy = 0.005*lsx;
 	bridgeLsz = 6 * lsz;
-	poleSteelScale = 50;
-	poleLsx = 0.5*lsx;
-	poleLsy = 0.1*lsy;
-	poleLsz = 0.1*lsz;
+	gateSteelScale = 1;
+	gateLsx = 0.5*lsx;
+	gateLsy = 0.1*lsy;
+	gateLsz = 0.1*lsz;
 	int upAxis = 1;
 	m_guiHelper->setUpAxis(upAxis);
 	btVector3 groundExtents(200,200,200);
@@ -1491,42 +1491,42 @@ tr.setOrigin(btVector3(0,-3,0));
 			break;
 		}
 	}
-	/// create pole parts
+	/// create gate parts
 	{
-		steelScale = btScalar(poleSteelScale);
-		btScalar poleY = 0.5*yhl + wheelRadius;
-		btScalar poleSupportHeight = poleY + poleLsy;
-		btScalar poleSupportWidth = poleLsz*2;
+		steelScale = btScalar(gateSteelScale);
+		btScalar gateY = 0.5*yhl + wheelRadius;
+		btScalar gateSupportHeight = gateY + gateLsy;
+		btScalar gateSupportWidth = gateLsz*2;
 		btAlignedObjectArray<btRigidBody*> ha;
-		btScalar xlen = poleLsx / lpc;
+		btScalar xlen = gateLsx / lpc;
 		btCollisionShape* partShape = new btBoxShape
-			(btVector3(xlen / 2, poleLsy / 2, poleLsz / 2));
+			(btVector3(xlen / 2, gateLsy / 2, gateLsz / 2));
 		btCollisionShape* supportShape = new btBoxShape
-			(btVector3(xlen / 2, poleSupportHeight / 2, poleSupportWidth/2));
+			(btVector3(xlen / 2, gateSupportHeight / 2, gateSupportWidth/2));
 		btScalar mass;
 		switch (constraintType){
 		case Rigid:
 			mass = 0;
 			break;
 		default:
-			mass = poleLsx*poleLsy*poleLsz*density / lpc;
+			mass = gateLsx*gateLsy*gateLsz*density / lpc;
 			break;
 		}
 		m_collisionShapes.push_back(partShape);
-		btScalar xloc = (xlen - poleLsx) / 2;
+		btScalar xloc = (xlen - gateLsx) / 2;
 		for (int i = 0; i < lpc; i++){
 			btTransform tr;
 			tr.setIdentity();
-			btVector3 pos = btVector3(xloc, poleY, poleZ);
+			btVector3 pos = btVector3(xloc, gateY, gateZ);
 			tr.setOrigin(pos);
 			if (i == 0){
-				// add poleSupport and connect it to pole
-				btScalar poleSupportMass = 20 * mass*lpc;
+				// add gateSupport and connect it to gate
+				btScalar gateSupportMass = 20 * mass*lpc;
 				btTransform tr;
 				tr.setIdentity();
-				btVector3 pos = btVector3(xloc-xlen, poleY, poleZ);
+				btVector3 pos = btVector3(xloc-xlen, gateY, gateZ);
 				tr.setOrigin(pos);
-				ha.push_back(localCreateRigidBody(poleSupportMass, tr, supportShape));
+				ha.push_back(localCreateRigidBody(gateSupportMass, tr, supportShape));
 			}
 			ha.push_back(localCreateRigidBody(mass, tr, partShape));
 			xloc += xlen;
@@ -1536,7 +1536,7 @@ tr.setOrigin(btVector3(0,-3,0));
 			addFixedConstraint(ha, xlen);
 			break;
 		case ElasticPlastic:
-			addElasticPlasticConstraint(ha, xlen, poleLsy, poleLsz);
+			addElasticPlasticConstraint(ha, xlen, gateLsy, gateLsz);
 			break;
 		}
 	}
@@ -1845,7 +1845,7 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 		case B3G_F1:
 		{
 			handled = true;
-			setCarPosition(Pole);
+			setCarPosition(Gate);
 			break;
 		}
 		case B3G_F2:
