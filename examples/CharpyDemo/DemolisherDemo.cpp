@@ -1512,8 +1512,8 @@ void DemolisherDemo::initPhysics()
 	bridgeLsy = 0.03*lsx;
 	bridgeLsz = 6 * lsz;
 	gateLsx = 0.25*lsx;
-	gateLsy = 0.05*lsy;
-	gateLsz = 0.05*lsz;
+	gateLsy = 0.1*lsy;
+	gateLsz = 0.1*lsz;
 	int upAxis = 1;
 	m_guiHelper->setUpAxis(upAxis);
 	btVector3 groundExtents(200,200,200);
