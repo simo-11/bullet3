@@ -1200,7 +1200,7 @@ public:
 				btScalar gateSupportMass = carMass;
 				btTransform tr;
 				tr.setIdentity();
-				btVector3 pos = btVector3(xloc - xlen, gateY, gateZ);
+				btVector3 pos = btVector3(xloc - xlen, gateSupportHeight / 2, gateZ);
 				tr.setOrigin(pos);
 				ha.push_back(localCreateRigidBody(gateSupportMass, tr, supportShape));
 			}

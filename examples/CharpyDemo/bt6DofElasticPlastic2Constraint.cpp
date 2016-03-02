@@ -844,51 +844,73 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			btScalar kd = limot->m_springDamping;
 			btScalar ks = limot->m_springStiffness;
 			btScalar cfm = BT_ZERO;
-			btScalar mA = BT_ONE / m_rbA.getInvMass();
-			btScalar mB = BT_ONE / m_rbB.getInvMass();
-			btScalar m = mA > mB ? mB : mA;
-			btScalar angularfreq = sqrt(ks / m);
 			// bcc
-			
 			bool usePlasticity=false;
 			bool frequencyLimited = false;
-			btScalar afdt = angularfreq * dt;
-			//limit stiffness (the spring should not be sampled faster that the quarter of its angular frequency)
-			if(limot->m_springStiffnessLimited && 0.25 < afdt)
+			btScalar m;
+			btScalar afdt;
+			btScalar f;
+			btScalar fs;
+			if (limot->m_springStiffnessLimited || limot->m_springDampingLimited)
 			{
 				// bcc
-				if (maxForce < SIMD_INFINITY){
-					usePlasticity=true;
-					frequencyLimited = true;
-				} else{
-					ks = BT_ONE / dt / dt / btScalar(16.0) * m;
+				btScalar mAI;
+				btScalar mBI;
+				if (rotational){
+					mAI = m_rbA.getInvInertiaDiagLocal().dot(ax1);
+					mBI = m_rbB.getInvInertiaDiagLocal().dot(ax1);
+				}
+				else{
+					mAI = m_rbA.getInvMass();
+					mBI = m_rbB.getInvMass();
+				}
+				btScalar mA = (mAI>SIMD_EPSILON?BT_ONE / mAI:SIMD_INFINITY);
+				btScalar mB = (mBI>SIMD_EPSILON?BT_ONE / mBI:SIMD_INFINITY);
+				m = mA > mB ? mB : mA;
+				// limit stiffness (the spring should not be sampled 
+				// faster that the quarter of its angular frequency)
+				if (limot->m_springStiffnessLimited){
+					btScalar angularfreq = sqrt(ks / m);
+					afdt = angularfreq * dt;
+					if (0.25 < afdt){
+						if (maxForce < SIMD_INFINITY){
+							frequencyLimited = true;
+						}
+						else{
+							ks = BT_ONE / dt / dt / btScalar(16.0) * m;
+						}
+					}
+				}
+				//avoid damping that would blow up the spring
+				if (limot->m_springDampingLimited)
+				{
+					btScalar kddt = kd*dt;
+					if (kddt > m){
+						if (maxForce < SIMD_INFINITY){
+							frequencyLimited = true;
+						}
+						else{
+							kd = m / dt;
+						}
+					}
 				}
 			}
 			// bcc
 			btScalar minf;
 			btScalar maxf;
 			btScalar vel;
-			btScalar fs;
 			btScalar fd;
-			btScalar f;
-			if (!usePlasticity){
-				//avoid damping that would blow up the spring
-				if (limot->m_springDampingLimited && kd * dt > m)
-				{
-					kd = m / dt;
-				}
-				vel = rotational ? angVelA.dot(ax1) - angVelB.dot(ax1) : linVelA.dot(ax1) - linVelB.dot(ax1);
-				fs = ks * error * dt;
-				fd = -kd * (vel)* (rotational ? -1 : 1) * dt;
-				f = (fs + fd);
-				if (btFabs(f) > maxImpulse){
-					usePlasticity = true;
-				}
-				else{
-					info->m_constraintError[srow] = (vel + f * (rotational ? -1 : 1));
-					minf = f < fd ? f : fd;
-					maxf = f < fd ? fd : f;
-				}
+			vel = rotational ? angVelA.dot(ax1) - angVelB.dot(ax1) : linVelA.dot(ax1) - linVelB.dot(ax1);
+			fs = ks * error * dt;
+			fd = -kd * (vel)* (rotational ? -1 : 1) * dt;
+			f = (fs + fd);
+			if (btFabs(f) > maxImpulse){
+				usePlasticity = true;
+			}
+			else if(!frequencyLimited){
+				info->m_constraintError[srow] = (vel + f * (rotational ? -1 : 1));
+				minf = f < fd ? f : fd;
+				maxf = f < fd ? fd : f;
 			}
 			/*
 			contrainError is set:
@@ -896,7 +918,7 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			(upper==lower/limot->m_currentLimit==3) is used 
 			If maximum impulse has been reached error is set to zero.
 			*/
-			if (usePlasticity){
+			if (usePlasticity || frequencyLimited){
 				minf = -maxImpulse;
 				maxf = maxImpulse;
 				if (frequencyLimited){
