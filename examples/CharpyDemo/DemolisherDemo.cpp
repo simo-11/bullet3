@@ -984,7 +984,7 @@ public:
 		if (sy < 0){
 			sy = 0.06;
 		}
-		btScalar yStart = sy + yhl;
+		btScalar yStart = connectionHeight-suspensionRestLength+sy;
 		btScalar zStart, xStart;
 		btTransform tr;
 		tr.setIdentity();
@@ -996,12 +996,12 @@ public:
 			break;
 		case Bridge:
 			{
-				btQuaternion q(btVector3(0, 1, 0), SIMD_HALF_PI);
+				btQuaternion q(SIMD_HALF_PI,0,0);
 				tr.setRotation(q);
+				xStart = -bridgeLsx / 2 ;
+				zStart = bridgeZ;
+				yStart += bridgeSupportY + bridgeLsy;
 			}
-			xStart = -bridgeLsx / 2 - 3;
-			zStart = bridgeZ;
-			yStart += lsy;
 			break;
 		case Gate:
 			xStart = 0;
@@ -1119,6 +1119,8 @@ public:
 			new btBoxShape(btVector3(xlen / 2, bridgeLsy / 2, bridgeLsz / 2));
 		btCollisionShape* supportShape = 
 			new btBoxShape(btVector3(bridgeSupportX/2, bridgeSupportY / 2, bridgeLsz / 2));
+		m_collisionShapes.push_back(partShape);
+		m_collisionShapes.push_back(supportShape);
 		btScalar mass;
 		switch (constraintType){
 		case Rigid:
@@ -1128,7 +1130,6 @@ public:
 			mass = bridgeLsx*bridgeLsy*bridgeLsz*density / lpc;
 			break;
 		}
-		m_collisionShapes.push_back(partShape);
 		btScalar xloc = (xlen - bridgeLsx) / 2;
 		for (int i = 0; i < lpc; i++){
 			btTransform tr;
