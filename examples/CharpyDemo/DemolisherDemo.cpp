@@ -92,7 +92,8 @@ public:
 	// vehicle body measures
 	btScalar yhl,xhl,zhl;
 	int lpc;
-	btScalar breakingImpulseThreshold;
+	btScalar breakingImpulseThreshold, breakingSpeed;
+	btScalar m_fixedTimeStep = btScalar(1) / btScalar(60);
 	btScalar bridgeSteelScale,gateSteelScale,fenceSteelScale;
 	btScalar density;
 	btScalar defaultCarMass = 50000;
@@ -422,7 +423,7 @@ public:
 	void setLsy(Gwen::Controls::Base* control);
 	void setLsz(Gwen::Controls::Base* control);
 	void setDensity(Gwen::Controls::Base* control);
-	void setBreakingImpulseThreshold(Gwen::Controls::Base* control);
+	void setBreakingSpeed(Gwen::Controls::Base* control);
 	void setCarMass(Gwen::Controls::Base* control);
 	void setDefaultBreakingForce(Gwen::Controls::Base* control);
 	void setMaxEngineForce(Gwen::Controls::Base* control);
@@ -628,14 +629,14 @@ public:
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setDensity);
 	}
-	void addBreakingImpulseThreshold(){
-		addLabel("breakingImpulse");
+	void addBreakingSpeed(){
+		addLabel("breakingSpeed");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(breakingImpulseThreshold, "%.0f");
-		gc->SetToolTip("breakingImpulseThreshold for load parts [Ns]");
+		std::string text = uif(breakingSpeed, "%.2f");
+		gc->SetToolTip("breakingSpeed [m/s]");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setBreakingImpulseThreshold);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setBreakingSpeed);
 	}
 	void addMaxPlasticStrain(){
 		addLabel("maxPlasticStrain");
@@ -803,7 +804,10 @@ public:
 		switch (constraintType){
 		case Impulse:
 			addCollisionBetweenLinkedBodies();
-			addBreakingImpulseThreshold();
+			addGateSteelScale();
+			addFenceSteelScale();
+			addBridgeSteelScale();
+			addBreakingSpeed();
 			break;
 		case ElasticPlastic:
 			addCollisionBetweenLinkedBodies();
@@ -863,6 +867,7 @@ public:
 	}
 	void addFixedConstraint(btAlignedObjectArray<btRigidBody*> ha, btScalar xlen, btScalar scale){
 		int loopSize = ha.size() - 1;
+		breakingImpulseThreshold = carMass*breakingSpeed / m_fixedTimeStep;
 		btScalar halfLength = xlen / 2;
 		btTransform tra;
 		btTransform trb;
@@ -900,11 +905,13 @@ public:
 		tra.setOrigin(cpos);
 		trb.setOrigin(-cpos);
 		btScalar k0(E*ylen*zlen*steelScale / xlen);
-		btScalar k1(E*ylen*ylen*ylen*zlen/12*steelScale);
-		btScalar k2(E*ylen*zlen*zlen*zlen / 12 * steelScale);
+		// I=bh^3/12, k is 48EI/l^3
+		btScalar im(4 * E* steelScale / xlen / xlen / xlen);
+		btScalar k1(ylen*ylen*ylen*zlen*im);
+		btScalar k2(ylen*zlen*zlen*zlen*im);
 		btScalar w0(fy*ylen*zlen*steelScale);
-		btScalar w1(k1*fy/E);
-		btScalar w2(k2*fy/E);
+		btScalar w1(fy*zlen*ylen*ylen*steelScale / 4);
+		btScalar w2(fy*zlen*zlen*ylen*steelScale / 4);
 		for (int i = 0; i < loopSize; i++){
 			bt6DofElasticPlastic2Constraint *sc =
 				new bt6DofElasticPlastic2Constraint(*ha[i], *ha[i + 1],
@@ -1170,15 +1177,16 @@ public:
 		}
 	}
 	void addGate ()	{
-		btScalar gateY = 0.5*yhl + wheelRadius;
-		btScalar gateSupportHeight = gateY + gateLsy;
-		btScalar gateSupportWidth = 0.5+gateLsz * 2;
+		btScalar gateSupportHeight = 0.5*yhl + wheelRadius + gateLsy;
+		btScalar gateY = gateSupportHeight/2;
+		btScalar gateSupportWidth = 0.5 + gateLsz * 2;
+		btScalar gateSupportLength = gateLsx;
 		btAlignedObjectArray<btRigidBody*> ha;
 		btScalar xlen = gateLsx / lpc;
 		btCollisionShape* partShape = new btBoxShape
 			(btVector3(xlen / 2, gateLsy / 2, gateLsz / 2));
 		btCollisionShape* supportShape = new btBoxShape
-			(btVector3(xlen / 2, gateSupportHeight / 2, gateSupportWidth / 2));
+			(btVector3(gateSupportLength / 2, gateSupportHeight / 2, gateSupportWidth / 2));
 		btScalar mass;
 		switch (constraintType){
 		case Rigid:
@@ -1196,15 +1204,23 @@ public:
 			btVector3 pos = btVector3(xloc, gateY, gateZ);
 			tr.setOrigin(pos);
 			if (i == 0){
-				// add gateSupport and connect it to gate
-				btScalar gateSupportMass = carMass;
-				btTransform tr;
-				tr.setIdentity();
-				btVector3 pos = btVector3(xloc - xlen, gateSupportHeight / 2, gateZ);
-				tr.setOrigin(pos);
-				ha.push_back(localCreateRigidBody(gateSupportMass, tr, supportShape));
+				// add gateSupport and connect it to gate part
+				btScalar gateSupportMass=2*carMass+mass;
+				btCompoundShape* compound = new btCompoundShape();
+				m_collisionShapes.push_back(compound);
+				btTransform itr;
+				itr.setIdentity();
+				compound->addChildShape(itr, partShape);
+				btTransform str;
+				str.setIdentity();
+				btVector3 pos = btVector3(xlen / 2 - gateSupportLength / 2, 0, 0);
+				str.setOrigin(pos);
+				compound->addChildShape(str, supportShape);
+				ha.push_back(localCreateRigidBody(gateSupportMass, tr, compound));
 			}
-			ha.push_back(localCreateRigidBody(mass, tr, partShape));
+			else{
+				ha.push_back(localCreateRigidBody(mass, tr, partShape));
+			}
 			xloc += xlen;
 		}
 		switch (constraintType){
@@ -1279,8 +1295,8 @@ void DemolisherDemo::setDensity(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->density));
 	restartHandler(control);
 }
-void DemolisherDemo::setBreakingImpulseThreshold(Gwen::Controls::Base* control){
-	setScalar(control, &(demo->breakingImpulseThreshold));
+void DemolisherDemo::setBreakingSpeed(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->breakingSpeed));
 	restartHandler(control);
 }
 void DemolisherDemo::setCarMass(Gwen::Controls::Base* control){
@@ -1354,7 +1370,7 @@ void DemolisherDemo::reinit(){
 	lsy = 3;
 	lsz = 2;
 	density = 2000;
-	breakingImpulseThreshold = 50000;
+	breakingSpeed = 5;
 	carMass = defaultCarMass;
 	maxEngineForce = 100000;
 	defaultBreakingForce = 1000;
@@ -1365,7 +1381,7 @@ void DemolisherDemo::reinit(){
 	suspensionRestLength=0.8;
 	gateSteelScale = 0.01;
 	fenceSteelScale = 0.001;
-	bridgeSteelScale = 0.17;
+	bridgeSteelScale = 0.05;
 	maxPlasticStrain = 0.2;
 	maxPlasticRotation = 3;
 	gameBindings = true;
@@ -1496,6 +1512,7 @@ void DemolisherDemo::initPhysics()
 	}
 	{ /* car dimensions are scaled if mass is changed
 	  third root would be correct for homogenous solid
+	  so it is used
 	  */
 		btScalar mr=pow(carMass / defaultCarMass,0.33);
 		yhl = mr;
@@ -1510,7 +1527,7 @@ void DemolisherDemo::initPhysics()
 	connectionHeight = 1.2*yhl;
 	tolerance = 0.003*bridgeLsx;
 	bridgeLsx = lsx;
-	bridgeLsy = 0.03*lsx;
+	bridgeLsy = 0.02*lsx;
 	bridgeLsz = 6 * lsz;
 	gateLsx = 0.25*lsx;
 	gateLsy = 0.1*lsy;
@@ -1738,7 +1755,7 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 	{
 		int maxSimSubSteps =  2;		
 		int numSimSteps;
-        numSimSteps = m_dynamicsWorld->stepSimulation(dt,maxSimSubSteps);
+        numSimSteps = m_dynamicsWorld->stepSimulation(dt,maxSimSubSteps, m_fixedTimeStep);
 		updateView();
 	}
 	else{
