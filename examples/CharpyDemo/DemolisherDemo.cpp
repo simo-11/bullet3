@@ -79,7 +79,8 @@ public:
 	class btDefaultCollisionConfiguration* m_collisionConfiguration;
 
 	class btTriangleIndexVertexArray*	m_indexVertexArrays;
-
+	btDantzigSolver* mlcp=0;
+	btMLCPSolver* sol=0;
 	btVector3*	m_vertices;
 	btScalar	maxEngineForce;//this should be engine/velocity dependent
 	btScalar	defaultBreakingForce;
@@ -91,6 +92,8 @@ public:
 	btScalar tolerance;
 	// vehicle body measures
 	btScalar yhl,xhl,zhl;
+	long stepCount;
+	btScalar stepTime;
 	int lpc;
 	btScalar breakingImpulseThreshold, breakingSpeed;
 	btScalar m_fixedTimeStep = btScalar(1) / btScalar(60);
@@ -445,6 +448,7 @@ public:
 	Gwen::Controls::Button* pauseButton;
 	Gwen::Controls::Label *db11, *db12, *db13, *db14, *db15, *db16;
 	Gwen::Controls::Label *db21, *db22, *db23;
+	Gwen::Controls::Label *db31, *db32;
 	int fps = 0;
 	int kmph = 0;
 	int mps = 0;
@@ -468,6 +472,11 @@ public:
 		sprintf_s(buffer, UIF_SIZE, "%9.0f ", -dragForce);
 		str = std::string(buffer);
 		db23->SetText(str);
+		if (useMCLPSolver && sol){
+			sprintf_s(buffer, UIF_SIZE, "%5d ", sol->getNumFallbacks());
+			str = std::string(buffer);
+			db32->SetText(str);
+		}
 	}
 	void addCollisionBetweenLinkedBodies(){
 		Gwen::Controls::Label* label = addLabel("disableCollisions");
@@ -517,6 +526,8 @@ public:
 		db21 = new Gwen::Controls::Label(pPage);
 		db22 = new Gwen::Controls::Label(pPage);
 		db23 = new Gwen::Controls::Label(pPage);
+		db31 = new Gwen::Controls::Label(pPage);
+		db32 = new Gwen::Controls::Label(pPage);
 		updateDashboards();
 		db11->SizeToContents();
 		db11->SetPos(gx, gy);
@@ -540,6 +551,14 @@ public:
 		db22->SetPos(gx + wxi, gy);
 		db23->SizeToContents();
 		db23->SetPos(gx + 2 * wxi, gy);
+		gy += gyInc;
+		if (useMCLPSolver){
+			db31->SetText("#mlcp fails");
+			db31->SizeToContents();
+			db31->SetPos(gx, gy);
+			db32->SizeToContents();
+			db32->SetPos(gx + wxi, gy);
+		}
 	}
 	Gwen::Controls::Label* addLabel(std::string txt){
 		Gwen::Controls::Label* gc = new Gwen::Controls::Label(pPage);
@@ -1011,7 +1030,7 @@ public:
 			}
 			break;
 		case Gate:
-			xStart = 0;
+			xStart = gateLsx/4;
 			zStart = gateZ-3*zhl;
 			break;
 		}
@@ -1231,6 +1250,24 @@ public:
 			addElasticPlasticConstraint(ha, xlen, gateLsy, gateLsz, gateSteelScale);
 			break;
 		}
+	}
+	void switchSolver(){
+		//switch solver (needs demo restart)
+		useMCLPSolver = !useMCLPSolver;
+		printf("switching to useMLCPSolver = %d\n", useMCLPSolver);
+		delete m_constraintSolver;
+		if (useMCLPSolver)
+		{
+			btDantzigSolver* mlcp = new btDantzigSolver();
+			//btSolveProjectedGaussSeidel* mlcp = new btSolveProjectedGaussSeidel;
+			btMLCPSolver* sol = new btMLCPSolver(mlcp);
+			m_constraintSolver = sol;
+		}
+		else
+		{
+			m_constraintSolver = new btSequentialImpulseConstraintSolver();
+		}
+		m_dynamicsWorld->setConstraintSolver(m_constraintSolver);
 	}
 };
 DemolisherDemo *demo = 0;
@@ -1545,9 +1582,8 @@ void DemolisherDemo::initPhysics()
 	m_overlappingPairCache = new btAxisSweep3(worldMin,worldMax);
 	if (useMCLPSolver)
 	{
-		btDantzigSolver* mlcp = new btDantzigSolver();
-		//btSolveProjectedGaussSeidel* mlcp = new btSolveProjectedGaussSeidel;
-		btMLCPSolver* sol = new btMLCPSolver(mlcp);
+		mlcp = new btDantzigSolver();
+		sol = new btMLCPSolver(mlcp);
 		m_constraintSolver = sol;
 	} else
 	{
@@ -1559,7 +1595,7 @@ void DemolisherDemo::initPhysics()
 	{//for direct solver it is better to have a small A matrix
 		m_dynamicsWorld ->getSolverInfo().m_minimumSolverBatchSize = 1;
 	} else
-	{//for direct solver, it is better to solve multiple objects together, small batches have high overhead
+	{//for iterative solver, it is better to solve multiple objects together, small batches have high overhead
 		m_dynamicsWorld ->getSolverInfo().m_minimumSolverBatchSize = 128;
 	}
 	m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
@@ -1754,8 +1790,8 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 	if (m_dynamicsWorld)
 	{
 		int maxSimSubSteps =  2;		
-		int numSimSteps;
-        numSimSteps = m_dynamicsWorld->stepSimulation(dt,maxSimSubSteps, m_fixedTimeStep);
+		stepCount += m_dynamicsWorld->stepSimulation(m_fixedTimeStep, maxSimSubSteps, m_fixedTimeStep);
+		stepTime += m_fixedTimeStep;
 		updateView();
 	}
 	else{
@@ -1801,6 +1837,8 @@ void DemolisherDemo::resetDemolisher()
 			m_vehicle->updateWheelTransform(i,true);
 		}
 	}
+	stepCount = 0;
+	stepTime = 0;
 }
 
 
@@ -1927,22 +1965,7 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 		case B3G_F6:
 			{
 				handled = true;
-				//switch solver (needs demo restart)
-				useMCLPSolver = !useMCLPSolver;
-				printf("switching to useMLCPSolver = %d\n", useMCLPSolver);
-
-				delete m_constraintSolver;
-				if (useMCLPSolver)
-				{
-					btDantzigSolver* mlcp = new btDantzigSolver();
-					//btSolveProjectedGaussSeidel* mlcp = new btSolveProjectedGaussSeidel;
-					btMLCPSolver* sol = new btMLCPSolver(mlcp);
-					m_constraintSolver = sol;
-				} else
-				{
-					m_constraintSolver = new btSequentialImpulseConstraintSolver();
-				}
-				m_dynamicsWorld->setConstraintSolver(m_constraintSolver);
+				switchSolver();
 				break;
 			}
 		case B3G_F5:
