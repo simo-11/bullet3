@@ -61,7 +61,7 @@ public:
 	{
 		return m_dynamicsWorld;
 	}
-	btRigidBody* m_carChassis;
+	btRigidBody* m_carChassis=0;
 	btRigidBody* localCreateRigidBody(btScalar mass, const btTransform& worldTransform, btCollisionShape* colSape);
 
 	GUIHelperInterface* m_guiHelper;
@@ -135,9 +135,9 @@ public:
 	enum CarPosition { Gate, Fence, Bridge};
 	Constraint constraintType;
 	btRaycastVehicle::btVehicleTuning	m_tuning;
-	btVehicleRaycaster*	m_vehicleRayCaster;
-	btRaycastVehicle*	m_vehicle;
-	btCollisionShape*	m_wheelShape;
+	btVehicleRaycaster*	m_vehicleRayCaster=0;
+	btRaycastVehicle*	m_vehicle=0;
+	btCollisionShape*	m_wheelShape=0;
 
 	float		m_cameraHeight;
 
@@ -1251,6 +1251,88 @@ public:
 			break;
 		}
 	}
+	void addVehicle(){
+		btCollisionShape* chassisShape = new btBoxShape(btVector3(xhl, yhl, zhl));
+		m_collisionShapes.push_back(chassisShape);
+		btCompoundShape* compound = new btCompoundShape();
+		m_collisionShapes.push_back(compound);
+		btTransform localTrans;
+		localTrans.setIdentity();
+		localTrans.setOrigin(btVector3(0, yhl, 0));
+		compound->addChildShape(localTrans, chassisShape);
+		m_carChassis = localCreateRigidBody(carMass, getCarTransform(), compound);
+		m_wheelShape = new btCylinderShapeX(btVector3(wheelWidth, wheelRadius, wheelRadius));
+		m_guiHelper->createCollisionShapeGraphicsObject(m_wheelShape);
+		int wheelGraphicsIndex = m_wheelShape->getUserIndex();
+		const float position[4] = { 0, 10, 10, 0 };
+		const float quaternion[4] = { 0, 0, 0, 1 };
+		const float color[4] = { 0.4, 0.4, 0.4, 1 };
+		const float scaling[4] = { 1, 1, 1, 1 };
+		for (int i = 0; i<4; i++)
+		{
+			m_wheelInstances[i] = m_guiHelper->registerGraphicsInstance
+				(wheelGraphicsIndex, position, quaternion, color, scaling);
+		}
+		{
+			m_vehicleRayCaster = new btDefaultVehicleRaycaster(m_dynamicsWorld);
+			m_vehicle = new btRaycastVehicle(m_tuning, m_carChassis, m_vehicleRayCaster);
+
+			///never deactivate the vehicle
+			m_carChassis->setActivationState(DISABLE_DEACTIVATION);
+			m_dynamicsWorld->addAction(m_vehicle);
+			bool isFrontWheel = true;
+			//choose coordinate system
+			int rightIndex = 0;
+			int upIndex = 1;
+			int forwardIndex = 2;
+			m_vehicle->setCoordinateSystem(rightIndex, upIndex, forwardIndex);
+			// <2 causes frequently wheel to be seen
+			// >1.1 causes situation where wheels are in air
+			btScalar wheelZLocScale = 0.8;
+			btScalar caster = 0.05;
+			btScalar camber = 0.05;
+			btVector3 connectionPointCS0(xhl - (0.3*wheelWidth),
+				connectionHeight, zhl - wheelZLocScale*wheelRadius);
+			btVector3 wheelDirectionCS0(camber, -1, caster);
+			btVector3 wheelAxleCS(-1, 0, 0);
+			// left front
+			m_vehicle->addWheel(connectionPointCS0, wheelDirectionCS0, wheelAxleCS,
+				suspensionRestLength, wheelRadius, m_tuning, isFrontWheel);
+
+			connectionPointCS0 = btVector3(-xhl + (0.3*wheelWidth),
+				connectionHeight, zhl - wheelZLocScale*wheelRadius);
+			wheelDirectionCS0 = btVector3(-camber, -1, caster);
+			// right front
+			m_vehicle->addWheel(connectionPointCS0, wheelDirectionCS0, wheelAxleCS,
+				suspensionRestLength, wheelRadius, m_tuning, isFrontWheel);
+
+			connectionPointCS0 = btVector3(-xhl + (0.3*wheelWidth),
+				connectionHeight, -zhl + wheelZLocScale*wheelRadius);
+			wheelDirectionCS0 = btVector3(-camber, -1, -caster);
+			isFrontWheel = false;
+			// right rear
+			m_vehicle->addWheel(connectionPointCS0, wheelDirectionCS0, wheelAxleCS,
+				suspensionRestLength, wheelRadius, m_tuning, isFrontWheel);
+
+			connectionPointCS0 = btVector3(xhl - (0.3*wheelWidth),
+				connectionHeight, -zhl + wheelZLocScale*wheelRadius);
+			wheelDirectionCS0 = btVector3(camber, -1, -caster);
+			// leaft rear
+			m_vehicle->addWheel(connectionPointCS0, wheelDirectionCS0, wheelAxleCS,
+				suspensionRestLength, wheelRadius, m_tuning, isFrontWheel);
+
+			for (int i = 0; i < m_vehicle->getNumWheels(); i++)
+			{
+				btWheelInfo& wheel = m_vehicle->getWheelInfo(i);
+				wheel.m_suspensionStiffness = suspensionStiffness;
+				wheel.m_wheelsDampingRelaxation = suspensionDamping;
+				wheel.m_wheelsDampingCompression = suspensionCompression;
+				wheel.m_frictionSlip = wheelFriction;
+				wheel.m_rollInfluence = rollInfluence;
+				wheel.m_maxSuspensionForce = suspensionMaxForce;
+			}
+		}
+	}
 	void switchSolver(){
 		//switch solver (needs demo restart)
 		useMCLPSolver = !useMCLPSolver;
@@ -1402,7 +1484,7 @@ void DemolisherDemo::restartHandler(Gwen::Controls::Base* control){
 }
 void DemolisherDemo::reinit(){
 	wheelFriction = 0.8;
-	lpc = 6;
+	lpc = 3;
 	lsx = 20;
 	lsy = 3;
 	lsz = 2;
@@ -1495,15 +1577,16 @@ void DemolisherDemo::exitPhysics()
 	delete m_dynamicsWorld;
 	m_dynamicsWorld=0;
 
-	delete m_vehicleRayCaster;
-	m_vehicleRayCaster = 0;
-
-	delete m_vehicle;
-	m_vehicle=0;
-	
-	delete m_wheelShape;
-	m_wheelShape=0;
-
+	if (m_vehicleRayCaster){
+		delete m_vehicleRayCaster;
+		m_vehicleRayCaster = 0;
+	}
+	if (m_vehicle){
+		delete m_vehicle;
+		m_vehicle = 0;
+		delete m_wheelShape;
+		m_wheelShape = 0;
+	}
 	//delete solver
 	delete m_constraintSolver;
 	m_constraintSolver=0;
@@ -1599,99 +1682,16 @@ void DemolisherDemo::initPhysics()
 		m_dynamicsWorld ->getSolverInfo().m_minimumSolverBatchSize = 128;
 	}
 	m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
-btTransform tr;
-tr.setIdentity();
-tr.setOrigin(btVector3(0,-3,0));
+	btTransform tr;
+	tr.setIdentity();
+	tr.setOrigin(btVector3(0,-3,0));
 	//create ground object
 	localCreateRigidBody(0,tr,groundShape);
 	halfAreaForDrag = xhl*yhl * 2;
-	btCollisionShape* chassisShape = new btBoxShape(btVector3(xhl,yhl,zhl));
-	m_collisionShapes.push_back(chassisShape);
-	btCompoundShape* compound = new btCompoundShape();
-	m_collisionShapes.push_back(compound);
-	btTransform localTrans;
-	localTrans.setIdentity();
-	localTrans.setOrigin(btVector3(0, yhl, 0));
-	compound->addChildShape(localTrans, chassisShape);
-	m_carChassis = localCreateRigidBody(carMass, getCarTransform(), compound);
-	m_wheelShape = new btCylinderShapeX(btVector3(wheelWidth,wheelRadius,wheelRadius));
-
-	m_guiHelper->createCollisionShapeGraphicsObject(m_wheelShape);
-	int wheelGraphicsIndex = m_wheelShape->getUserIndex();
-
-	const float position[4]={0,10,10,0};
-	const float quaternion[4]={0,0,0,1};
-	const float color[4]={0.4,0.4,0.4,1};
-	const float scaling[4] = {1,1,1,1};
-
-	for (int i=0;i<4;i++)
-	{
-		m_wheelInstances[i] = m_guiHelper->registerGraphicsInstance
-			(wheelGraphicsIndex, position, quaternion, color, scaling);
-	}
 	addGate();
-	addFence();
-	addBridge();
-	/// create vehicle
-	{
-		m_vehicleRayCaster = new btDefaultVehicleRaycaster(m_dynamicsWorld);
-		m_vehicle = new btRaycastVehicle(m_tuning,m_carChassis,m_vehicleRayCaster);
-		
-		///never deactivate the vehicle
-		m_carChassis->setActivationState(DISABLE_DEACTIVATION);
-		m_dynamicsWorld->addAction(m_vehicle);
-		bool isFrontWheel=true;
-		//choose coordinate system
-		int rightIndex = 0;
-		int upIndex = 1;
-		int forwardIndex = 2;
-		m_vehicle->setCoordinateSystem(rightIndex, upIndex, forwardIndex);
-		// <2 causes frequently wheel to be seen
-		// >1.1 causes situation where wheels are in air
-		btScalar wheelZLocScale = 0.8;
-		btScalar caster = 0.05;
-		btScalar camber = 0.05;
-		btVector3 connectionPointCS0(xhl - (0.3*wheelWidth),
-			connectionHeight, zhl - wheelZLocScale*wheelRadius);
-		btVector3 wheelDirectionCS0(camber, -1, caster);
-		btVector3 wheelAxleCS(-1, 0, 0);
-		// left front
-		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
-			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
-
-		connectionPointCS0 = btVector3(-xhl+(0.3*wheelWidth),
-			connectionHeight, zhl - wheelZLocScale*wheelRadius);
-		wheelDirectionCS0 = btVector3(-camber, -1, caster);
-		// right front
-		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
-			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
-
-		connectionPointCS0 = btVector3(-xhl+(0.3*wheelWidth),
-			connectionHeight, -zhl + wheelZLocScale*wheelRadius);
-		wheelDirectionCS0 = btVector3(-camber, -1, -caster);
-		isFrontWheel = false;
-		// right rear
-		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
-			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
-
-		connectionPointCS0 = btVector3(xhl-(0.3*wheelWidth),
-			connectionHeight, -zhl + wheelZLocScale*wheelRadius);
-		wheelDirectionCS0 = btVector3(camber, -1, -caster);
-		// leaft rear
-		m_vehicle->addWheel(connectionPointCS0,wheelDirectionCS0,wheelAxleCS,
-			suspensionRestLength,wheelRadius,m_tuning,isFrontWheel);
-		
-		for (int i=0;i<m_vehicle->getNumWheels();i++)
-		{
-			btWheelInfo& wheel = m_vehicle->getWheelInfo(i);
-			wheel.m_suspensionStiffness = suspensionStiffness;
-			wheel.m_wheelsDampingRelaxation = suspensionDamping;
-			wheel.m_wheelsDampingCompression = suspensionCompression;
-			wheel.m_frictionSlip = wheelFriction;
-			wheel.m_rollInfluence = rollInfluence;
-			wheel.m_maxSuspensionForce = suspensionMaxForce;
-		}
-	}
+	//addFence();
+	//addBridge();
+	//addVehicle();
 	resetDemolisher();
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
 }
@@ -1708,21 +1708,22 @@ void DemolisherDemo::physicsDebugDraw(int debugFlags)
 void DemolisherDemo::renderScene()
 {
 	m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
-
-	for (int i=0;i<m_vehicle->getNumWheels();i++)
-	{
-		//synchronize the wheels with the (interpolated) chassis worldtransform
-		m_vehicle->updateWheelTransform(i,true);
-
-		CommonRenderInterface* renderer = m_guiHelper->getRenderInterface();
-		if (renderer)
+	if (m_vehicle){
+		for (int i = 0; i < m_vehicle->getNumWheels(); i++)
 		{
-			btTransform tr = m_vehicle->getWheelInfo(i).m_worldTransform;
-			btVector3 pos=tr.getOrigin();
-			btQuaternion orn = tr.getRotation();
-			renderer->writeSingleInstanceTransformToCPU(pos,orn,m_wheelInstances[i]);
+			//synchronize the wheels with the (interpolated) chassis worldtransform
+			m_vehicle->updateWheelTransform(i, true);
+
+			CommonRenderInterface* renderer = m_guiHelper->getRenderInterface();
+			if (renderer)
+			{
+				btTransform tr = m_vehicle->getWheelInfo(i).m_worldTransform;
+				btVector3 pos = tr.getOrigin();
+				btQuaternion orn = tr.getRotation();
+				renderer->writeSingleInstanceTransformToCPU(pos, orn, m_wheelInstances[i]);
+			}
 		}
-	}	
+	}
 	updatePitch();
 	updateYaw();
 	updatePauseButtonText();
@@ -1738,13 +1739,14 @@ void DemolisherDemo::renderScene()
 	btVector3 wheelColor(1,0,0);
 	btVector3	worldBoundsMin,worldBoundsMax;
 	getDynamicsWorld()->getBroadphase()->getBroadphaseAabb(worldBoundsMin,worldBoundsMax);
-	for (i=0;i<m_vehicle->getNumWheels();i++)
-	{
-		//synchronize the wheels with the (interpolated) chassis worldtransform
-		m_vehicle->updateWheelTransform(i,true);
-		//draw wheels (cylinders)
-		m_vehicle->getWheelInfo(i).m_worldTransform.getOpenGLMatrix(m);
-//		m_shapeDrawer->drawOpenGL(m,m_wheelShape,wheelColor,getDebugMode(),worldBoundsMin,worldBoundsMax);
+	if (m_vehicle){
+		for (i = 0; i < m_vehicle->getNumWheels(); i++)
+		{
+			//synchronize the wheels with the (interpolated) chassis worldtransform
+			m_vehicle->updateWheelTransform(i, true);
+			//draw wheels (cylinders)
+			m_vehicle->getWheelInfo(i).m_worldTransform.getOpenGLMatrix(m);
+		}
 	}
 	btScalar idleTime = idleClock.getTimeSeconds();
 	if ( idleTime> 10 && !isMoving()){
@@ -1763,15 +1765,13 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 		restart();
 		restartRequested = false;
 	}
-	{
+	if(m_vehicle){
 		int wheelIndex = 2;
 		m_vehicle->applyEngineForce(gEngineForce,wheelIndex);
 		m_vehicle->setBrake(gBreakingForce,wheelIndex);
 		wheelIndex = 3;
 		m_vehicle->applyEngineForce(gEngineForce,wheelIndex);
 		m_vehicle->setBrake(gBreakingForce,wheelIndex);
-
-
 		wheelIndex = 0;
 		m_vehicle->setSteeringValue(gVehicleSteering,wheelIndex);
 		m_vehicle->setBrake(gBreakingForce, wheelIndex);
@@ -1780,7 +1780,7 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 		m_vehicle->setBrake(gBreakingForce, wheelIndex);
 
 	}
-	{
+	if(m_carChassis){
 		updateDrag();
 		m_carChassis->applyCentralForce(drag);
 	}
@@ -1792,7 +1792,9 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 		int maxSimSubSteps =  2;		
 		stepCount += m_dynamicsWorld->stepSimulation(m_fixedTimeStep, maxSimSubSteps, m_fixedTimeStep);
 		stepTime += m_fixedTimeStep;
-		updateView();
+		if (m_vehicle){
+			updateView();
+		}
 	}
 	else{
 		kmph = 0;
@@ -1822,12 +1824,14 @@ void DemolisherDemo::resetDemolisher()
 	gEngineForce = 0.f;
 	clas = 0;
 	clai = 0;
-	m_carChassis->setCenterOfMassTransform(getCarTransform());
-	m_carChassis->setLinearVelocity(btVector3(0,0,0));
-	m_carChassis->setAngularVelocity(btVector3(0,0,0));
-	m_dynamicsWorld->getBroadphase()->getOverlappingPairCache()->
-		cleanProxyFromPairs(m_carChassis->getBroadphaseHandle(),
-		getDynamicsWorld()->getDispatcher());
+	if (m_carChassis){
+		m_carChassis->setCenterOfMassTransform(getCarTransform());
+		m_carChassis->setLinearVelocity(btVector3(0, 0, 0));
+		m_carChassis->setAngularVelocity(btVector3(0, 0, 0));
+		m_dynamicsWorld->getBroadphase()->getOverlappingPairCache()->
+			cleanProxyFromPairs(m_carChassis->getBroadphaseHandle(),
+			getDynamicsWorld()->getDispatcher());
+	}
 	if (m_vehicle)
 	{
 		m_vehicle->resetSuspension();
