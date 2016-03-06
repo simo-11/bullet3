@@ -264,7 +264,12 @@ public:
 		lastClock = currentClock;
 		currentClock = now;
 		lastLocation = currentLocation;
-		currentLocation = m_carChassis->getCenterOfMassPosition();
+		if (m_carChassis){
+			currentLocation = m_carChassis->getCenterOfMassPosition();
+		}
+		else{
+			currentLocation = getCarTransform().getOrigin();
+		}
 		updateCameraLocation();
 		float timeDelta = now - speedometerUpdated;
 		if (timeDelta < updateInterval){
@@ -1138,7 +1143,6 @@ public:
 		}
 	}
 	void addBridge(){
-		bridgeSupportY = 1.2*lsy;
 		btAlignedObjectArray<btRigidBody*> ha;
 		btScalar xlen = bridgeLsx / lpc;
 		btCollisionShape* partShape = 
@@ -1569,14 +1573,14 @@ void DemolisherDemo::exitPhysics()
 		delete shape;
 	}
 	m_collisionShapes.clear();
-
-	delete m_indexVertexArrays;
-	delete m_vertices;
-
-	//delete dynamics world
-	delete m_dynamicsWorld;
-	m_dynamicsWorld=0;
-
+	if (m_indexVertexArrays){
+		delete m_indexVertexArrays;
+		m_indexVertexArrays = 0;
+	}
+	if (m_vertices){
+		delete m_vertices;
+		m_vertices = 0;
+	}
 	if (m_vehicleRayCaster){
 		delete m_vehicleRayCaster;
 		m_vehicleRayCaster = 0;
@@ -1587,21 +1591,26 @@ void DemolisherDemo::exitPhysics()
 		delete m_wheelShape;
 		m_wheelShape = 0;
 	}
-	//delete solver
-	delete m_constraintSolver;
-	m_constraintSolver=0;
-
-	//delete broadphase
-	delete m_overlappingPairCache;
-	m_overlappingPairCache=0;
-
-	//delete dispatcher
-	delete m_dispatcher;
-	m_dispatcher=0;
-
-	delete m_collisionConfiguration;
-	m_collisionConfiguration=0;
-
+	if (m_constraintSolver){
+		delete m_constraintSolver;
+		m_constraintSolver = 0;
+	}
+	if (m_dynamicsWorld){
+		delete m_dynamicsWorld;
+		m_dynamicsWorld = 0;
+	}
+	if (m_overlappingPairCache){
+		delete m_overlappingPairCache;
+		m_overlappingPairCache = 0;
+	}
+	if (m_dispatcher){
+		delete m_dispatcher;
+		m_dispatcher = 0;
+	}
+	if (m_collisionConfiguration){
+		delete m_collisionConfiguration;
+		m_collisionConfiguration = 0;
+	}
 }
 
 DemolisherDemo::~DemolisherDemo()
@@ -1649,6 +1658,7 @@ void DemolisherDemo::initPhysics()
 	bridgeLsx = lsx;
 	bridgeLsy = 0.02*lsx;
 	bridgeLsz = 6 * lsz;
+	bridgeSupportY = 1.2*lsy;
 	gateLsx = 0.25*lsx;
 	gateLsy = 0.1*lsy;
 	gateLsz = 0.1*lsz;
@@ -1688,10 +1698,18 @@ void DemolisherDemo::initPhysics()
 	//create ground object
 	localCreateRigidBody(0,tr,groundShape);
 	halfAreaForDrag = xhl*yhl * 2;
-	addGate();
-	//addFence();
-	//addBridge();
-	//addVehicle();
+	if (gateSteelScale >= 0){
+		addGate();
+	}
+	if (fenceSteelScale >= 0){
+		addFence();
+	}
+	if (bridgeSteelScale >= 0){
+		addBridge();
+	}
+	if (wheelFriction >= 0){
+		addVehicle();
+	}
 	resetDemolisher();
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
 }
@@ -1792,9 +1810,7 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 		int maxSimSubSteps =  2;		
 		stepCount += m_dynamicsWorld->stepSimulation(m_fixedTimeStep, maxSimSubSteps, m_fixedTimeStep);
 		stepTime += m_fixedTimeStep;
-		if (m_vehicle){
-			updateView();
-		}
+		updateView();
 	}
 	else{
 		kmph = 0;
