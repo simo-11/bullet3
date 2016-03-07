@@ -1502,8 +1502,8 @@ void DemolisherDemo::reinit(){
 	suspensionDamping = .5;
 	suspensionCompression=0.3;
 	suspensionRestLength=0.8;
-	gateSteelScale = 0.01;
-	fenceSteelScale = 0.001;
+	gateSteelScale = 0.05;
+	fenceSteelScale = 0.01;
 	bridgeSteelScale = 0.05;
 	maxPlasticStrain = 0.2;
 	maxPlasticRotation = 3;
@@ -1659,7 +1659,7 @@ void DemolisherDemo::initPhysics()
 	bridgeLsy = 0.02*lsx;
 	bridgeLsz = 6 * lsz;
 	bridgeSupportY = 1.2*lsy;
-	gateLsx = 0.25*lsx;
+	gateLsx = 0.5*lsx;
 	gateLsy = 0.1*lsy;
 	gateLsz = 0.1*lsz;
 	int upAxis = 1;
@@ -1725,6 +1725,9 @@ void DemolisherDemo::physicsDebugDraw(int debugFlags)
 
 void DemolisherDemo::renderScene()
 {
+	if (demo->restartRequested){
+		return;
+	}
 	m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
 	if (m_vehicle){
 		for (int i = 0; i < m_vehicle->getNumWheels(); i++)
