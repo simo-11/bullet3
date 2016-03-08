@@ -143,7 +143,7 @@ public:
 
 	float	m_minCameraDistance;
 	float	m_maxCameraDistance;
-	bool useMCLPSolver = true;
+	bool useMCLPSolver = false;
 	float	wheelRadius,wheelWidth;
 	float	rollInfluence = 0.1f;//1.0f;
 
@@ -653,6 +653,10 @@ public:
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setDensity);
 	}
+	btScalar steelDensity=7800;
+	btScalar getDensity(btScalar steelScale){
+		return btScalar(steelScale*steelDensity+(1-steelScale)*density);
+	}
 	void addBreakingSpeed(){
 		addLabel("breakingSpeed");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
@@ -929,8 +933,8 @@ public:
 		tra.setOrigin(cpos);
 		trb.setOrigin(-cpos);
 		btScalar k0(E*ylen*zlen*steelScale / xlen);
-		// I=bh^3/12, k is 48EI/l^3
-		btScalar im(4 * E* steelScale / xlen / xlen / xlen);
+		// I=bh^3/12, k for end moment with fixed end is EI/l
+		btScalar im(E* steelScale / xlen / 12);
 		btScalar k1(ylen*ylen*ylen*zlen*im);
 		btScalar k2(ylen*zlen*zlen*zlen*im);
 		btScalar w0(fy*ylen*zlen*steelScale);
@@ -1120,7 +1124,7 @@ public:
 			mass = 0;
 			break;
 		default:
-			mass = lsx*lsy*lsz*density / lpc;
+			mass = lsx*lsy*lsz*getDensity(fenceSteelScale) / lpc;
 			break;
 		}
 		m_collisionShapes.push_back(loadShape);
@@ -1157,7 +1161,7 @@ public:
 			mass = 0;
 			break;
 		default:
-			mass = bridgeLsx*bridgeLsy*bridgeLsz*density / lpc;
+			mass = bridgeLsx*bridgeLsy*bridgeLsz*getDensity(bridgeSteelScale) / lpc;
 			break;
 		}
 		btScalar xloc = (xlen - bridgeLsx) / 2;
@@ -1216,7 +1220,7 @@ public:
 			mass = 0;
 			break;
 		default:
-			mass = gateLsx*gateLsy*gateLsz*density / lpc;
+			mass = gateLsx*gateLsy*gateLsz*getDensity(gateSteelScale) / lpc;
 			break;
 		}
 		m_collisionShapes.push_back(partShape);
@@ -1256,7 +1260,8 @@ public:
 		}
 	}
 	void addVehicle(){
-		btCollisionShape* chassisShape = new btBoxShape(btVector3(xhl, yhl, zhl));
+		btCollisionShape* chassisShape = 
+			new btBoxShape(btVector3(xhl, yhl, zhl));
 		m_collisionShapes.push_back(chassisShape);
 		btCompoundShape* compound = new btCompoundShape();
 		m_collisionShapes.push_back(compound);
@@ -1264,11 +1269,15 @@ public:
 		localTrans.setIdentity();
 		localTrans.setOrigin(btVector3(0, yhl, 0));
 		compound->addChildShape(localTrans, chassisShape);
-		m_carChassis = localCreateRigidBody(carMass, getCarTransform(), compound);
-		m_wheelShape = new btCylinderShapeX(btVector3(wheelWidth, wheelRadius, wheelRadius));
+		btTransform carTr = getCarTransform();
+		m_carChassis = localCreateRigidBody(carMass, carTr, compound);
+		m_wheelShape = new btCylinderShapeX
+			(btVector3(wheelWidth, wheelRadius, wheelRadius));
 		m_guiHelper->createCollisionShapeGraphicsObject(m_wheelShape);
 		int wheelGraphicsIndex = m_wheelShape->getUserIndex();
-		const float position[4] = { 0, 10, 10, 0 };
+		btVector3 co=carTr.getOrigin();
+		const float position[4] = 
+		{ (float)co.getX(), (float)co.getY(), (float)co.getZ(), 0 };
 		const float quaternion[4] = { 0, 0, 0, 1 };
 		const float color[4] = { 0.4, 0.4, 0.4, 1 };
 		const float scaling[4] = { 1, 1, 1, 1 };
@@ -1725,7 +1734,7 @@ void DemolisherDemo::physicsDebugDraw(int debugFlags)
 
 void DemolisherDemo::renderScene()
 {
-	if (demo->restartRequested){
+	if (demo->restartRequested || stepCount<1){
 		return;
 	}
 	m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
