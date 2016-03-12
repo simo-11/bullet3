@@ -355,14 +355,30 @@ void btRaycastVehicle::updateVehicle( btScalar step )
 			btScalar proj2 = fwd.dot(vel);
 			
 			wheel.m_deltaRotation = (proj2 * step) / (wheel.m_wheelsRadius);
-			wheel.m_rotation += wheel.m_deltaRotation;
-
-		} else
-		{
+			// provide visual feedback for skid by rotating wheel
+			if (wheel.m_skidInfo < btScalar(1)
+				&& btFabs(wheel.m_engineForce) > SIMD_EPSILON){
+				// do not let divisor too near to zero as it
+				// will invalidate wheel transformation
+				btScalar divisor(wheel.m_skidInfo>0.01?wheel.m_skidInfo:0.01);
+				btScalar dr(wheel.m_deltaRotation);
+				// for stationary and low velocity cases
+				if (btFabs(dr) < 0.1){
+					dr = (dr< 0 ? btScalar(-0.1) : btScalar(0.1));
+				}
+				// motor is active to different direction compared to current movement
+				if (dr*m_forwardImpulse[i]<0){
+					dr *= btScalar(-1);
+				}
+				wheel.m_deltaRotation = dr / divisor;
+			}
 			wheel.m_rotation += wheel.m_deltaRotation;
 		}
-		
-		wheel.m_deltaRotation *= btScalar(0.99);//damping of rotation when not in contact
+		else
+		{
+			wheel.m_rotation += wheel.m_deltaRotation;
+			wheel.m_deltaRotation *= btScalar(0.99);//damping of rotation when not in contact
+		}
 
 	}
 
