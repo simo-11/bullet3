@@ -1745,9 +1745,6 @@ void DemolisherDemo::renderScene()
 	if (m_vehicle){
 		for (int i = 0; i < m_vehicle->getNumWheels(); i++)
 		{
-			//synchronize the wheels with the (interpolated) chassis worldtransform
-			m_vehicle->updateWheelTransform(i, true);
-
 			CommonRenderInterface* renderer = m_guiHelper->getRenderInterface();
 			if (renderer)
 			{
@@ -1769,19 +1766,6 @@ void DemolisherDemo::renderScene()
 	}
 	m_guiHelper->render(m_dynamicsWorld);
 	ATTRIBUTE_ALIGNED16(btScalar) m[16];
-	int i;
-	btVector3 wheelColor(1,0,0);
-	btVector3	worldBoundsMin,worldBoundsMax;
-	getDynamicsWorld()->getBroadphase()->getBroadphaseAabb(worldBoundsMin,worldBoundsMax);
-	if (m_vehicle){
-		for (i = 0; i < m_vehicle->getNumWheels(); i++)
-		{
-			//synchronize the wheels with the (interpolated) chassis worldtransform
-			m_vehicle->updateWheelTransform(i, true);
-			//draw wheels (cylinders)
-			m_vehicle->getWheelInfo(i).m_worldTransform.getOpenGLMatrix(m);
-		}
-	}
 	btScalar idleTime = idleClock.getTimeSeconds();
 	if ( idleTime> 10 && !isMoving()){
 #ifdef _WIN32
