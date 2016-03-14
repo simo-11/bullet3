@@ -1039,7 +1039,7 @@ public:
 			}
 			break;
 		case Gate:
-			xStart = gateLsx/4;
+			xStart = 0;
 			zStart = gateZ-3*zhl;
 			break;
 		}
@@ -1203,13 +1203,15 @@ public:
 			break;
 		}
 	}
-	void addGate ()	{
+	void addGate(){
 		btScalar gateSupportHeight = 0.5*yhl + wheelRadius + gateLsy;
 		btScalar gateY = gateSupportHeight/2;
 		btScalar gateSupportWidth = 0.5 + gateLsz * 2;
-		btScalar gateSupportLength = gateLsx;
+		btScalar gateSupportLength = gateLsx/3;
 		btAlignedObjectArray<btRigidBody*> ha;
-		btScalar xlen = gateLsx / lpc;
+		/* end parts have additional mass */
+		int gpc = lpc + 2;
+		btScalar xlen = gateLsx / gpc;
 		btCollisionShape* partShape = new btBoxShape
 			(btVector3(xlen / 2, gateLsy / 2, gateLsz / 2));
 		btCollisionShape* supportShape = new btBoxShape
@@ -1220,19 +1222,19 @@ public:
 			mass = 0;
 			break;
 		default:
-			mass = gateLsx*gateLsy*gateLsz*getDensity(gateSteelScale) / lpc;
+			mass = gateLsx*gateLsy*gateLsz*getDensity(gateSteelScale) / gpc;
 			break;
 		}
+		btScalar gateSupportMass = gateSupportHeight / gateLsy*gateSupportWidth / gateLsz*mass;
 		m_collisionShapes.push_back(partShape);
 		btScalar xloc = (xlen - gateLsx) / 2;
-		for (int i = 0; i < lpc; i++){
+		for (int i = 0; i < gpc; i++){
 			btTransform tr;
 			tr.setIdentity();
 			btVector3 pos = btVector3(xloc, gateY, gateZ);
 			tr.setOrigin(pos);
-			if (i == 0){
+			if (i == 0 || i==(gpc-1)){
 				// add gateSupport and connect it to gate part
-				btScalar gateSupportMass=2*carMass+mass;
 				btCompoundShape* compound = new btCompoundShape();
 				m_collisionShapes.push_back(compound);
 				btTransform itr;
@@ -1240,7 +1242,11 @@ public:
 				compound->addChildShape(itr, partShape);
 				btTransform str;
 				str.setIdentity();
-				btVector3 pos = btVector3(xlen / 2 - gateSupportLength / 2, 0, 0);
+				btScalar xLoc(xlen / 2 - gateSupportLength / 2);
+				if (i != 0){
+					xLoc = -xLoc;
+				}
+				btVector3 pos = btVector3(xLoc, 0, 0);
 				str.setOrigin(pos);
 				compound->addChildShape(str, supportShape);
 				ha.push_back(localCreateRigidBody(gateSupportMass, tr, compound));
@@ -1670,7 +1676,7 @@ void DemolisherDemo::initPhysics()
 	bridgeSupportY = 1.2*lsy;
 	b3Printf("bridgeLsx=%.1f, bridgeLsy=%.1f, bridgeLsz=%.1f", 
 		bridgeLsx, bridgeLsy, bridgeLsz);
-	gateLsx = 0.5*lsx;
+	gateLsx = lsx;
 	gateLsy = 0.1*lsy;
 	gateLsz = 0.1*lsz;
 	b3Printf("gateLsx=%.1f, gateLsy=%.1f, gateLsz=%.1f",
@@ -1765,7 +1771,6 @@ void DemolisherDemo::renderScene()
 		showMessage();
 	}
 	m_guiHelper->render(m_dynamicsWorld);
-	ATTRIBUTE_ALIGNED16(btScalar) m[16];
 	btScalar idleTime = idleClock.getTimeSeconds();
 	if ( idleTime> 10 && !isMoving()){
 #ifdef _WIN32
@@ -1784,19 +1789,34 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 		restartRequested = false;
 	}
 	if(m_vehicle){
-		int wheelIndex = 2;
-		m_vehicle->applyEngineForce(gEngineForce,wheelIndex);
-		m_vehicle->setBrake(gBreakingForce,wheelIndex);
-		wheelIndex = 3;
-		m_vehicle->applyEngineForce(gEngineForce,wheelIndex);
-		m_vehicle->setBrake(gBreakingForce,wheelIndex);
-		wheelIndex = 0;
-		m_vehicle->setSteeringValue(gVehicleSteering,wheelIndex);
-		m_vehicle->setBrake(gBreakingForce, wheelIndex);
-		wheelIndex = 1;
-		m_vehicle->setSteeringValue(gVehicleSteering,wheelIndex);
-		m_vehicle->setBrake(gBreakingForce, wheelIndex);
-
+		btScalar kmph = m_vehicle->getCurrentSpeedKmHour();
+		bool reverseSteeringForBackWheels = (kmph<40);
+		for (int i = 0; i < 4; i++){
+			btScalar steering;
+			if (reverseSteeringForBackWheels){
+				bool frontWheel = false;
+				switch (i){
+				case 0:
+				case 1:
+					frontWheel = true;
+					break;
+				default:
+					break;
+				}
+				if (frontWheel){
+					steering = gVehicleSteering;
+				}
+				else{
+					steering = -gVehicleSteering;
+				}
+			}
+			else{
+				steering = gVehicleSteering;
+			}
+			m_vehicle->setSteeringValue(steering, i);
+			m_vehicle->applyEngineForce(gEngineForce, i);
+			m_vehicle->setBrake(gBreakingForce, i);
+		}
 	}
 	if(m_carChassis){
 		updateDrag();
