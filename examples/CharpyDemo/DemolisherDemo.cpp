@@ -251,7 +251,6 @@ public:
 	}
 	/** update fps and kmph after interval seconds have passed */
 	float speedometerUpdated;
-	btVector3 speedometerLocation = lastLocation;
 	float updateInterval = 0.3;
 	int updateViewCount = 0;
 	void resetClocks(){
@@ -275,10 +274,11 @@ public:
 		if (timeDelta < updateInterval){
 			return;
 		}
-		mps = (int)(currentLocation.distance(speedometerLocation) / timeDelta);
-		kmph = (int)(3.6*currentLocation.distance(speedometerLocation) / timeDelta);
+		if (m_vehicle){
+			kmph = (int)(m_vehicle->getCurrentSpeedKmHour());
+			mps = (int)(m_vehicle->getCurrentSpeedKmHour() / 3.6);
+		}
 		fps = updateViewCount / timeDelta;
-		speedometerLocation = currentLocation;
 		speedometerUpdated = now;
 		updateViewCount = 0;
 	}
@@ -1503,7 +1503,7 @@ void DemolisherDemo::restartHandler(Gwen::Controls::Base* control){
 }
 void DemolisherDemo::reinit(){
 	wheelFriction = 0.8;
-	lpc = 3;
+	lpc = 4;
 	lsx = 20;
 	lsy = 3;
 	lsz = 2;
@@ -1677,8 +1677,8 @@ void DemolisherDemo::initPhysics()
 	b3Printf("bridgeLsx=%.1f, bridgeLsy=%.1f, bridgeLsz=%.1f", 
 		bridgeLsx, bridgeLsy, bridgeLsz);
 	gateLsx = lsx;
-	gateLsy = 0.1*lsy;
-	gateLsz = 0.1*lsz;
+	gateLsy = 0.2*lsy;
+	gateLsz = 0.2*lsz;
 	b3Printf("gateLsx=%.1f, gateLsy=%.1f, gateLsz=%.1f",
 		gateLsx, gateLsy, gateLsz);
 	int upAxis = 1;
@@ -1790,28 +1790,28 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 	}
 	if(m_vehicle){
 		btScalar kmph = m_vehicle->getCurrentSpeedKmHour();
-		bool reverseSteeringForBackWheels = (kmph<40);
+		bool reverseSteeringForBackWheels = (btFabs(kmph)<40);
 		for (int i = 0; i < 4; i++){
 			btScalar steering;
-			if (reverseSteeringForBackWheels){
-				bool frontWheel = false;
-				switch (i){
-				case 0:
-				case 1:
-					frontWheel = true;
-					break;
-				default:
-					break;
-				}
-				if (frontWheel){
-					steering = gVehicleSteering;
-				}
-				else{
-					steering = -gVehicleSteering;
-				}
+			bool frontWheel = false;
+			switch (i){
+			case 0:
+			case 1:
+				frontWheel = true;
+				break;
+			default:
+				break;
+			}
+			if (frontWheel){
+				steering = gVehicleSteering;
 			}
 			else{
-				steering = gVehicleSteering;
+				if (reverseSteeringForBackWheels){
+					steering = -gVehicleSteering/2;
+				}
+				else{
+					steering = gVehicleSteering/5;
+				}
 			}
 			m_vehicle->setSteeringValue(steering, i);
 			m_vehicle->applyEngineForce(gEngineForce, i);
