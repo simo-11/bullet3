@@ -9,6 +9,9 @@
 #include "SharedMemory/PhysicsDirectC_API.h"
 #endif //PHYSICS_SERVER_DIRECT
 
+#ifdef PHYSICS_IN_PROCESS_EXAMPLE_BROWSER
+#include "SharedMemory/SharedMemoryInProcessPhysicsC_API.h"
+#endif//PHYSICS_IN_PROCESS_EXAMPLE_BROWSER
 
 #include "SharedMemory/SharedMemoryPublic.h"
 #include "Bullet3Common/b3Logging.h"
@@ -16,6 +19,7 @@
 
 
 #include <stdio.h>
+
 
 int main(int argc, char* argv[])
 {
@@ -40,7 +44,11 @@ int main(int argc, char* argv[])
 
 #ifdef PHYSICS_SERVER_DIRECT
 	sm = b3ConnectPhysicsDirect();
-#else//PHYSICS_SERVER_DIRECT
+#endif
+
+#ifdef PHYSICS_IN_PROCESS_EXAMPLE_BROWSER
+	sm = b3CreateInProcessPhysicsServerAndConnect(argc,argv);
+#else
 	sm = b3ConnectSharedMemory(SHARED_MEMORY_KEY);
 #endif //PHYSICS_SERVER_DIRECT
 	
@@ -58,14 +66,20 @@ int main(int argc, char* argv[])
 		
         {
             b3SharedMemoryStatusHandle statusHandle;
+			int statusType;
 			b3SharedMemoryCommandHandle command = b3LoadUrdfCommandInit(sm, urdfFileName);
 			
             //setting the initial position, orientation and other arguments are optional
-            startPosX =2;
-            startPosY =3;
+            startPosX =0;
+            startPosY =0;
             startPosZ = 1;
             ret = b3LoadUrdfCommandSetStartPosition(command, startPosX,startPosY,startPosZ);
             statusHandle = b3SubmitClientCommandAndWaitStatus(sm, command);
+			statusType = b3GetStatusType(statusHandle);
+			if (statusType != CMD_URDF_LOADING_COMPLETED)
+			{
+				printf("Loading URDF failed, status type = %d\n",statusType);
+			}
 			bodyIndex = b3GetStatusBodyIndex(statusHandle);
         }
         
@@ -161,7 +175,16 @@ int main(int argc, char* argv[])
         ///perform some simulation steps for testing
         for ( i=0;i<100;i++)
         {
-            b3SubmitClientCommandAndWaitStatus(sm, b3InitStepSimulationCommand(sm));
+			b3SharedMemoryStatusHandle statusHandle;
+			int statusType;
+
+			statusHandle = b3SubmitClientCommandAndWaitStatus(sm, b3InitStepSimulationCommand(sm));
+			statusType = b3GetStatusType(statusHandle);
+			if (statusType != CMD_STEP_FORWARD_SIMULATION_COMPLETED)
+			{
+				printf("Step Simulation failed, Unexpected status type = %d\n",statusType);
+				break;
+			}
         }
         
         {
