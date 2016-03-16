@@ -285,12 +285,39 @@ public:
 	float gVehicleSteering = 0.f;
 	float steeringIncrement = 0.04f;
 	float steeringClamp = 0.3f;
+	/* 1 second for full recover */
+	float centeringIncrement = steeringClamp *m_fixedTimeStep; 
 	float steeringDelta = 0.f;
 	void setSteeringDelta(float delta){
 		steeringDelta = delta;
 	}
+	void centerSteering(){
+		if (!isMoving()){
+			return;
+		}
+		if (gVehicleSteering == 0.f){
+			return;
+		}
+		if (gVehicleSteering > 0.f){
+			if (gVehicleSteering < centeringIncrement){
+				gVehicleSteering = 0.f;
+			}
+			else{
+				gVehicleSteering -= centeringIncrement;
+			}
+		}
+		else{
+			if (gVehicleSteering > -centeringIncrement){
+				gVehicleSteering = 0.f;
+			}
+			else{
+				gVehicleSteering +=centeringIncrement;
+			}
+		}
+	}
 	void updateSteering(){
 		if (steeringDelta == 0.f){
+			centerSteering();
 			return;
 		}
 		gVehicleSteering += steeringDelta;
@@ -1789,6 +1816,7 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 		restartRequested = false;
 	}
 	if(m_vehicle){
+		updateSteering();
 		btScalar kmph = m_vehicle->getCurrentSpeedKmHour();
 		bool reverseSteeringForBackWheels = (btFabs(kmph)<40);
 		for (int i = 0; i < 4; i++){
@@ -2077,7 +2105,6 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 			}
 		}
 	}
-	updateSteering();
 	return handled;
 }
 
