@@ -285,8 +285,8 @@ public:
 	float gVehicleSteering = 0.f;
 	float steeringIncrement = 0.04f;
 	float steeringClamp = 0.3f;
-	/* 1 second for full recover */
-	float centeringIncrement = steeringClamp *m_fixedTimeStep; 
+	/* 1/3 second for full recover */
+	float centeringIncrement = 3*steeringClamp *m_fixedTimeStep; 
 	float steeringDelta = 0.f;
 	void setSteeringDelta(float delta){
 		steeringDelta = delta;
@@ -1276,7 +1276,10 @@ public:
 				btVector3 pos = btVector3(xLoc, 0, 0);
 				str.setOrigin(pos);
 				compound->addChildShape(str, supportShape);
-				ha.push_back(localCreateRigidBody(gateSupportMass, tr, compound));
+				btRigidBody* rb=localCreateRigidBody(gateSupportMass, tr, compound);
+				btScalar friction = rb->getFriction();
+				rb->setFriction(friction*15);
+				ha.push_back(rb);
 			}
 			else{
 				ha.push_back(localCreateRigidBody(mass, tr, partShape));
@@ -1529,7 +1532,7 @@ void DemolisherDemo::restartHandler(Gwen::Controls::Base* control){
 	demo->restartRequested = true;
 }
 void DemolisherDemo::reinit(){
-	wheelFriction = 0.8;
+	wheelFriction = 3;
 	lpc = 4;
 	lsx = 20;
 	lsy = 3;
@@ -1663,7 +1666,7 @@ DemolisherDemo::~DemolisherDemo()
 void DemolisherDemo::initPhysics()
 {	
 	if (calculateMaxEngineForce){
-		maxEngineForce = 2*carMass;
+		maxEngineForce = 4*carMass*wheelFriction;
 	}
 	if (calculateMaxEngineForce){
 		defaultBreakingForce = 0.01*carMass;
@@ -1672,8 +1675,8 @@ void DemolisherDemo::initPhysics()
 		suspensionStiffness = 30;
 	}
 	if (calculateMaxSuspensionForce){
-		// 4 wheels, so car can take additional load of 5 time of own mass
-		suspensionMaxForce = 15 * carMass;
+		// 4 wheels, so car can take additional load of 2 time of own mass
+		suspensionMaxForce = (1+2)*10*carMass/4;
 	}
 	if (calculateSuspensionDamping){
 		suspensionDamping = .5;
