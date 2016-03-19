@@ -93,7 +93,8 @@ public:
 	// vehicle body measures
 	btScalar yhl,xhl,zhl;
 	long stepCount;
-	btScalar stepTime;
+	btScalar stepTime,gravityRampUpTime;
+	btVector3 m_gravity;
 	int lpc;
 	btScalar breakingImpulseThreshold, breakingSpeed;
 	btScalar m_fixedTimeStep = btScalar(1) / btScalar(60);
@@ -453,6 +454,7 @@ public:
 		return std::string(buffer);
 	}
 	void setWheelFriction(Gwen::Controls::Base* control);
+	void setGravityRampUpTime(Gwen::Controls::Base* control);
 	void setLpc(Gwen::Controls::Base* control);
 	void setLsx(Gwen::Controls::Base* control);
 	void setLsy(Gwen::Controls::Base* control);
@@ -634,6 +636,15 @@ public:
 		gc->SetText(text);
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setWheelFriction);
+	}
+	void addGravityRampUpTime(){
+		addLabel("gravityRampUpTime");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		gc->SetToolTip("Gravity ramp up time [s]");
+		std::string text = uif(gravityRampUpTime, "%.2f");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setGravityRampUpTime);
 	}
 	void addLpc(){
 		addLabel("lpc");
@@ -896,6 +907,7 @@ public:
 			addDefaultBreakingForce();
 		}
 		addWheelFriction();
+		addGravityRampUpTime();
 		addGameBindings();
 		addDumpPng();
 		addLogDir();
@@ -1112,6 +1124,9 @@ public:
 		}
 		pData.clear();
 		char buf[B_LEN*2];
+		sprintf_s(buf, B_LEN, "stepTime=%4.1f, gravity=%4.1f",
+			stepTime, m_dynamicsWorld->getGravity().getY());
+		infoMsg(buf);
 		btDiscreteDynamicsWorld *dw = m_dynamicsWorld;
 		bool headerDone = false;
 		int numConstraints=dw->getNumConstraints();
@@ -1443,6 +1458,10 @@ void DemolisherDemo::setWheelFriction(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->wheelFriction));
 	restartHandler(control);
 }
+void DemolisherDemo::setGravityRampUpTime(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->gravityRampUpTime));
+	restartHandler(control);
+}
 void DemolisherDemo::setLpc(Gwen::Controls::Base* control){
 	setInt(control, &(demo->lpc));
 	restartHandler(control);
@@ -1533,8 +1552,9 @@ void DemolisherDemo::restartHandler(Gwen::Controls::Base* control){
 }
 void DemolisherDemo::reinit(){
 	wheelFriction = 3;
+	gravityRampUpTime = 4;
 	lpc = 4;
-	lsx = 20;
+	lsx = 30;
 	lsy = 3;
 	lsz = 2;
 	density = 2000;
@@ -1700,7 +1720,7 @@ void DemolisherDemo::initPhysics()
 	}
 	connectionHeight = 1.2*yhl;
 	tolerance = 0.003*bridgeLsx;
-	bridgeLsx = lsx;
+	bridgeLsx = 5*lsx/6;
 	bridgeLsy = 0.02*lsx;
 	bridgeLsz = 6 * lsz;
 	bridgeSupportY = 1.2*lsy;
@@ -1858,7 +1878,10 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 	
 	if (m_dynamicsWorld)
 	{
-		int maxSimSubSteps =  2;		
+		int maxSimSubSteps =  2;
+		if (stepTime < gravityRampUpTime){
+			m_dynamicsWorld->setGravity(stepTime / gravityRampUpTime*m_gravity);
+		}
 		stepCount += m_dynamicsWorld->stepSimulation(m_fixedTimeStep, maxSimSubSteps, m_fixedTimeStep);
 		stepTime += m_fixedTimeStep;
 		updateView();
@@ -1910,6 +1933,7 @@ void DemolisherDemo::resetDemolisher()
 	}
 	stepCount = 0;
 	stepTime = 0;
+	m_gravity = m_dynamicsWorld->getGravity();
 }
 
 
