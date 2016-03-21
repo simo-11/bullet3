@@ -1721,8 +1721,8 @@ void DemolisherDemo::initPhysics()
 	connectionHeight = 1.2*yhl;
 	tolerance = 0.003*bridgeLsx;
 	bridgeLsx = 5*lsx/6;
-	bridgeLsy = 0.02*lsx;
-	bridgeLsz = 6 * lsz;
+	bridgeLsy = 0.02*bridgeLsx;
+	bridgeLsz = 6 * xhl;
 	bridgeSupportY = 1.2*lsy;
 	b3Printf("bridgeLsx=%.1f, bridgeLsy=%.1f, bridgeLsz=%.1f", 
 		bridgeLsx, bridgeLsy, bridgeLsz);
