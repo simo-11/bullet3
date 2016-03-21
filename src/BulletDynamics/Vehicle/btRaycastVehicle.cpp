@@ -324,6 +324,9 @@ void btRaycastVehicle::updateVehicle( btScalar step )
 		if (groundObject && groundObject->getInvMass() != 0.0){
 			btVector3 relpos2 = wheel.m_raycastInfo.m_contactPointWS -
 				groundObject->getCenterOfMassPosition();
+			if (!groundObject->isActive()){
+				groundObject->activate();
+			}
 			groundObject->applyImpulse(-impulse, relpos2);
 		}
 
