@@ -95,6 +95,7 @@ public:
 	long stepCount;
 	btScalar stepTime,gravityRampUpTime;
 	btVector3 m_gravity;
+	bool hasFullGravity;
 	int lpc;
 	btScalar breakingImpulseThreshold, breakingSpeed;
 	btScalar m_fixedTimeStep = btScalar(1) / btScalar(60);
@@ -1053,9 +1054,10 @@ public:
 		return getCarTransform(latestCarPosition);
 	}
 	btTransform getCarTransform(CarPosition position){
-		btScalar sy = suspensionRestLength - 
-			10 * carMass / suspensionStiffness / 4;
-		if (sy < 0){
+		btScalar sy = suspensionRestLength+
+			m_dynamicsWorld->getGravity().getY() * carMass
+			/ suspensionStiffness / 4;
+		if (sy < 0.06){
 			sy = 0.06;
 		}
 		btScalar yStart = connectionHeight-suspensionRestLength+sy;
@@ -1124,8 +1126,8 @@ public:
 		}
 		pData.clear();
 		char buf[B_LEN*2];
-		sprintf_s(buf, B_LEN, "stepTime=%4.1f, gravity=%4.1f",
-			stepTime, m_dynamicsWorld->getGravity().getY());
+		sprintf_s(buf, B_LEN, "stepTime=%4.1f, gravity=%4.1f, stepCount=%d",
+			stepTime, m_dynamicsWorld->getGravity().getY(),stepCount);
 		infoMsg(buf);
 		btDiscreteDynamicsWorld *dw = m_dynamicsWorld;
 		bool headerDone = false;
@@ -1551,7 +1553,7 @@ void DemolisherDemo::restartHandler(Gwen::Controls::Base* control){
 	demo->restartRequested = true;
 }
 void DemolisherDemo::reinit(){
-	wheelFriction = 3;
+	wheelFriction = 1;
 	gravityRampUpTime = 4;
 	lpc = 4;
 	lsx = 30;
@@ -1685,6 +1687,7 @@ DemolisherDemo::~DemolisherDemo()
 
 void DemolisherDemo::initPhysics()
 {	
+	hasFullGravity = false;
 	if (calculateMaxEngineForce){
 		maxEngineForce = 4*carMass*wheelFriction;
 	}
@@ -1878,12 +1881,17 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 	
 	if (m_dynamicsWorld)
 	{
-		int maxSimSubSteps =  2;
+		int maxSimSubSteps =  10;
 		if (stepTime < gravityRampUpTime){
 			m_dynamicsWorld->setGravity(stepTime / gravityRampUpTime*m_gravity);
 		}
-		stepCount += m_dynamicsWorld->stepSimulation(m_fixedTimeStep, maxSimSubSteps, m_fixedTimeStep);
-		stepTime += m_fixedTimeStep;
+		else if (!hasFullGravity){
+			m_dynamicsWorld->setGravity(m_gravity);
+			hasFullGravity = true;
+		}
+		btScalar timeStep = (btScalar)deltaTime;
+		stepCount += m_dynamicsWorld->stepSimulation(timeStep, maxSimSubSteps, m_fixedTimeStep);
+		stepTime += timeStep;
 		updateView();
 	}
 	else{
