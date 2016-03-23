@@ -1607,8 +1607,7 @@ m_maxCameraDistance(10.f)
 
 void DemolisherDemo::exitPhysics()
 {
-		//cleanup in the reverse order of creation/initialization
-
+	//cleanup in the reverse order of creation/initialization
 	//remove the rigidbodies from the dynamics world and delete them
 	int i;
 	for (i=m_dynamicsWorld->getNumCollisionObjects()-1; i>=0 ;i--)
@@ -1617,7 +1616,6 @@ void DemolisherDemo::exitPhysics()
 		btRigidBody* body = btRigidBody::upcast(obj);
 		if (body && body->getMotionState())
 		{
-
 			while (body->getNumConstraintRefs())
 			{
 				btTypedConstraint* constraint = body->getConstraintRef(0);
@@ -1801,19 +1799,6 @@ void DemolisherDemo::renderScene()
 		return;
 	}
 	m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
-	if (m_vehicle){
-		for (int i = 0; i < m_vehicle->getNumWheels(); i++)
-		{
-			CommonRenderInterface* renderer = m_guiHelper->getRenderInterface();
-			if (renderer)
-			{
-				btTransform tr = m_vehicle->getWheelInfo(i).m_worldTransform;
-				btVector3 pos = tr.getOrigin();
-				btQuaternion orn = tr.getRotation();
-				renderer->writeSingleInstanceTransformToCPU(pos, orn, m_wheelInstances[i]);
-			}
-		}
-	}
 	updatePitch();
 	updateYaw();
 	updatePauseButtonText();
@@ -1824,6 +1809,17 @@ void DemolisherDemo::renderScene()
 		showMessage();
 	}
 	m_guiHelper->render(m_dynamicsWorld);
+	CommonRenderInterface* renderer = m_guiHelper->getRenderInterface();
+	if (m_vehicle && renderer){
+		for (int i = 0; i < m_vehicle->getNumWheels(); i++)
+		{
+			btWheelInfo& wi = m_vehicle->getWheelInfo(i);
+			btTransform tr = wi.m_worldTransform;
+			btVector3 pos = tr.getOrigin();
+			btQuaternion orn = tr.getRotation();
+			renderer->writeSingleInstanceTransformToCPU(pos, orn, m_wheelInstances[i]);
+		}
+	}
 	btScalar idleTime = idleClock.getTimeSeconds();
 	if ( idleTime> 10 && !isMoving()){
 #ifdef _WIN32
@@ -1868,7 +1864,13 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 				}
 			}
 			m_vehicle->setSteeringValue(steering, i);
-			m_vehicle->applyEngineForce(gEngineForce, i);
+			// limit speed
+			if (btFabs(kmph) < 95 || kmph*gEngineForce<0) {
+				m_vehicle->applyEngineForce(gEngineForce, i);
+			}
+			else{
+				m_vehicle->applyEngineForce(0, i);
+			}
 			m_vehicle->setBrake(gBreakingForce, i);
 		}
 	}
