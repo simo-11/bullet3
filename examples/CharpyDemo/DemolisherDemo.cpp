@@ -92,7 +92,7 @@ public:
 	btScalar tolerance;
 	// vehicle body measures
 	btScalar yhl,xhl,zhl;
-	long stepCount;
+	long stepCount,maxStepCount,syncedStep;
 	btScalar stepTime,gravityRampUpTime;
 	btVector3 m_gravity;
 	bool hasFullGravity;
@@ -125,6 +125,7 @@ public:
 	int gx = 10; // for labels
 	int gxi = 120; // for inputs elements
 	int wxi = 60; // width
+	int swxi = 30; // short width
 	int gy;
 	int gyInc = 25;
 	bool restartRequested;
@@ -476,11 +477,13 @@ public:
 	void setMaxPlasticStrain(Gwen::Controls::Base* control);
 	void setMaxPlasticRotation(Gwen::Controls::Base* control);
 	void setGameBindings(Gwen::Controls::Base* control);
+	void handlePauseSimulation(Gwen::Controls::Base* control);
+	void handleSingleStep(Gwen::Controls::Base* control);
 	void setDisableCollisionsBetweenLinkedBodies(Gwen::Controls::Base* control);
 	void setLogDir(Gwen::Controls::Base* control);
 	void setDumpPng(Gwen::Controls::Base* control);
 	Gwen::Controls::Base* pPage;
-	Gwen::Controls::Button* pauseButton;
+	Gwen::Controls::Button* pauseButton, *singleStepButton;
 	Gwen::Controls::Label *db11, *db12, *db13, *db14, *db15, *db16;
 	Gwen::Controls::Label *db21, *db22, *db23;
 	Gwen::Controls::Label *db31, *db32;
@@ -511,6 +514,20 @@ public:
 			sprintf_s(buffer, UIF_SIZE, "%5d ", sol->getNumFallbacks());
 			str = std::string(buffer);
 			db32->SetText(str);
+		}
+	}
+	void syncWheelsToGraphics(){
+		CommonRenderInterface* renderer = m_guiHelper->getRenderInterface();
+		if (m_vehicle && renderer){
+			for (int i = 0; i < m_vehicle->getNumWheels(); i++)
+			{
+				btWheelInfo& wi = m_vehicle->getWheelInfo(i);
+				btTransform tr = wi.m_worldTransform;
+				btVector3 pos = tr.getOrigin();
+				btQuaternion orn = tr.getRotation();
+				renderer->writeSingleInstanceTransformToCPU
+					(pos, orn, m_wheelInstances[i]);
+			}
 		}
 	}
 	void addCollisionBetweenLinkedBodies(){
@@ -610,17 +627,25 @@ public:
 		gc->SetSize(wxi - 4, gyInc - 4);
 		gc->onPress.Add(pPage, &DemolisherDemo::handlePauseSimulation);
 	}
+	void addSingleStepButton(){
+		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
+		gc->SetText(L"SS");
+		gc->SetToolTip(L"Single Step");
+		gc->SetPos(gx + wxi, gy);
+		gc->SetSize(swxi - 4, gyInc - 4);
+		gc->onPress.Add(pPage, &DemolisherDemo::handleSingleStep);
+	}
 	void addRestartButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
 		gc->SetText(L"Restart");
-		gc->SetPos(gx + wxi, gy);
+		gc->SetPos(gx + wxi+swxi, gy);
 		gc->SetSize(wxi - 4, gyInc - 4);
 		gc->onPress.Add(pPage, &DemolisherDemo::restartHandler);
 	}
 	void addResetButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
 		gc->SetText(L"Reset");
-		gc->SetPos(gx + 2 * wxi, gy);
+		gc->SetPos(gx + 2 * wxi+swxi, gy);
 		gc->SetSize(wxi - 4, gyInc - 4);
 		gy += gyInc;
 		gc->onPress.Add(pPage, &DemolisherDemo::resetHandler);
@@ -832,13 +857,6 @@ public:
 			pauseButton->SetText(L"Pause");
 		}
 	}
-	void handlePauseSimulation(Gwen::Controls::Base* control){
-		Gwen::Controls::Button* gc =
-			static_cast<Gwen::Controls::Button*>(control);
-		bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
-		pauseSimulation = !pauseSimulation;
-		PlasticityExampleBrowser::setPauseSimulation(pauseSimulation);
-	}
 	void initOptions(){
 		resetCamera();
 		int option = m_option;
@@ -913,6 +931,7 @@ public:
 		addDumpPng();
 		addLogDir();
 		addPauseSimulationButton();
+		addSingleStepButton();
 		addRestartButton();
 		addResetButton();
 		addDashboard();
@@ -1428,6 +1447,23 @@ DemolisherDemo *demo = 0;
 #include "DemolisherDemo.h"
 
 
+void DemolisherDemo::handlePauseSimulation(Gwen::Controls::Base* control){
+	Gwen::Controls::Button* gc =
+		static_cast<Gwen::Controls::Button*>(control);
+	bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
+	pauseSimulation = !pauseSimulation;
+	if (!pauseSimulation){
+		demo->maxStepCount = LONG_MAX;
+	}
+	PlasticityExampleBrowser::setPauseSimulation(pauseSimulation);
+}
+
+void DemolisherDemo::handleSingleStep(Gwen::Controls::Base* control){
+	Gwen::Controls::Button* gc =
+		static_cast<Gwen::Controls::Button*>(control);
+	demo->maxStepCount = demo->stepCount + 1;
+	PlasticityExampleBrowser::setPauseSimulation(false);
+}
 
 void DemolisherDemo::setGameBindings(Gwen::Controls::Base* control){
 	Gwen::Controls::CheckBox* cb =
@@ -1798,28 +1834,21 @@ void DemolisherDemo::renderScene()
 	if (demo->restartRequested || stepCount<1){
 		return;
 	}
-	m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
 	updatePitch();
 	updateYaw();
 	updatePauseButtonText();
-	updateDashboards();
 	setDumpFilename();
 	{
 		BT_PROFILE("CharpyDemo::showMessage");
 		showMessage();
 	}
-	m_guiHelper->render(m_dynamicsWorld);
-	CommonRenderInterface* renderer = m_guiHelper->getRenderInterface();
-	if (m_vehicle && renderer){
-		for (int i = 0; i < m_vehicle->getNumWheels(); i++)
-		{
-			btWheelInfo& wi = m_vehicle->getWheelInfo(i);
-			btTransform tr = wi.m_worldTransform;
-			btVector3 pos = tr.getOrigin();
-			btQuaternion orn = tr.getRotation();
-			renderer->writeSingleInstanceTransformToCPU(pos, orn, m_wheelInstances[i]);
-		}
+	updateDashboards();
+	if (stepCount > syncedStep){
+		syncWheelsToGraphics();
+		m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
+		syncedStep = stepCount;
 	}
+	m_guiHelper->render(m_dynamicsWorld);
 	btScalar idleTime = idleClock.getTimeSeconds();
 	if ( idleTime> 10 && !isMoving()){
 #ifdef _WIN32
@@ -1893,6 +1922,9 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 		}
 		btScalar timeStep = (btScalar)deltaTime;
 		stepCount += m_dynamicsWorld->stepSimulation(timeStep, maxSimSubSteps, m_fixedTimeStep);
+		if (stepCount > maxStepCount){
+			PlasticityExampleBrowser::setPauseSimulation(true);
+		}
 		stepTime += timeStep;
 		updateView();
 	}
@@ -1942,6 +1974,8 @@ void DemolisherDemo::resetDemolisher()
 		}
 	}
 	stepCount = 0;
+	syncedStep = 0;
+	maxStepCount = LONG_MAX;
 	stepTime = 0;
 	m_gravity = m_dynamicsWorld->getGravity();
 }
