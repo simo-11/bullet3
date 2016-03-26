@@ -218,7 +218,7 @@ public:
 		bool isMoving = d2 > 1e-4;
 		return isMoving;
 	}
-#define CAM_SMOOTH_SIZE 10
+#define CAM_SMOOTH_SIZE 1
 	btVector3 cla[CAM_SMOOTH_SIZE];
 	btVector3 scl; // smoothed camera location
 	int clai = 0;
