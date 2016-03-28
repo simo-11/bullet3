@@ -809,11 +809,17 @@ void PlasticityExampleBrowser::update(float deltaTime)
 				float camDist = cam->getCameraDistance();
 				float pitch = cam->getCameraPitch();
 				float yaw = cam->getCameraYaw();
-				float camTarget[3];
+				float camTarget[3], camPosition[3];
 				cam->getCameraTargetPosition(camTarget);
-				sprintf_s(msg,BLEN,
-					"dist=%.2f, pitch=%.2f, yaw=%.2f, target=%.2f, %.2f, %.2f", 
-					camDist,pitch,yaw,camTarget[0],camTarget[1],camTarget[2]);
+				cam->getCameraPosition(camPosition);
+				sprintf_s(msg, BLEN,
+					"d=%.1f, p=%.1f, y=%.1f, \
+t=%.1f, %.1f, %.1f, \
+p=%.1f, %.1f, %.1f", 
+					camDist,pitch,yaw,
+					camTarget[0],camTarget[1],camTarget[2],
+					camPosition[0], camPosition[1], camPosition[2]
+					);
 				gui->setStatusBarMessage(msg, true);	
 			}
 			
