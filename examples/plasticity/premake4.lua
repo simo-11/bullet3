@@ -35,6 +35,7 @@
 		excludes {
 		"../ExampleBrowser/OpenGLExampleBrowser.*",
 		"../ExampleBrowser/ExampleEntries.*",
+		"../ExampleBrowser/InProcessExampleBrowser.*",
 		"../ExampleBrowser/main.*",
 		}
 		
