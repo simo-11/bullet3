@@ -1843,12 +1843,12 @@ void DemolisherDemo::renderScene()
 		showMessage();
 	}
 	updateDashboards();
+	m_guiHelper->render(m_dynamicsWorld);
 	if (stepCount > syncedStep){
 		syncWheelsToGraphics();
 		m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
 		syncedStep = stepCount;
 	}
-	m_guiHelper->render(m_dynamicsWorld);
 	btScalar idleTime = idleClock.getTimeSeconds();
 	if ( idleTime> 10 && !isMoving()){
 #ifdef _WIN32
