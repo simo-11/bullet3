@@ -371,6 +371,18 @@ public:
 		gEngineForce += scale*maxEngineForce;
 		gBreakingForce = 0.f;
 	}
+	void updateGravity(){
+		if (!m_dynamicsWorld){
+			return;
+		}
+		if (stepTime < gravityRampUpTime){
+			m_dynamicsWorld->setGravity(stepTime / gravityRampUpTime*m_gravity);
+		}
+		else if (!hasFullGravity){
+			m_dynamicsWorld->setGravity(m_gravity);
+			hasFullGravity = true;
+		}
+	}
 	/**
 	https://en.wikipedia.org/wiki/Drag_(physics)
 	ro is about 1 kg/m3
@@ -1073,13 +1085,18 @@ public:
 		return getCarTransform(latestCarPosition);
 	}
 	btTransform getCarTransform(CarPosition position){
-		btScalar sy = suspensionRestLength+
-			m_dynamicsWorld->getGravity().getY() * carMass
-			/ suspensionStiffness / 4;
-		if (sy < 0.06){
-			sy = 0.06;
+		updateGravity();
+		btScalar gy = m_dynamicsWorld->getGravity().getY();
+		/*
+		* this scaler was obtained by fitting data
+		* physical backgrund remains to be solved
+		*/
+		btScalar scaler = 0.00018;
+		btScalar sy = scaler* gy* carMass	/ suspensionStiffness / 4;
+		if (sy < -suspensionRestLength){
+			sy = -suspensionRestLength;
 		}
-		btScalar yStart = connectionHeight-suspensionRestLength+sy;
+		btScalar yStart = connectionHeight+sy;
 		btScalar zStart, xStart;
 		btTransform tr;
 		tr.setIdentity();
@@ -1590,6 +1607,7 @@ void DemolisherDemo::restartHandler(Gwen::Controls::Base* control){
 }
 void DemolisherDemo::reinit(){
 	wheelFriction = 1;
+	m_gravity = btVector3(0, -10, 0);
 	gravityRampUpTime = 4;
 	lpc = 4;
 	lsx = 30;
@@ -1611,6 +1629,7 @@ void DemolisherDemo::reinit(){
 	maxPlasticStrain = 0.2;
 	maxPlasticRotation = 3;
 	gameBindings = true;
+	maxStepCount = LONG_MAX;
 	resetClocks();
 }
 
@@ -1722,6 +1741,16 @@ DemolisherDemo::~DemolisherDemo()
 void DemolisherDemo::initPhysics()
 {	
 	hasFullGravity = false;
+	if (maxStepCount != LONG_MAX){
+		// Single step is active
+		maxStepCount = 1;
+	}
+	else{
+		maxStepCount = LONG_MAX;
+	}
+	stepCount = 0;
+	syncedStep = 0;
+	stepTime = 0;
 	if (calculateMaxEngineForce){
 		maxEngineForce = 4*carMass*wheelFriction;
 	}
@@ -1802,7 +1831,8 @@ void DemolisherDemo::initPhysics()
 	tr.setIdentity();
 	tr.setOrigin(btVector3(0,-3,0));
 	//create ground object
-	localCreateRigidBody(0,tr,groundShape);
+	btRigidBody* ground=localCreateRigidBody(0, tr, groundShape);
+	ground->setFriction(1);
 	halfAreaForDrag = xhl*yhl * 2;
 	if (gateSteelScale >= 0){
 		addGate();
@@ -1913,13 +1943,7 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 	if (m_dynamicsWorld)
 	{
 		int maxSimSubSteps =  10;
-		if (stepTime < gravityRampUpTime){
-			m_dynamicsWorld->setGravity(stepTime / gravityRampUpTime*m_gravity);
-		}
-		else if (!hasFullGravity){
-			m_dynamicsWorld->setGravity(m_gravity);
-			hasFullGravity = true;
-		}
+		updateGravity();
 		btScalar timeStep = (btScalar)deltaTime;
 		stepCount += m_dynamicsWorld->stepSimulation(timeStep, maxSimSubSteps, m_fixedTimeStep);
 		if (stepCount > maxStepCount){
@@ -1973,11 +1997,6 @@ void DemolisherDemo::resetDemolisher()
 			m_vehicle->updateWheelTransform(i,true);
 		}
 	}
-	stepCount = 0;
-	syncedStep = 0;
-	maxStepCount = LONG_MAX;
-	stepTime = 0;
-	m_gravity = m_dynamicsWorld->getGravity();
 }
 
 

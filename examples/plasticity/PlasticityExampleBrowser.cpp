@@ -814,7 +814,7 @@ void PlasticityExampleBrowser::update(float deltaTime)
 				cam->getCameraPosition(camPosition);
 				sprintf_s(msg, BLEN,
 					"d=%.1f, p=%.1f, y=%.1f, \
-t=% .1f, % .1f, % .1f, \
+t=% .1f, % .2f, % .1f, \
 p=% .1f, % .1f, % .1f", 
 					camDist,pitch,yaw,
 					camTarget[0],camTarget[1],camTarget[2],
