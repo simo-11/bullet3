@@ -48,7 +48,8 @@ http://gimpact.sf.net
 #include "BulletDynamics/Dynamics/btActionInterface.h"
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 class btRigidBody;
-
+#include "BulletDynamics/Dynamics/btDynamicsWorld.h"
+class btDynamicsWorld;
 
 #ifdef BT_USE_DOUBLE_PRECISION
 #define bt6DofElasticPlastic2ConstraintData2		bt6DofElasticPlastic2ConstraintDoubleData2
@@ -299,8 +300,11 @@ public:
 	///btActionInterface interface
 	virtual void updateAction(btCollisionWorld* collisionWorld, btScalar step)
 	{
-		(void)collisionWorld;
 		updatePlasticity(jointFeedback);
+		if (!isEnabled()){
+			btDynamicsWorld *dw = (btDynamicsWorld *)collisionWorld;
+			dw->removeConstraint(this);
+		}
 	}
 	///btActionInterface interface
 	void	debugDraw(btIDebugDraw* debugDrawer);
