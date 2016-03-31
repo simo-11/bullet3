@@ -1869,12 +1869,16 @@ void DemolisherDemo::renderScene()
 	updatePauseButtonText();
 	setDumpFilename();
 	{
-		BT_PROFILE("CharpyDemo::showMessage");
+		BT_PROFILE("DemolisherDemo::showMessage");
 		showMessage();
 	}
 	updateDashboards();
-	m_guiHelper->render(m_dynamicsWorld);
+	{
+		BT_PROFILE("m_guiHelper::render");
+		m_guiHelper->render(m_dynamicsWorld);
+	}
 	if (stepCount > syncedStep){
+		BT_PROFILE("m_guiHelper::syncPhysicsToGraphics");
 		syncWheelsToGraphics();
 		m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
 		syncedStep = stepCount;

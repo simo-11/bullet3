@@ -43,6 +43,7 @@ http://gimpact.sf.net
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 #include "LinearMath/btTransformUtil.h"
 #include "LinearMath/btIDebugDraw.h"
+#include "LinearMath/btQuickprof.h"
 #include <new>
 #include "../plasticity/PlasticityData.h"
 
@@ -492,6 +493,7 @@ void bt6DofElasticPlastic2Constraint::getInfo1 (btConstraintInfo1* info)
 
 void bt6DofElasticPlastic2Constraint::getInfo2 (btConstraintInfo2* info)
 {
+	BT_PROFILE("bt6DofElasticPlastic2Constraint::getInfo2");
 	const btTransform& transA = m_rbA.getCenterOfMassTransform();
 	const btTransform& transB = m_rbB.getCenterOfMassTransform();
 	const btVector3& linVelA = m_rbA.getLinearVelocity();
@@ -673,6 +675,7 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 	const btTransform& transA,const btTransform& transB,const btVector3& linVelA,const btVector3& linVelB,const btVector3& angVelA,const btVector3& angVelB,
 	btConstraintInfo2 *info, int row, btVector3& ax1, int rotational,int rotAllowed, btScalar maxForce)
 {
+	BT_PROFILE("bt6DofElasticPlastic2Constraint::get_limit_motor_info2");
 	bool useBcc = true;
 	int count = 0;
 	int srow = row * info->rowskip;
@@ -1241,6 +1244,7 @@ int bt6DofElasticPlastic2Constraint::getMaxRatioDof(){
 	return m_maxRatioDof;
 }
 void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
+	BT_PROFILE("updatePlasticity");
 	if (!isEnabled()){
 		return;
 	}
