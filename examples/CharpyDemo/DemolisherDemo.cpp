@@ -1110,7 +1110,7 @@ public:
 			{
 				btQuaternion q(SIMD_HALF_PI,0,0);
 				tr.setRotation(q);
-				xStart = -bridgeLsx / 2 ;
+				xStart = -bridgeLsx / 2-zhl ;
 				zStart = bridgeZ;
 				yStart += bridgeSupportY + bridgeLsy;
 			}
