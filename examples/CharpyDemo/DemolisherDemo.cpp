@@ -1789,7 +1789,7 @@ void DemolisherDemo::initPhysics()
 	bridgeLsx = 5*lsx/6;
 	bridgeLsy = 0.02*bridgeLsx;
 	bridgeLsz = 6 * xhl;
-	bridgeSupportY = 1.2*lsy;
+	bridgeSupportY = max(1.2*lsy,2*yhl+wheelRadius);
 	b3Printf("bridgeLsx=%.1f, bridgeLsy=%.1f, bridgeLsz=%.1f", 
 		bridgeLsx, bridgeLsy, bridgeLsz);
 	gateLsx = lsx;
