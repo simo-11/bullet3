@@ -87,8 +87,9 @@ public:
 	btScalar	wheelFriction;
 	btScalar lsx, lsy, lsz;
 	btScalar bridgeLsx, bridgeLsy, bridgeLsz, bridgeSupportY;
+	bool twoSupportsForGate = false;
 	btScalar gateLsx, gateLsy, gateLsz;
-	btScalar bridgeZ = 40, gateZ = -20, bridgeSupportX=1;
+	btScalar bridgeZ = 40, gateZ = -20, fenceZ=5, bridgeSupportX=1;
 	btScalar tolerance;
 	// vehicle body measures
 	btScalar yhl,xhl,zhl;
@@ -1212,7 +1213,7 @@ public:
 		for (int i = 0; i < lpc; i++){
 			btTransform loadTrans;
 			loadTrans.setIdentity();
-			btVector3 pos = btVector3(xloc, lsy / 2, 5);
+			btVector3 pos = btVector3(xloc, lsy / 2, fenceZ);
 			loadTrans.setOrigin(pos);
 			ha.push_back(localCreateRigidBody(mass, loadTrans, loadShape));
 			xloc += xlen;
@@ -1287,10 +1288,10 @@ public:
 		btScalar gateSupportHeight = 0.5*yhl + wheelRadius + gateLsy;
 		btScalar gateY = gateSupportHeight/2;
 		btScalar gateSupportWidth = 0.5 + gateLsz * 2;
-		btScalar gateSupportLength = gateLsx/3;
+		btScalar gateSupportLength = (twoSupportsForGate?gateLsx/3:gateLsx/2);
 		btAlignedObjectArray<btRigidBody*> ha;
-		/* end parts have additional mass */
-		int gpc = lpc + 2;
+		/* end part(s) have additional mass */
+		int gpc = lpc + (twoSupportsForGate?2:1);
 		btScalar xlen = gateLsx / gpc;
 		btCollisionShape* partShape = new btBoxShape
 			(btVector3(xlen / 2, gateLsy / 2, gateLsz / 2));
@@ -1305,7 +1306,8 @@ public:
 			mass = gateLsx*gateLsy*gateLsz*getDensity(gateSteelScale) / gpc;
 			break;
 		}
-		btScalar gateSupportMass = gateSupportHeight / gateLsy*gateSupportWidth / gateLsz*mass;
+		/* */
+		btScalar gateSupportMass = gateSupportLength*gateSupportHeight*gateSupportWidth*density+mass;
 		m_collisionShapes.push_back(partShape);
 		btScalar xloc = (xlen - gateLsx) / 2;
 		for (int i = 0; i < gpc; i++){
@@ -1313,7 +1315,7 @@ public:
 			tr.setIdentity();
 			btVector3 pos = btVector3(xloc, gateY, gateZ);
 			tr.setOrigin(pos);
-			if (i == 0 || i==(gpc-1)){
+			if (i == 0 || (twoSupportsForGate && i == (gpc - 1))){
 				// add gateSupport and connect it to gate part
 				btCompoundShape* compound = new btCompoundShape();
 				m_collisionShapes.push_back(compound);
@@ -1792,7 +1794,7 @@ void DemolisherDemo::initPhysics()
 	bridgeSupportY = max(1.2*lsy,2*yhl+wheelRadius);
 	b3Printf("bridgeLsx=%.1f, bridgeLsy=%.1f, bridgeLsz=%.1f", 
 		bridgeLsx, bridgeLsy, bridgeLsz);
-	gateLsx = lsx;
+	gateLsx = lsx/3;
 	gateLsy = 0.2*lsy;
 	gateLsz = 0.2*lsz;
 	b3Printf("gateLsx=%.1f, gateLsy=%.1f, gateLsz=%.1f",
