@@ -1111,9 +1111,9 @@ public:
 			{
 				btQuaternion q(SIMD_HALF_PI,0,0);
 				tr.setRotation(q);
-				xStart = -bridgeLsx / 2-zhl ;
+				xStart = -bridgeLsx / 2-2*zhl ;
 				zStart = bridgeZ;
-				yStart += bridgeSupportY + bridgeLsy;
+				yStart += bridgeSupportY + bridgeLsy-0.2*zhl;
 			}
 			break;
 		case Gate:
@@ -1791,7 +1791,7 @@ void DemolisherDemo::initPhysics()
 	bridgeLsx = 5*lsx/6;
 	bridgeLsy = 0.0007*bridgeLsx*bridgeLsx;
 	bridgeLsz = 6 * xhl;
-	bridgeSupportY = max(1.2*lsy,2*yhl+wheelRadius);
+	bridgeSupportY = max(2.5*lsy,2*yhl+wheelRadius);
 	b3Printf("bridgeLsx=%.1f, bridgeLsy=%.1f, bridgeLsz=%.1f", 
 		bridgeLsx, bridgeLsy, bridgeLsz);
 	gateLsx = lsx/3;
