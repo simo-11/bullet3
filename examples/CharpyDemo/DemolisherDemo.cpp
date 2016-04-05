@@ -1789,7 +1789,7 @@ void DemolisherDemo::initPhysics()
 	connectionHeight = 1.2*yhl;
 	tolerance = 0.003*bridgeLsx;
 	bridgeLsx = 5*lsx/6;
-	bridgeLsy = 0.02*bridgeLsx;
+	bridgeLsy = 0.0007*bridgeLsx*bridgeLsx;
 	bridgeLsz = 6 * xhl;
 	bridgeSupportY = max(1.2*lsy,2*yhl+wheelRadius);
 	b3Printf("bridgeLsx=%.1f, bridgeLsy=%.1f, bridgeLsz=%.1f", 
