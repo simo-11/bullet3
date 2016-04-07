@@ -86,6 +86,8 @@ public:
 	btScalar loadMass, loadRaise, loadRaiseX, loadRaiseZ;
 	btScalar maxPlasticRotation;
 	btScalar maxPlasticStrain;
+	long stepCount, maxStepCount, syncedStep;
+	btScalar stepTime;
 	bool gameBindings = true;
 	bool solidPlate = true;
 	bool disableCollisionsBetweenLinkedBodies = true;
@@ -94,6 +96,7 @@ public:
 	int gx = 10; // for labels
 	int gxi = 120; // for inputs elements
 	int wxi = 60; // width
+	int swxi = 30; // short width
 	int gy;
 	int gyInc = 25;
 	bool restartRequested;
@@ -291,7 +294,7 @@ public:
 	void setLogDir(Gwen::Controls::Base* control);
 	void setDumpPng(Gwen::Controls::Base* control);
 	Gwen::Controls::Base* pPage;
-	Gwen::Controls::Button* pauseButton;
+	Gwen::Controls::Button* pauseButton, *singleStepButton;
 	Gwen::Controls::Button* raiseLoadButton;
 	void addCollisionBetweenLinkedBodies(){
 		Gwen::Controls::Label* label = addLabel("disableCollisions");
@@ -353,17 +356,25 @@ public:
 		gc->SetSize(wxi - 4, gyInc - 4);
 		gc->onPress.Add(pPage, &PlateDemo::handlePauseSimulation);
 	}
+	void addSingleStepButton(){
+		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
+		gc->SetText(L"SS");
+		gc->SetToolTip(L"Single Step");
+		gc->SetPos(gx + wxi, gy);
+		gc->SetSize(swxi - 4, gyInc - 4);
+		gc->onPress.Add(pPage, &PlateDemo::handleSingleStep);
+	}
 	void addRestartButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
 		gc->SetText(L"Restart");
-		gc->SetPos(gx + wxi, gy);
+		gc->SetPos(gx + wxi + swxi, gy);
 		gc->SetSize(wxi - 4, gyInc - 4);
 		gc->onPress.Add(pPage, &PlateDemo::restartHandler);
 	}
 	void addResetButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
 		gc->SetText(L"Reset");
-		gc->SetPos(gx + 2 * wxi, gy);
+		gc->SetPos(gx + 2 * wxi + swxi, gy);
 		gc->SetSize(wxi - 4, gyInc - 4);
 		gy += gyInc;
 		gc->onPress.Add(pPage, &PlateDemo::resetHandler);
@@ -420,8 +431,8 @@ public:
 	void addThickness(){
 		addLabel("thickness");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(thickness, "%.2f");
-		gc->SetToolTip("Plate thickness");
+		std::string text = uif(thickness, "%.4f");
+		gc->SetToolTip("Plate thickness [m]");
 		gc->SetText(text);
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setThickness);
@@ -519,14 +530,9 @@ public:
 			pauseButton->SetText(L"Pause");
 		}
 	}
-	void handlePauseSimulation(Gwen::Controls::Base* control){
-		Gwen::Controls::Button* gc =
-			static_cast<Gwen::Controls::Button*>(control);
-		bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
-		pauseSimulation = !pauseSimulation;
-		PlasticityExampleBrowser::setPauseSimulation(pauseSimulation);
-	}
+	void handlePauseSimulation(Gwen::Controls::Base* control);
 	void handleRaiseLoad(Gwen::Controls::Base* control);
+	void handleSingleStep(Gwen::Controls::Base* control);
 	void initOptions(){
 		resetCamera();
 		int option = m_option;
@@ -576,6 +582,7 @@ public:
 		addDumpPng();
 		addLogDir();
 		addPauseSimulationButton();
+		addSingleStepButton();
 		addRestartButton();
 		addResetButton();
 		addRaiseLoadButton();
@@ -822,6 +829,24 @@ PlateDemo *demo = 0;
 #include <stdio.h> //printf debugging
 #include "PlateDemo.h"
 
+void PlateDemo::handleSingleStep(Gwen::Controls::Base* control){
+	Gwen::Controls::Button* gc =
+		static_cast<Gwen::Controls::Button*>(control);
+	demo->maxStepCount = demo->stepCount + 1;
+	PlasticityExampleBrowser::setPauseSimulation(false);
+}
+
+void PlateDemo::handlePauseSimulation(Gwen::Controls::Base* control){
+	Gwen::Controls::Button* gc =
+		static_cast<Gwen::Controls::Button*>(control);
+	bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
+	pauseSimulation = !pauseSimulation;
+	if (!pauseSimulation){
+		demo->maxStepCount = LONG_MAX;
+	}
+	PlasticityExampleBrowser::setPauseSimulation(pauseSimulation);
+}
+
 void PlateDemo::handleRaiseLoad(Gwen::Controls::Base* control){
 	Gwen::Controls::Button* gc =
 		static_cast<Gwen::Controls::Button*>(control);
@@ -948,6 +973,7 @@ void PlateDemo::reinit(){
 	else{
 		density = 2000;
 	}
+	maxStepCount = LONG_MAX;
 }
 void PlateDemo::resetHandler(Gwen::Controls::Base* control){
 	demo->reinit();
@@ -1050,7 +1076,7 @@ void PlateDemo::initPhysics()
 	m_guiHelper->setUpAxis(upAxis);
 	btScalar xm(0.4*lsx);
 	btScalar zm(0.4*lsz);
-	btVector3 groundExtents(9, 0.5, 9);
+	btVector3 groundExtents(lsx+4, 0.5, lsz+4);
 	btCollisionShape* groundShape = new btBoxShape(groundExtents);
 	m_collisionShapes.push_back(groundShape);
 	btVector3 supportExtentsX(lsx / 2, thickness, lsz/10);
@@ -1061,8 +1087,9 @@ void PlateDemo::initPhysics()
 	m_collisionShapes.push_back(supportShapeZ);
 	m_collisionConfiguration = new btDefaultCollisionConfiguration();
 	m_dispatcher = new btCollisionDispatcher(m_collisionConfiguration);
-	btVector3 worldMin(-20,-20,-20);
-	btVector3 worldMax(20,20,20);
+	btScalar ws = 3 * max(lsx, lsz);
+	btVector3 worldMin(-ws,-ws,-ws);
+	btVector3 worldMax(ws,ws,ws);
 	m_overlappingPairCache = new btAxisSweep3(worldMin,worldMax);
 	m_constraintSolver = new btSequentialImpulseConstraintSolver();
 	m_dynamicsWorld = new btDiscreteDynamicsWorld
@@ -1176,8 +1203,15 @@ void PlateDemo::renderScene()
 		}
 	}
 #endif
-	m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
-	m_guiHelper->render(m_dynamicsWorld);
+	if (stepCount > syncedStep){
+		BT_PROFILE("m_guiHelper::syncPhysicsToGraphics");
+		m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
+		syncedStep = stepCount;
+	}
+	{
+		BT_PROFILE("m_guiHelper::render");
+		m_guiHelper->render(m_dynamicsWorld);
+	}
 }
 
 void PlateDemo::stepSimulation(float deltaTime)
@@ -1186,13 +1220,15 @@ void PlateDemo::stepSimulation(float deltaTime)
 		restart();
 		restartRequested = false;
 	}
-	float dt = deltaTime;
-	
 	if (m_dynamicsWorld)
 	{
-		int maxSimSubSteps =  2;		
-		int numSimSteps;
-        numSimSteps = m_dynamicsWorld->stepSimulation(dt,maxSimSubSteps);
+		int maxSimSubSteps =  10;
+		btScalar timeStep = (btScalar)deltaTime;
+		stepCount += m_dynamicsWorld->stepSimulation(timeStep, maxSimSubSteps);
+		if (stepCount > maxStepCount){
+			PlasticityExampleBrowser::setPauseSimulation(true);
+		}
+		stepTime += timeStep;
 	}
 }
 

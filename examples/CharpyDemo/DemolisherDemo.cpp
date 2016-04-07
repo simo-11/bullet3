@@ -1943,9 +1943,6 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 		updateDrag();
 		m_carChassis->applyCentralForce(drag);
 	}
-
-	float dt = deltaTime;
-	
 	if (m_dynamicsWorld)
 	{
 		int maxSimSubSteps =  10;
