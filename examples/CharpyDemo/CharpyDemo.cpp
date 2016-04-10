@@ -548,7 +548,7 @@ public:
 		btScalar tv(fy / 1e6);
 		setScalar(control, &tv);
 		fy = tv*1e6;
-restartHandler(control);
+		restartHandler(control);
 	}
 	void setL(Gwen::Controls::Base* control){
 		setScalar(control, &l);
@@ -702,7 +702,7 @@ restartHandler(control);
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
 		string text = uif(fy / 1e6,"%.3f");
 		gc->SetText(text);
-		gc->SetToolTip("Ultimate strength");
+		gc->SetToolTip("yield stress");
 		gc->SetPos(gxi, gy);
 		gc->SetWidth(wxi);
 		gy += gyInc;

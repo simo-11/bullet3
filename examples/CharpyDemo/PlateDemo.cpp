@@ -45,6 +45,7 @@ class btCollisionShape;
 #include "../CommonInterfaces/CommonGraphicsAppInterface.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenUserInterface.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenInternalData.h"
+#include <string>
 
 const char * PROFILE_PLATE_SLEEP = "PlateDemo::Sleep";
 
@@ -83,6 +84,12 @@ public:
 	int cx,cz;
 	btScalar breakingImpulseThreshold;
 	btScalar density;
+	btScalar initialE=200E9; // Steel
+	btScalar E;
+	btScalar nu=0.3; // Steel
+	btScalar initialFy=200e6;
+	btScalar fy;
+	int numIterations;
 	btScalar loadMass, loadRaise, loadRaiseX, loadRaiseZ;
 	btScalar maxPlasticRotation;
 	btScalar maxPlasticStrain;
@@ -279,6 +286,8 @@ public:
 	void setLsz(Gwen::Controls::Base* control);
 	void setThickness(Gwen::Controls::Base* control);
 	void setDensity(Gwen::Controls::Base* control);
+	void setE(Gwen::Controls::Base* control);
+	void setFy(Gwen::Controls::Base* control);
 	void setBreakingImpulseThreshold(Gwen::Controls::Base* control);
 	void setLoadMass(Gwen::Controls::Base* control);
 	void setLoadRaise(Gwen::Controls::Base* control);
@@ -437,6 +446,28 @@ public:
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setThickness);
 	}
+	void addE(){
+		addLabel("E [GPa]");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(E / 1e9, "%.2f");
+		gc->SetText(text);
+		gc->SetToolTip("Young's modulus");
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setE);
+	}
+	void addFy(){
+		addLabel("fy [MPa]");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(fy / 1e6, "%.3f");
+		gc->SetText(text);
+		gc->SetToolTip("yield stress");
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setFy);
+	}
 	void addDensity(){
 		addLabel("density");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
@@ -491,6 +522,25 @@ public:
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setLoadRaise);
 	}
+	void setUiNumIterations(Gwen::Controls::Base* control){
+		setInt(control, &numIterations);
+		if (NULL != m_dynamicsWorld){
+			m_dynamicsWorld->getSolverInfo().m_numIterations = numIterations;
+		}
+		dropFocus = true;
+	}
+	void addNumIterations(){
+		addLabel("iteration count");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = std::to_string(numIterations);
+		gc->SetText(text);
+		gc->SetToolTip("Number of solver iterations");
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setUiNumIterations);
+	}
+
 	Gwen::Controls::TextBoxNumeric* loadRaiseXGc;
 	void updateLoadRaiseXGc(){
 		std::string text = uif(loadRaiseX, "%.2f");
@@ -562,6 +612,8 @@ public:
 		addLsx();
 		addLsz();
 		addThickness();
+		addE();
+		addFy();
 		addDensity();
 		switch (constraintType){
 		case Impulse:
@@ -682,9 +734,7 @@ public:
 			}
 		}
 #endif
-		btScalar E(200E9);
-		btScalar G(80E9);
-		btScalar fy(200E6);
+		btScalar G = E / 2 / (1 + nu);
 		bool limitIfNeeded = true;
 		{ // x-direction
 			btScalar hlz = lsz / cz / 2;
@@ -829,6 +879,19 @@ PlateDemo *demo = 0;
 #include <stdio.h> //printf debugging
 #include "PlateDemo.h"
 
+void PlateDemo::setE(Gwen::Controls::Base* control){
+	btScalar tv(E / 1e9);
+	setScalar(control, &tv);
+	demo->E = tv*1e9;
+	restartHandler(control);
+}
+void PlateDemo::setFy(Gwen::Controls::Base* control){
+	btScalar tv(fy / 1e6);
+	setScalar(control, &tv);
+	demo->fy = tv*1e6;
+	restartHandler(control);
+}
+
 void PlateDemo::handleSingleStep(Gwen::Controls::Base* control){
 	Gwen::Controls::Button* gc =
 		static_cast<Gwen::Controls::Button*>(control);
@@ -952,11 +1015,13 @@ void PlateDemo::restartHandler(Gwen::Controls::Base* control){
 	demo->restartRequested = true;
 }
 void PlateDemo::reinit(){
-	cx = 5;
-	cz = 5;
-	lsx = 5;
-	lsz = 5;
-	thickness = 0.1;
+	cx = 11;
+	cz = 11;
+	lsx = 20;
+	lsz = 20;
+	E = initialE;
+	fy = initialFy;
+	thickness = 0.01;
 	breakingImpulseThreshold = 1000;
 	loadMass = 40000;
 	loadRaise = 5;
@@ -1079,10 +1144,10 @@ void PlateDemo::initPhysics()
 	btVector3 groundExtents(lsx+4, 0.5, lsz+4);
 	btCollisionShape* groundShape = new btBoxShape(groundExtents);
 	m_collisionShapes.push_back(groundShape);
-	btVector3 supportExtentsX(lsx / 2, thickness, lsz/10);
+	btVector3 supportExtentsX(0.5*lsx, 0.1, 0.1*lsz);
 	btCollisionShape* supportShapeX = new btBoxShape(supportExtentsX);
 	m_collisionShapes.push_back(supportShapeX);
-	btVector3 supportExtentsZ(lsx/10, thickness, lsz/2);
+	btVector3 supportExtentsZ(0.1*lsx, 0.1, 0.3*lsz);
 	btCollisionShape* supportShapeZ = new btBoxShape(supportExtentsZ);
 	m_collisionShapes.push_back(supportShapeZ);
 	m_collisionConfiguration = new btDefaultCollisionConfiguration();
@@ -1099,7 +1164,7 @@ void PlateDemo::initPhysics()
 	//create ground and support objects
 	btTransform tr;
 	tr.setIdentity();
-	tr.setOrigin(btVector3(0,-20*thickness-2,0));
+	tr.setOrigin(btVector3(0,-20*thickness-max(lsx,lsz),0));
 	localCreateRigidBody(0,tr,groundShape);
 	tr.setOrigin(btVector3(xm, -thickness, 0));
 	localCreateRigidBody(0, tr, supportShapeZ);
@@ -1119,13 +1184,16 @@ void PlateDemo::initPhysics()
 	switch (constraintType){
 	case ElasticPlastic:
 	{
-		btElasticPlasticMaterial* steel = new btElasticPlasticMaterial();
+		btElasticPlasticMaterial* plateMaterial = new btElasticPlasticMaterial();
+		plateMaterial->setE(E);
+		plateMaterial->setDensity(density);
+		plateMaterial->setFy(fy);
 		btTransform localTrans;
 		localTrans.setIdentity();
 		btBoxShape* plateShape =
 			new btBoxShape(btVector3(lsx / 2, thickness / 2, lsz / 2));
 		elasticPlasticPlate = new btElasticPlasticPlate();
-		elasticPlasticPlate->setMaterial(steel);
+		elasticPlasticPlate->setMaterial(plateMaterial);
 		elasticPlasticPlate->setShape(plateShape);
 		elasticPlasticPlate->setLongCount(cx);
 		elasticPlasticPlate->setMiddleCount(cz);

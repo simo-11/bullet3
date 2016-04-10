@@ -28,6 +28,7 @@ protected:
 	btScalar m_density = 7800;//
 	btScalar m_E=21E10; // steel as default
 	btScalar m_nu=0.3; // steel as default
+	bool m_isotropic = true;
 	btScalar m_G=m_E/(2*(1+m_nu)); // isotropic as default
 	btScalar m_fy=m_E/1000; // low carbon
 	btScalar m_maxPlasticStrain=0.25; //
@@ -40,9 +41,11 @@ public:
 	const btScalar getG() { return m_G; }
 	const btScalar getFy() { return m_fy; }
 	const btScalar getMaxPlasticStrain() { return m_maxPlasticStrain; }
+	bool isIsotropic(){ return m_isotropic; }
+	void setIsotropic(bool v){ m_isotropic = v; }
 	void setDensity(btScalar v){ m_density = v; }
-	void setE(btScalar v){ m_E = v; }
-	void setNu(btScalar v){ m_nu = v; }
+	void setE(btScalar v){ m_E = v; if (m_isotropic){ m_G = m_E / (2 * (1 + m_nu)); } }
+	void setNu(btScalar v){ m_nu = v; if (m_isotropic){ m_G = m_E / (2 * (1 + m_nu)); } }
 	void setG(btScalar v){ m_G = v; }
 	void setFy(btScalar v){ m_fy = v; }
 	void setMaxPlasticStrain(btScalar v){ m_maxPlasticStrain = v; }
