@@ -89,7 +89,8 @@ public:
 	btScalar nu=0.3; // Steel
 	btScalar initialFy=200e6;
 	btScalar fy;
-	int numIterations;
+	int initialNumIterations = 10;
+	int numIterations = initialNumIterations;
 	btScalar loadMass, loadRaise, loadRaiseX, loadRaiseZ;
 	btScalar maxPlasticRotation;
 	btScalar maxPlasticStrain;
@@ -522,13 +523,7 @@ public:
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setLoadRaise);
 	}
-	void setUiNumIterations(Gwen::Controls::Base* control){
-		setInt(control, &numIterations);
-		if (NULL != m_dynamicsWorld){
-			m_dynamicsWorld->getSolverInfo().m_numIterations = numIterations;
-		}
-		dropFocus = true;
-	}
+	void setUiNumIterations(Gwen::Controls::Base* control);
 	void addNumIterations(){
 		addLabel("iteration count");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
@@ -633,6 +628,7 @@ public:
 		addGameBindings();
 		addDumpPng();
 		addLogDir();
+		addNumIterations();
 		addPauseSimulationButton();
 		addSingleStepButton();
 		addRestartButton();
@@ -879,6 +875,14 @@ PlateDemo *demo = 0;
 #include <stdio.h> //printf debugging
 #include "PlateDemo.h"
 
+void PlateDemo::setUiNumIterations(Gwen::Controls::Base* control){
+	setInt(control, &(demo->numIterations));
+	if (NULL != demo->m_dynamicsWorld){
+		demo->m_dynamicsWorld->getSolverInfo().m_numIterations = numIterations;
+	}
+	restartHandler(control);
+}
+
 void PlateDemo::setE(Gwen::Controls::Base* control){
 	btScalar tv(E / 1e9);
 	setScalar(control, &tv);
@@ -1032,6 +1036,7 @@ void PlateDemo::reinit(){
 	driveClock.reset();
 	gameBindings = true;
 	solidPlate = true;
+	numIterations = initialNumIterations;
 	if (solidPlate){
 		density = 7800;
 	}
