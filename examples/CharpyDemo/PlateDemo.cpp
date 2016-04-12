@@ -30,6 +30,8 @@ Based on DemolisherDemo by Simo Nikula 2016-
 #include "btElasticPlasticPlate.h"
 #include "btElasticPlasticMaterial.h"
 #include "../plasticity/PlasticityExampleBrowser.h"
+#include "../plasticity/PlasticityData.h"
+#include "../plasticity/PlasticityStatistics.h"
 
 class btCollisionShape;
 
@@ -697,124 +699,6 @@ public:
 			}
 		}
 	}
-	void prepareAndAdd(bt6DofElasticPlastic2Constraint *sc){
-		btScalar damping(0.1);
-		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
-		for (int i = 0; i < 6; i++)
-		{
-			sc->enableSpring(i, true);
-		}
-		for (int i = 0; i < 6; i++)
-		{
-			sc->setDamping(i, damping);
-		}
-		sc->setEquilibriumPoint();
-		m_dynamicsWorld->addAction(sc);
-	}
-	void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha){
-#if 0	
-		btElasticPlasticMaterial material;
-		material.setE(btScalar(200E9));
-		material.setNu(btScalar(0.3));
-		material.setFy(btScalar(200E6));
-		material.setMaxPlasticStrain(btScalar(0.25));
-		{ // x-direction
-			for (int i = 0; i < cx - 1; i++){
-				for (int j = 0; j < cz; j++){
-					btElasticPlasticPlate *sc =
-						new btElasticPlasticPlate
-						(*ha[cz*i + j], *ha[cz*(i + 1) + j],
-						material);
-					prepareAndAdd(sc);
-				}
-			}
-		}
-#endif
-		btScalar G = E / 2 / (1 + nu);
-		bool limitIfNeeded = true;
-		{ // x-direction
-			btScalar hlz = lsz / cz / 2;
-			btScalar hlx = lsz / cx / 2;
-			btTransform tra;
-			btTransform trb;
-			tra.setIdentity();
-			trb.setIdentity();
-			btVector3 cpos(hlx, 0, 0);
-			tra.setOrigin(cpos);
-			trb.setOrigin(-cpos);
-			btScalar k0(E * 2 * hlx*thickness / hlz);
-			btScalar k1(G * 2 * hlx*thickness / hlx);
-			btScalar k2(G * 2 * hlx);
-			btScalar m(fy / E);
-			btScalar w0(k0*m);
-			btScalar w1(k1*fy / E);
-			btScalar w2(k2*fy / E);
-			for (int i = 0; i < (cx-1); i++){
-				for (int j = 0; j < cz; j++){
-					bt6DofElasticPlastic2Constraint *sc =
-						new bt6DofElasticPlastic2Constraint
-						(*ha[cz*i + j], *ha[cz*(i + 1) + j],
-						tra, trb);
-					sc->setMaxPlasticRotation(maxPlasticRotation);
-					sc->setMaxPlasticStrain(maxPlasticStrain);
-					sc->setStiffness(0, k0, limitIfNeeded);
-					sc->setMaxForce(0, w0);
-					sc->setStiffness(2, k1, limitIfNeeded);
-					sc->setMaxForce(2, w0 / 2);
-					sc->setStiffness(1, k2, limitIfNeeded);
-					sc->setMaxForce(1, w0 / 2);
-					sc->setStiffness(5, k0, limitIfNeeded);
-					sc->setMaxForce(5, w0);
-					sc->setStiffness(4, k1, limitIfNeeded);
-					sc->setMaxForce(4, w1);
-					sc->setStiffness(3, k2, limitIfNeeded);
-					sc->setMaxForce(3, w2);
-					prepareAndAdd(sc);
-				}
-			}
-		}
-		{ // z-direction
-			btScalar hlz = lsz / cz / 2;
-			btScalar hlx = lsz / cx / 2;
-			btTransform tra;
-			btTransform trb;
-			tra.setIdentity();
-			trb.setIdentity();
-			btVector3 cpos(0, 0, hlz);
-			tra.setOrigin(cpos);
-			trb.setOrigin(-cpos);
-			btScalar k0(E*2*hlx*thickness / hlz);
-			btScalar k1(G * 2 * hlx*thickness / hlx);
-			btScalar k2(G*2*hlx);
-			btScalar m(fy / E);
-			btScalar w0(k0*m);
-			btScalar w1(k1*fy / E);
-			btScalar w2(k2*fy / E);
-			for (int i = 0; i < cx; i++){
-				for (int j = 0; j < cz - 1; j++){
-					bt6DofElasticPlastic2Constraint *sc =
-						new bt6DofElasticPlastic2Constraint
-						(*ha[cz*i + j], *ha[cz*i + j+1],
-						tra, trb);
-					sc->setMaxPlasticRotation(maxPlasticRotation);
-					sc->setMaxPlasticStrain(maxPlasticStrain);
-					sc->setStiffness(2, k0, limitIfNeeded);
-					sc->setMaxForce(2, w0);
-					sc->setStiffness(0, k1, limitIfNeeded);
-					sc->setMaxForce(0, w0 / 2);
-					sc->setStiffness(1, k2, limitIfNeeded);
-					sc->setMaxForce(1, w0 / 2);
-					sc->setStiffness(5, k0, limitIfNeeded);
-					sc->setMaxForce(5, w0);
-					sc->setStiffness(4, k1, limitIfNeeded);
-					sc->setMaxForce(4, w1);
-					sc->setStiffness(3, k2, limitIfNeeded);
-					sc->setMaxForce(3, w2);
-					prepareAndAdd(sc);
-				}
-			}
-		}
-	}
 	int pngNro = 0;
 	char dumpFilename[FN_SIZE];
 	void setDumpFilename(){
@@ -868,7 +752,68 @@ public:
 		m_loadBody->activate();
 		raiseLoad = false;
 	}
-
+	list<PlasticityData> pData;
+	PlasticityData getPlasticityData(char* buf){
+		PlasticityData pd(buf);
+		return pd;
+	}
+	void addPData(char * buf){
+		pData.push_back(getPlasticityData(buf));
+	}
+	void infoMsg(char * buf){
+		addPData(buf);
+	}
+	void headerMsg(char * buf){
+		pData.push_front(getPlasticityData(buf));
+	}
+	// Buffer length for sprintfs
+#define B_LEN 100
+	// clean small value
+#define CSV(x) ((x)<1e-6?0:(x))
+	void showMessage()
+	{
+		if (!PlasticityData::getCollect()){
+			return;
+		}
+		if (restartRequested){
+			return;
+		}
+		pData.clear();
+		btDiscreteDynamicsWorld *dw = m_dynamicsWorld;
+		int numConstraints = dw->getNumConstraints();
+		char buf[B_LEN * 2];
+		bool headerDone = false;
+		int ep2count = 0;
+		for (int i = 0; i < numConstraints; i++){
+			btTypedConstraint* sc = dw->getConstraint(i);
+			int type = sc->getUserConstraintType();
+			if (type != BPT_EP2){
+				continue;
+			}
+			if (!headerDone){
+				sprintf_s(buf, B_LEN, "%2s %8s %5s %5s %5s %5s %5s",
+					"#", "max%", "m%dof", "mpr", "cpr", "mps", "cps");
+				infoMsg(buf);
+				headerDone = true;
+			}
+			bt6DofElasticPlastic2Constraint *epc =
+				static_cast<bt6DofElasticPlastic2Constraint*>(sc);
+			btScalar mpr = epc->getMaxPlasticRotation(),
+				cpr = epc->getCurrentPlasticRotation(),
+				mps = epc->getMaxPlasticStrain(),
+				cps = epc->getCurrentPlasticStrain(),
+				maxr = epc->getMaxRatio();
+			int	maxrd = epc->getMaxRatioDof();
+			sprintf_s(buf, B_LEN * 2, "%2d %8.1f %5d %5.3f %5.3f %5.3f %5.3f",
+				i, maxr * 100, maxrd, mpr, cpr, mps, cps);
+			infoMsg(buf);
+			ep2count++;
+		}
+		sprintf_s(buf, B_LEN, "stepTime=%4.1f, stepCount=%d, ep2count=%d",
+			stepTime, stepCount, ep2count);
+		headerMsg(buf);
+		PlasticityData::setData(&pData);
+	}
 };
 PlateDemo *demo = 0;
 
@@ -1142,6 +1087,9 @@ PlateDemo::~PlateDemo()
 
 void PlateDemo::initPhysics()
 {
+	stepCount = 0;
+	syncedStep = 0;
+	stepTime = 0;
 	int upAxis = 1;	
 	m_guiHelper->setUpAxis(upAxis);
 	btScalar xm(0.4*lsx);
@@ -1284,6 +1232,10 @@ void PlateDemo::renderScene()
 	{
 		BT_PROFILE("m_guiHelper::render");
 		m_guiHelper->render(m_dynamicsWorld);
+	}
+	{
+		BT_PROFILE("PlateDemo::showMessage");
+		showMessage();
 	}
 }
 

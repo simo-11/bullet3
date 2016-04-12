@@ -61,7 +61,9 @@ protected:
 	virtual const btTransform getConnectingFrame
 		(btRigidBody& rbA, btRigidBody& rbB);
 	virtual void updateConstraint
-		(bt6DofElasticPlastic2Constraint &constraint);
+		(btCollisionWorld* collisionWorld,
+		bt6DofElasticPlastic2Constraint &constraint,
+		btScalar step);
 	virtual void prepareAndAdd
 		(bt6DofElasticPlastic2Constraint *sc, btDiscreteDynamicsWorld* dw);
 public:

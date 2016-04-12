@@ -18,6 +18,7 @@ Simo Nikula 2016- while studying plasticity
 #define _CRT_SECURE_NO_WARNINGS
 #include "btElasticPlasticPlate.h"
 #include "btBulletDynamicsCommon.h"
+#include "../plasticity/PlasticityData.h"
 /**
 It is assumed that rbA and rbB have same size and link is wanted between them
 */
@@ -91,7 +92,8 @@ void btElasticPlasticPlate::initMaxForces(){
 
 /**
 */
-void btElasticPlasticPlate::updateConstraint(bt6DofElasticPlastic2Constraint &constraint) {
+void btElasticPlasticPlate::updateConstraint(btCollisionWorld* dw,
+	bt6DofElasticPlastic2Constraint &constraint, btScalar step) {
 	BT_PROFILE("updateConstraint");
 	btRigidBody& rbA = constraint.getRigidBodyA();
 	btRigidBody& rbB = constraint.getRigidBodyB();
@@ -109,6 +111,7 @@ void btElasticPlasticPlate::updateConstraint(bt6DofElasticPlastic2Constraint &co
 		constraint.setStiffness(i, stiffness, m_limitIfNeedeed);
 		constraint.setMaxForce(i, maxForce);
 	}
+	constraint.updateAction(dw, step);
 }
 
 void btElasticPlasticPlate::join(btDiscreteDynamicsWorld* dw){
@@ -174,9 +177,10 @@ void btElasticPlasticPlate::initRigidBodies(btDiscreteDynamicsWorld* dw){
 
 void btElasticPlasticPlate::prepareAndAdd
 	(bt6DofElasticPlastic2Constraint *sc, btDiscreteDynamicsWorld* dw){
+	sc->setUserConstraintType(BPT_EP2);
 	sc->setMaxPlasticRotation(m_maxPlasticRotation);
 	sc->setMaxPlasticStrain(m_maxPlasticStrain);
-	updateConstraint(*sc);
+	updateConstraint(dw,*sc,0);
 	dw->addConstraint(sc, m_disableCollisionsBetweenLinkedBodies);
 	m_constraints.push_back(sc);
 	for (int i = 0; i < 6; i++)
@@ -242,7 +246,7 @@ void btElasticPlasticPlate::updateAction(btCollisionWorld* collisionWorld, btSca
 	for (int i = 0; i<m_constraints.size(); i++)
 	{
 		bt6DofElasticPlastic2Constraint* c = m_constraints[i];
-		updateConstraint(*c);
+		updateConstraint(collisionWorld, *c, step);
 	}
 
 }
