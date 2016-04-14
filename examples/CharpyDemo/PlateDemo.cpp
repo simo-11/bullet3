@@ -964,16 +964,16 @@ void PlateDemo::restartHandler(Gwen::Controls::Base* control){
 	demo->restartRequested = true;
 }
 void PlateDemo::reinit(){
-	cx = 11;
-	cz = 11;
-	lsx = 20;
-	lsz = 20;
+	cx = 3;
+	cz = 3;
+	lsx = 3;
+	lsz = 3;
 	E = initialE;
 	fy = initialFy;
 	thickness = 0.01;
 	breakingImpulseThreshold = 1000;
-	loadMass = 40000;
-	loadRaise = 5;
+	loadMass = 5000;
+	loadRaise = 0;
 	loadRaiseX = 0;
 	loadRaiseZ = 0;
 	maxPlasticStrain = 0.1;
