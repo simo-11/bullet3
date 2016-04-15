@@ -82,7 +82,7 @@ public:
 
 	btVector3*	m_vertices;
 	btScalar lsx, lsz;
-	btScalar thickness;
+	btScalar thickness, supportThickness=0.2;
 	int cx,cz;
 	btScalar breakingImpulseThreshold;
 	btScalar density;
@@ -737,16 +737,21 @@ public:
 	}
 	void updateLoadRaiseX(btScalar increment);
 	void updateLoadRaiseZ(btScalar increment);
+	btScalar getLoadRaiseY(){
+		return yhl + thickness + supportThickness / 2 + loadRaise;
+	}
 	btTransform getLoadRaisePoint(){
 		btTransform tr;
 		tr.setIdentity();
 		tr.setOrigin(btVector3
-			(loadRaiseX, yhl + thickness + loadRaise, loadRaiseZ));
+			(loadRaiseX, getLoadRaiseY(), loadRaiseZ));
 		return tr;
 	}
 	void raiseLoadAction(){
 		btVector3 zero(0, 0, 0);
-		m_loadBody->setCenterOfMassTransform(getLoadRaisePoint());
+		btTransform tr(m_loadBody->getCenterOfMassTransform());
+		tr.getOrigin().setY(getLoadRaiseY());
+		m_loadBody->setCenterOfMassTransform(tr);
 		m_loadBody->setAngularVelocity(zero);
 		m_loadBody->setLinearVelocity(zero);
 		m_loadBody->activate();
@@ -1087,6 +1092,13 @@ PlateDemo::~PlateDemo()
 
 void PlateDemo::initPhysics()
 {
+	if (maxStepCount != LONG_MAX){
+		// Single step is active
+		maxStepCount = 1;
+	}
+	else{
+		maxStepCount = LONG_MAX;
+	}
 	stepCount = 0;
 	syncedStep = 0;
 	stepTime = 0;
@@ -1097,10 +1109,10 @@ void PlateDemo::initPhysics()
 	btVector3 groundExtents(lsx+4, 0.5, lsz+4);
 	btCollisionShape* groundShape = new btBoxShape(groundExtents);
 	m_collisionShapes.push_back(groundShape);
-	btVector3 supportExtentsX(0.5*lsx, 0.1, 0.1*lsz);
+	btVector3 supportExtentsX(0.5*lsx, supportThickness/2, 0.1*lsz);
 	btCollisionShape* supportShapeX = new btBoxShape(supportExtentsX);
 	m_collisionShapes.push_back(supportShapeX);
-	btVector3 supportExtentsZ(0.1*lsx, 0.1, 0.3*lsz);
+	btVector3 supportExtentsZ(0.1*lsx, supportThickness/2, 0.3*lsz);
 	btCollisionShape* supportShapeZ = new btBoxShape(supportExtentsZ);
 	m_collisionShapes.push_back(supportShapeZ);
 	m_collisionConfiguration = new btDefaultCollisionConfiguration();
@@ -1162,7 +1174,7 @@ void PlateDemo::initPhysics()
 		ha.reserve(cx*cz);
 		btScalar xlen = lsx / cx;
 		btScalar zlen = lsz / cz;
-		btCollisionShape* loadShape = 
+		btCollisionShape* partShape = 
 			new btBoxShape(btVector3(xlen / 2, thickness/2, zlen / 2));
 		btScalar mass;
 		switch (constraintType){
@@ -1173,7 +1185,7 @@ void PlateDemo::initPhysics()
 			mass = xlen*zlen*thickness*density;
 			break;
 		}
-		m_collisionShapes.push_back(loadShape);
+		m_collisionShapes.push_back(partShape);
 		btScalar xloc = (xlen - lsx) / 2;
 		for (int i = 0; i < cx; i++){
 			btScalar zloc = (zlen - lsz) / 2;
@@ -1182,7 +1194,7 @@ void PlateDemo::initPhysics()
 				plateTrans.setIdentity();
 				btVector3 pos = btVector3(xloc, thickness / 2, zloc);
 				plateTrans.setOrigin(pos);
-				ha.push_back(localCreateRigidBody(mass, plateTrans, loadShape));
+				ha.push_back(localCreateRigidBody(mass, plateTrans, partShape));
 				zloc += zlen;
 			}
 			xloc += xlen;
