@@ -93,6 +93,7 @@ public:
 	btScalar fy;
 	int initialNumIterations = 10;
 	int numIterations = initialNumIterations;
+	bool moveLoad;
 	btScalar loadMass, loadRaise, loadRaiseX, loadRaiseZ;
 	btScalar maxPlasticRotation;
 	btScalar maxPlasticStrain;
@@ -749,8 +750,15 @@ public:
 	}
 	void raiseLoadAction(){
 		btVector3 zero(0, 0, 0);
-		btTransform tr(m_loadBody->getCenterOfMassTransform());
-		tr.getOrigin().setY(getLoadRaiseY());
+		btTransform tr;
+		if (moveLoad){
+			tr = getLoadRaisePoint();
+			moveLoad = false;
+		}
+		else{
+			tr=m_loadBody->getCenterOfMassTransform();
+			tr.getOrigin().setY(getLoadRaiseY());
+		}
 		m_loadBody->setCenterOfMassTransform(tr);
 		m_loadBody->setAngularVelocity(zero);
 		m_loadBody->setLinearVelocity(zero);
@@ -871,11 +879,13 @@ void PlateDemo::handleRaiseLoad(Gwen::Controls::Base* control){
 }
 void PlateDemo::updateLoadRaiseX(btScalar increment){
 	demo->raiseLoad = true;
+	demo->moveLoad = true;
 	demo->loadRaiseX += increment;
 	demo->updateLoadRaiseXGc();
 }
 void PlateDemo::updateLoadRaiseZ(btScalar increment){
 	demo->raiseLoad = true;
+	demo->moveLoad = true;
 	demo->loadRaiseZ += increment;
 	demo->updateLoadRaiseZGc();
 }
