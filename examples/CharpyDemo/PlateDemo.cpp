@@ -93,6 +93,7 @@ public:
 	btScalar fy;
 	int initialNumIterations = 10;
 	int numIterations = initialNumIterations;
+	btScalar initialFixedTimeStep = 1. / 60 , m_fixedTimeStep;
 	bool moveLoad;
 	btScalar loadMass, loadRaise, loadRaiseX, loadRaiseZ;
 	btScalar maxPlasticRotation;
@@ -538,6 +539,18 @@ public:
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setUiNumIterations);
 	}
+	void setUiFixedTimeStep(Gwen::Controls::Base* control);
+	void addFixedTimeStep(){
+		addLabel("timeStep");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(1000*m_fixedTimeStep,"%.3f");
+		gc->SetText(text);
+		gc->SetToolTip("fixedTimeStep [ms]");
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setUiFixedTimeStep);
+	}
 
 	Gwen::Controls::TextBoxNumeric* loadRaiseXGc;
 	void updateLoadRaiseXGc(){
@@ -632,6 +645,7 @@ public:
 		addDumpPng();
 		addLogDir();
 		addNumIterations();
+		addFixedTimeStep();
 		addPauseSimulationButton();
 		addSingleStepButton();
 		addRestartButton();
@@ -841,14 +855,20 @@ void PlateDemo::setUiNumIterations(Gwen::Controls::Base* control){
 	restartHandler(control);
 }
 
+void PlateDemo::setUiFixedTimeStep(Gwen::Controls::Base* control){
+	btScalar tv(demo->m_fixedTimeStep*1e3);
+	setScalar(control, &tv);
+	demo->m_fixedTimeStep = tv/1e3;
+	restartHandler(control);
+}
 void PlateDemo::setE(Gwen::Controls::Base* control){
-	btScalar tv(E / 1e9);
+	btScalar tv(demo->E / 1e9);
 	setScalar(control, &tv);
 	demo->E = tv*1e9;
 	restartHandler(control);
 }
 void PlateDemo::setFy(Gwen::Controls::Base* control){
-	btScalar tv(fy / 1e6);
+	btScalar tv(demo->fy / 1e6);
 	setScalar(control, &tv);
 	demo->fy = tv*1e6;
 	restartHandler(control);
@@ -997,6 +1017,7 @@ void PlateDemo::reinit(){
 	gameBindings = true;
 	solidPlate = true;
 	numIterations = initialNumIterations;
+	m_fixedTimeStep = initialFixedTimeStep;
 	if (solidPlate){
 		density = 7800;
 	}
@@ -1271,7 +1292,7 @@ void PlateDemo::stepSimulation(float deltaTime)
 	{
 		int maxSimSubSteps =  10;
 		btScalar timeStep = (btScalar)deltaTime;
-		stepCount += m_dynamicsWorld->stepSimulation(timeStep, maxSimSubSteps);
+		stepCount += m_dynamicsWorld->stepSimulation(timeStep, maxSimSubSteps, m_fixedTimeStep);
 		if (stepCount > maxStepCount){
 			PlasticityExampleBrowser::setPauseSimulation(true);
 		}
