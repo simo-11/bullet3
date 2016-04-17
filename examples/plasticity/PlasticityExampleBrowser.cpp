@@ -54,7 +54,7 @@ CommonRenderInterface* PlasticityExampleBrowser::getRenderer(){
 	return s_instancingRenderer;
 }
 static OpenGLGuiHelper*	s_guiHelper=0;
-OpenGLGuiHelper* getGuiHelper(){
+OpenGLGuiHelper* PlasticityExampleBrowser::getGuiHelper(){
 	return s_guiHelper;
 }
 static MyProfileWindow* s_profWindow =0;

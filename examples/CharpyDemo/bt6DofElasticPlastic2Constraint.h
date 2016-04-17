@@ -276,6 +276,9 @@ public:
 	virtual void setParam(int num, btScalar value, int axis = -1);
 	virtual btScalar getParam(int num, int axis = -1) const;
 	// bcc
+	static void resetIdCounter();
+	int id;
+	int getId(){ return id; }
 	btScalar	m_maxForce[6];
 	btScalar	m_fpsLimit[6];
 	btScalar    m_currentPlasticStrain;

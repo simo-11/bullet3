@@ -32,6 +32,7 @@ Based on DemolisherDemo by Simo Nikula 2016-
 #include "../plasticity/PlasticityExampleBrowser.h"
 #include "../plasticity/PlasticityData.h"
 #include "../plasticity/PlasticityStatistics.h"
+#include "../plasticity/PlasticityDebugDrawer.h"
 
 class btCollisionShape;
 
@@ -55,6 +56,7 @@ class PlateDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 {
 public:
 	class btDiscreteDynamicsWorld* m_dynamicsWorld;
+	class PlasticityDebugDrawer* plasticityDebugDrawer=0;
 	btDiscreteDynamicsWorld* getDynamicsWorld()
 	{
 		return m_dynamicsWorld;
@@ -832,7 +834,7 @@ public:
 				maxr = epc->getMaxRatio();
 			int	maxrd = epc->getMaxRatioDof();
 			sprintf_s(buf, B_LEN * 2, "%2d %8.1f %5d %5.3f %5.3f %5.3f %5.3f",
-				i, maxr * 100, maxrd, mpr, cpr, mps, cps);
+				epc->getId(), maxr * 100, maxrd, mpr, cpr, mps, cps);
 			infoMsg(buf);
 			ep2count++;
 		}
@@ -1123,6 +1125,7 @@ PlateDemo::~PlateDemo()
 
 void PlateDemo::initPhysics()
 {
+	bt6DofElasticPlastic2Constraint::resetIdCounter();
 	if (maxStepCount != LONG_MAX){
 		// Single step is active
 		maxStepCount = 1;
@@ -1156,7 +1159,18 @@ void PlateDemo::initPhysics()
 	m_dynamicsWorld = new btDiscreteDynamicsWorld
 		(m_dispatcher,m_overlappingPairCache,m_constraintSolver,m_collisionConfiguration);
 	m_dynamicsWorld ->getSolverInfo().m_minimumSolverBatchSize = 128;
-	m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
+	bool own = false;
+	if (own){
+		plasticityDebugDrawer = new PlasticityDebugDrawer(PlasticityExampleBrowser::getApp());
+		m_dynamicsWorld->setDebugDrawer(plasticityDebugDrawer);
+		plasticityDebugDrawer->setDebugMode(
+			btIDebugDraw::DBG_DrawWireframe
+			+ btIDebugDraw::DBG_DrawAabb
+			);
+	}
+	else{
+		m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
+	}
 	// ground
 	btTransform tr;
 	tr.setIdentity();

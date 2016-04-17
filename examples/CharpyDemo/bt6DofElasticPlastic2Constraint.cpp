@@ -73,9 +73,14 @@ bt6DofElasticPlastic2Constraint::bt6DofElasticPlastic2Constraint(btRigidBody& rb
 	initPlasticity();
 }
 
+int idCounter = 0;
+void bt6DofElasticPlastic2Constraint::resetIdCounter(){
+	idCounter = 0;
+}
 // bcc
 void bt6DofElasticPlastic2Constraint::initPlasticity()
 {
+	id = ++idCounter;
 	for (int i = 0; i < 6; i++)
 	{
 		m_maxForce[i] = btScalar(SIMD_INFINITY);
@@ -1307,11 +1312,15 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 		setEnabled(false);
 	}
 }
+#define BLEN 6 
 void bt6DofElasticPlastic2Constraint::debugDraw(btIDebugDraw* debugDrawer)
 {
 	btVector3 color(1, 0, 0);
 	btVector3 from = m_rbA.getCenterOfMassPosition();
 	btVector3 to = from + m_frameInA.getOrigin();
+	char buffer[BLEN];
+	sprintf_s(buffer, BLEN, "%d", id);
+	debugDrawer->draw3dText(to, buffer);
 	debugDrawer->drawLine(from, to, color);
 	from = m_rbB.getCenterOfMassPosition();
 	to = from + m_frameInB.getOrigin();

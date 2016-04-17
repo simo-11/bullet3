@@ -2,6 +2,7 @@
 #define PLASTICITY_BROWSER_GUI_H
 
 #include "../ExampleBrowser/ExampleBrowserInterface.h"
+#include "../ExampleBrowser/OpenGLGuiHelper.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenUserInterface.h"
 #include "../CommonInterfaces/CommonGraphicsAppInterface.h"
 #include "../CommonInterfaces/CommonWindowInterface.h"
@@ -25,6 +26,7 @@ public:
 	static CommonWindowInterface* getWindow();
 	static CommonRenderInterface* getRenderer();
 	static GwenUserInterface* getGui();
+	static OpenGLGuiHelper* getGuiHelper();
 	static bool getPauseSimulation();
 	static void setPauseSimulation(bool pause);
 };
