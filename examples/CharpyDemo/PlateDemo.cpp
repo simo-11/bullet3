@@ -164,7 +164,7 @@ public:
 		float dist = 16;
 		float pitch = -45;
 		float yaw = 32;
-		float targetPos[3] = { -0.33, -0.72, 4.5 };
+		float targetPos[3] = { 0, 0, 0 };
 		m_guiHelper->resetCamera(dist, pitch, yaw, targetPos[0], targetPos[1], targetPos[2]);
 		CommonCameraInterface* camera =
 			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
@@ -753,7 +753,7 @@ public:
 	void updateLoadRaiseX(btScalar increment);
 	void updateLoadRaiseZ(btScalar increment);
 	btScalar getLoadRaiseY(){
-		return yhl + thickness + supportThickness / 2 + loadRaise;
+		return yhl + loadRaise;
 	}
 	btTransform getLoadRaisePoint(){
 		btTransform tr;
@@ -1157,18 +1157,20 @@ void PlateDemo::initPhysics()
 		(m_dispatcher,m_overlappingPairCache,m_constraintSolver,m_collisionConfiguration);
 	m_dynamicsWorld ->getSolverInfo().m_minimumSolverBatchSize = 128;
 	m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
-	//create ground and support objects
+	// ground
 	btTransform tr;
 	tr.setIdentity();
-	tr.setOrigin(btVector3(0,-20*thickness-max(lsx,lsz),0));
-	localCreateRigidBody(0,tr,groundShape);
-	tr.setOrigin(btVector3(xm, -thickness, 0));
+	tr.setOrigin(btVector3(0, -10 - thickness - max(lsx, lsz), 0));
+	localCreateRigidBody(0, tr, groundShape);
+	// support objects
+	btScalar supportY = -thickness - supportThickness / 2;
+	tr.setOrigin(btVector3(xm, supportY, 0));
 	localCreateRigidBody(0, tr, supportShapeZ);
-	tr.setOrigin(btVector3(-xm, -thickness, 0));
+	tr.setOrigin(btVector3(-xm, supportY, 0));
 	localCreateRigidBody(0, tr, supportShapeZ);
-	tr.setOrigin(btVector3(0, -thickness, -zm));
+	tr.setOrigin(btVector3(0, supportY, -zm));
 	localCreateRigidBody(0, tr, supportShapeX);
-	tr.setOrigin(btVector3(0, -thickness, zm));
+	tr.setOrigin(btVector3(0, supportY, zm));
 	localCreateRigidBody(0, tr, supportShapeX);
 	// load
 	btCollisionShape* loadShape = getLoadShape();
@@ -1186,6 +1188,7 @@ void PlateDemo::initPhysics()
 		plateMaterial->setFy(fy);
 		btTransform localTrans;
 		localTrans.setIdentity();
+		localTrans.setOrigin(btVector3(0, -thickness / 2, 0));
 		btBoxShape* plateShape =
 			new btBoxShape(btVector3(lsx / 2, thickness / 2, lsz / 2));
 		elasticPlasticPlate = new btElasticPlasticPlate();
