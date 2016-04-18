@@ -129,7 +129,7 @@ public:
 	int swxi = 30; // short width
 	int gy;
 	int gyInc = 25;
-	bool restartRequested;
+	bool restartRequested=false;
 	bool dropFocus = false;
 	GwenUserInterface* gui;
 	Gwen::Controls::Canvas* canvas;

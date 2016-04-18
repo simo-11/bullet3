@@ -113,7 +113,7 @@ public:
 	int swxi = 30; // short width
 	int gy;
 	int gyInc = 25;
-	bool restartRequested;
+	bool restartRequested=false;
 	bool dropFocus = false;
 	GwenUserInterface* gui;
 	Gwen::Controls::Canvas* canvas;
@@ -1167,6 +1167,9 @@ void PlateDemo::initPhysics()
 			btIDebugDraw::DBG_DrawWireframe
 			+ btIDebugDraw::DBG_DrawAabb
 			);
+		plasticityDebugDrawer->setTextSize(0.05*ws);
+		delete plasticityDebugDrawer;
+		plasticityDebugDrawer = 0;
 	}
 	else{
 		m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
