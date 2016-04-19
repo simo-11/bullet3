@@ -9,12 +9,6 @@ PlasticityDebugDrawer::PlasticityDebugDrawer(CommonGraphicsApp* app)
 {
 }
 
-void PlasticityDebugDrawer::setDefaultColors(const DefaultColors& colors)
-{
-	m_ourColors = colors;
-}
-
-
 void PlasticityDebugDrawer::drawLine
 	(const btVector3& from1, const btVector3& to1, const btVector3& color1)
 {

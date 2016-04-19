@@ -66,8 +66,6 @@ public:
 	btRigidBody* localCreateRigidBody(btScalar mass, const btTransform& worldTransform, btCollisionShape* colSape);
 
 	GUIHelperInterface* m_guiHelper;
-	int m_wheelInstances[4];
-
 	bool m_useDefaultCamera;
 
 	btAlignedObjectArray<btCollisionShape*> m_collisionShapes;
@@ -153,6 +151,7 @@ public:
 
 	virtual bool	keyboardCallback(int key, int state);
 
+	virtual void updateUI(); // called at end of stepSimulation
 	virtual void renderScene();
 
 	virtual void physicsDebugDraw(int debugFlags);
@@ -186,41 +185,11 @@ public:
 	void reinit();
 	void resetHandler(Gwen::Controls::Base* control);
 	float pitchDelta = 0;
-	void setPitchDelta(float delta){
-		pitchDelta = delta;
-	}
-	void updatePitch(){
-		if (pitchDelta == 0.f){
-			return;
-		}
-		CommonCameraInterface* camera =
-			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
-		float current = camera->getCameraPitch();
-		current += pitchDelta;
-		if (current > 360){
-			current -= 360;
-		}
-		else if (current < 0){
-			current += 360;
-		}
-		camera->setCameraPitch(current);
-	}
+	void setPitchDelta(float delta);
+	void updatePitch();
 	float yawDelta = 0;
-	void setYawDelta(float delta){
-		yawDelta = delta;
-	}
-	void updateYaw(){
-		if (yawDelta == 0.f){
-			return;
-		}
-		CommonCameraInterface* camera =
-			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
-		float current = camera->getCameraYaw();
-		current += yawDelta;
-		if (current > -90 && current < 90){
-			camera->setCameraYaw(current);
-		}
-	}
+	void setYawDelta(float delta);
+	void updateYaw();
 	std::string getText(Gwen::Controls::Base* control){
 		Gwen::Controls::TextBoxNumeric* box =
 			static_cast<Gwen::Controls::TextBoxNumeric*>(control);
@@ -309,6 +278,7 @@ public:
 	void setDisableCollisionsBetweenLinkedBodies(Gwen::Controls::Base* control);
 	void setLogDir(Gwen::Controls::Base* control);
 	void setDumpPng(Gwen::Controls::Base* control);
+	void updatePauseButtonText();
 	Gwen::Controls::Base* pPage;
 	Gwen::Controls::Button* pauseButton, *singleStepButton;
 	Gwen::Controls::Button* raiseLoadButton;
@@ -584,15 +554,7 @@ public:
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setLoadRaiseZ);
 	}
-	void PlateDemo::updatePauseButtonText(){
-		bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
-		if (pauseSimulation){
-			pauseButton->SetText(L"Continue");
-		}
-		else{
-			pauseButton->SetText(L"Pause");
-		}
-	}
+	void pdatePauseButtonText();
 	void handlePauseSimulation(Gwen::Controls::Base* control);
 	void handleRaiseLoad(Gwen::Controls::Base* control);
 	void handleSingleStep(Gwen::Controls::Base* control);
@@ -848,6 +810,16 @@ PlateDemo *demo = 0;
 
 #include <stdio.h> //printf debugging
 #include "PlateDemo.h"
+
+void PlateDemo::updatePauseButtonText(){
+	bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
+	if (pauseSimulation){
+		demo->pauseButton->SetText(L"Continue");
+	}
+	else{
+		demo->pauseButton->SetText(L"Pause");
+	}
+}
 
 void PlateDemo::setUiNumIterations(Gwen::Controls::Base* control){
 	setInt(control, &(demo->numIterations));
@@ -1115,7 +1087,10 @@ void PlateDemo::exitPhysics()
 
 	delete m_collisionConfiguration;
 	m_collisionConfiguration=0;
-
+	if (plasticityDebugDrawer != 0){
+		delete plasticityDebugDrawer;
+		plasticityDebugDrawer = 0;
+	}
 }
 
 PlateDemo::~PlateDemo()
@@ -1159,7 +1134,7 @@ void PlateDemo::initPhysics()
 	m_dynamicsWorld = new btDiscreteDynamicsWorld
 		(m_dispatcher,m_overlappingPairCache,m_constraintSolver,m_collisionConfiguration);
 	m_dynamicsWorld ->getSolverInfo().m_minimumSolverBatchSize = 128;
-	bool own = false;
+	bool own = true;
 	if (own){
 		plasticityDebugDrawer = new PlasticityDebugDrawer(PlasticityExampleBrowser::getApp());
 		m_dynamicsWorld->setDebugDrawer(plasticityDebugDrawer);
@@ -1168,8 +1143,6 @@ void PlateDemo::initPhysics()
 			+ btIDebugDraw::DBG_DrawAabb
 			);
 		plasticityDebugDrawer->setTextSize(0.05*ws);
-		delete plasticityDebugDrawer;
-		plasticityDebugDrawer = 0;
 	}
 	else{
 		m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
@@ -1260,24 +1233,28 @@ void PlateDemo::initPhysics()
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
 }
 
-void PlateDemo::physicsDebugDraw(int debugFlags)
+/** called at end of stepSimulation */
+void PlateDemo::updateUI()
 {
-	if (m_dynamicsWorld && m_dynamicsWorld->getDebugDrawer())
+	setDumpFilename();
 	{
-		m_dynamicsWorld->getDebugDrawer()->setDebugMode(debugFlags);
-		m_dynamicsWorld->debugDrawWorld();
+		BT_PROFILE("PlateDemo::showMessage");
+		showMessage();
 	}
 }
-
-void PlateDemo::renderScene()
+void PlateDemo::physicsDebugDraw(int debugFlags)
 {
-	if (raiseLoad){
+	if (demo->raiseLoad){
 		raiseLoadAction();
 	}
 	updatePitch();
 	updateYaw();
 	updatePauseButtonText();
-	setDumpFilename();
+	if (m_dynamicsWorld && m_dynamicsWorld->getDebugDrawer())
+	{
+		m_dynamicsWorld->getDebugDrawer()->setDebugMode(debugFlags);
+		m_dynamicsWorld->debugDrawWorld();
+	}
 #ifdef _WIN32
 	btScalar idleTime = idleClock.getTimeSeconds();
 	if (idleTime> 10){
@@ -1287,6 +1264,10 @@ void PlateDemo::renderScene()
 		}
 	}
 #endif
+}
+
+void PlateDemo::renderScene()
+{	
 	if (stepCount > syncedStep){
 		BT_PROFILE("m_guiHelper::syncPhysicsToGraphics");
 		m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
@@ -1295,10 +1276,6 @@ void PlateDemo::renderScene()
 	{
 		BT_PROFILE("m_guiHelper::render");
 		m_guiHelper->render(m_dynamicsWorld);
-	}
-	{
-		BT_PROFILE("PlateDemo::showMessage");
-		showMessage();
 	}
 }
 
@@ -1318,6 +1295,7 @@ void PlateDemo::stepSimulation(float deltaTime)
 		}
 		stepTime += timeStep;
 	}
+	updateUI();
 }
 
 
@@ -1349,7 +1327,7 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 	idleClock.reset();
 	if (state)
 	{
-	if (isShiftPressed||gameBindings)
+	if (isShiftPressed||demo->gameBindings)
 	{
 		switch (key) 
 			{
@@ -1359,7 +1337,7 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 					if (isControlPressed){
 						increment = 6;
 					}
-					setPitchDelta(increment);
+					demo->setPitchDelta(increment);
 					handled = true;
 					break;
 				}
@@ -1369,19 +1347,19 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 					if (isControlPressed){
 						increment = 6;
 					}
-					setPitchDelta(increment);
+					demo->setPitchDelta(increment);
 					handled = true;
 					break;
 				}
 			case B3G_UP_ARROW :
 				{
-					setYawDelta(1);
+					demo->setYawDelta(1);
 					handled = true;
 					break;
 				}
 			case B3G_DOWN_ARROW :
 				{
-					setYawDelta(-1);
+					demo->setYawDelta(-1);
 					handled = true;
 					break;
 				}
@@ -1398,45 +1376,45 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 				demo->raiseLoad = true;
 				break;
 			}
-		case 'a':if (!gameBindings){break;}
+		case 'a':if (!demo->gameBindings){break;}
 		case B3G_LEFT_ARROW :
 			{
-				updateLoadRaiseX(lsx / cx);
+				demo->updateLoadRaiseX(lsx / cx);
 				handled = true;
 				break;
 			}
-		case 'd':if (!gameBindings){ break; }
+		case 'd':if (!demo->gameBindings){ break; }
 		case B3G_RIGHT_ARROW:
 			{
-				updateLoadRaiseX(-lsx/cx);
+				demo->updateLoadRaiseX(-lsx/cx);
 				handled = true;
 				break;
 			}
-		case 'w':if (!gameBindings){ break; }
+		case 'w':if (!demo->gameBindings){ break; }
 		case B3G_UP_ARROW:
 			{
 				handled = true;
-				updateLoadRaiseZ(lsz/cz);
+				demo->updateLoadRaiseZ(lsz/cz);
 				break;
 			}
-		case 's':if (!gameBindings){ break; }
+		case 's':if (!demo->gameBindings){ break; }
 		case B3G_DOWN_ARROW:
 			{
 				handled = true;
-				updateLoadRaiseZ(-lsz / cz);
+				demo->updateLoadRaiseZ(-lsz / cz);
 				break;
 			}
 		case B3G_F7:
 			{
 				handled = true;
-				btDiscreteDynamicsWorld* world = (btDiscreteDynamicsWorld*)m_dynamicsWorld;
+				btDiscreteDynamicsWorld* world = (btDiscreteDynamicsWorld*)demo->m_dynamicsWorld;
 				world->setLatencyMotionStateInterpolation(!world->getLatencyMotionStateInterpolation());
 				printf("world latencyMotionStateInterpolation = %d\n", world->getLatencyMotionStateInterpolation());
 				break;
 			}
 		case B3G_F5:
 			handled = true;
-			m_useDefaultCamera = !m_useDefaultCamera;
+			demo->m_useDefaultCamera = !demo->m_useDefaultCamera;
 			break;
 		default:
 			break;
@@ -1454,15 +1432,15 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 				isArrow = true;
 				break;
 		}
-		bool isCommon = !(gameBindings&&isArrow);
-		if (gameBindings || isArrow){
+		bool isCommon = !(demo->gameBindings&&isArrow);
+		if (demo->gameBindings || isArrow){
 			switch (key)
 			{
 			case 'w':
 			case B3G_UP_ARROW:
 			{
 				if (isArrow){
-					setYawDelta(0.f);
+					demo->setYawDelta(0.f);
 				}
 				if (isCommon){
 				}
@@ -1473,7 +1451,7 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 			case B3G_DOWN_ARROW:
 			{
 				if (isArrow){
-					setYawDelta(0.f);
+					demo->setYawDelta(0.f);
 				}
 				if (isCommon){
 				}
@@ -1486,7 +1464,7 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 			case B3G_RIGHT_ARROW:
 			{
 				if (isArrow){
-					setPitchDelta(0.f);
+					demo->setPitchDelta(0.f);
 				}
 				if (isCommon){
 				}
@@ -1500,6 +1478,41 @@ bool	PlateDemo::keyboardCallback(int key, int state)
 	}
 	return handled;
 }
+void PlateDemo::setYawDelta(float delta){
+	demo->yawDelta = delta;
+}
+void PlateDemo::updateYaw(){
+	if (yawDelta == 0.f){
+		return;
+	}
+	CommonCameraInterface* camera =
+		PlasticityExampleBrowser::getRenderer()->getActiveCamera();
+	float current = camera->getCameraYaw();
+	current += yawDelta;
+	if (current > -90 && current < 90){
+		camera->setCameraYaw(current);
+	}
+}
+void PlateDemo::setPitchDelta(float delta){
+	demo->pitchDelta = delta;
+}
+void PlateDemo::updatePitch(){
+	if (pitchDelta == 0.f){
+		return;
+	}
+	CommonCameraInterface* camera =
+		PlasticityExampleBrowser::getRenderer()->getActiveCamera();
+	float current = camera->getCameraPitch();
+	current += pitchDelta;
+	if (current > 360){
+		current -= 360;
+	}
+	else if (current < 0){
+		current += 360;
+	}
+	camera->setCameraPitch(current);
+}
+
 
 void PlateDemo::specialKeyboardUp(int key, int x, int y)
 {
