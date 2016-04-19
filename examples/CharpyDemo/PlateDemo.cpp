@@ -1244,6 +1244,11 @@ void PlateDemo::updateUI()
 }
 void PlateDemo::physicsDebugDraw(int debugFlags)
 {
+	if (stepCount > syncedStep){
+		BT_PROFILE("m_guiHelper::syncPhysicsToGraphics");
+		m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
+		syncedStep = stepCount;
+	}
 	if (demo->raiseLoad){
 		raiseLoadAction();
 	}
@@ -1268,11 +1273,6 @@ void PlateDemo::physicsDebugDraw(int debugFlags)
 
 void PlateDemo::renderScene()
 {	
-	if (stepCount > syncedStep){
-		BT_PROFILE("m_guiHelper::syncPhysicsToGraphics");
-		m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
-		syncedStep = stepCount;
-	}
 	{
 		BT_PROFILE("m_guiHelper::render");
 		m_guiHelper->render(m_dynamicsWorld);
