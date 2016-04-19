@@ -25,14 +25,14 @@
 
 	newoption
 	{
-		trigger = "force_dlopen_opengl",
-		description = "Dynamically load OpenGL (instead of static/dynamic linking)"
+		trigger = "enable_system_opengl",
+		description = "Try to link and use the system OpenGL headers version instead of dynamically loading OpenGL (dlopen is default)"
 	}
 
 	newoption
 	{
-		trigger = "force_dlopen_x11",
-		description = "Dynamically load OpenGL (instead of static/dynamic linking)"
+		trigger = "enable_system_x11",
+		description = "Try to link and use system X11 headers instead of dynamically loading X11 (dlopen is default)"
 	}
 
 	newoption
@@ -176,29 +176,11 @@
 
 	language "C++"
 
-	if _OPTIONS["no-bullet3"] then
-		print "--no-bullet3 implies --no-demos"
-		_OPTIONS["no-demos"] = "1"
-	else
-		include "../src/Bullet3Common"
-		include "../src/Bullet3Geometry"
-		include "../src/Bullet3Collision"
-		include "../src/Bullet3Dynamics"
-		include "../src/Bullet3OpenCL"
-		include "../src/Bullet3Serialize/Bullet2FileLoader"
-	end
-
-	if _OPTIONS["no-extras"] then
-		print "--no-extras implies --no-demos"
-		_OPTIONS["no-demos"] = "1"
-	else
-		include "../Extras"
-	end
-
 	if not _OPTIONS["no-demos"] then
 		include "../examples/ExampleBrowser"
 		include "../examples/OpenGLWindow"
 		include "../examples/ThirdPartyLibs/Gwen"
+		include "../examples/SimpleOpenGL3"
 
 		include "../examples/HelloWorld"
 		include "../examples/BasicDemo"
@@ -219,6 +201,25 @@
 			end
 		end
 	end
+
+	 if _OPTIONS["no-bullet3"] then
+                print "--no-bullet3 implies --no-demos"
+                _OPTIONS["no-demos"] = "1"
+        else
+                include "../src/Bullet3Common"
+                include "../src/Bullet3Geometry"
+                include "../src/Bullet3Collision"
+                include "../src/Bullet3Dynamics"
+                include "../src/Bullet3OpenCL"
+                include "../src/Bullet3Serialize/Bullet2FileLoader"
+        end
+
+        if _OPTIONS["no-extras"] then
+                print "--no-extras implies --no-demos"
+                _OPTIONS["no-demos"] = "1"
+        else
+                include "../Extras"
+        end
 
 	if not _OPTIONS["no-test"] then
 		include "../test/Bullet2"
