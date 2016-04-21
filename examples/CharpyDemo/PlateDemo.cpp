@@ -100,7 +100,7 @@ public:
 	btScalar maxPlasticStrain;
 	long stepCount, maxStepCount, syncedStep;
 	btScalar stepTime;
-	bool gameBindings = true;
+	bool gameBindings = false;
 	bool solidPlate = true;
 	bool disableCollisionsBetweenLinkedBodies = true;
 	bool dumpPng = false;
@@ -1236,25 +1236,20 @@ void PlateDemo::initPhysics()
 /** called at end of stepSimulation */
 void PlateDemo::updateUI()
 {
-	setDumpFilename();
+//	setDumpFilename();
 	{
 		BT_PROFILE("PlateDemo::showMessage");
-		showMessage();
+//		showMessage();
 	}
 }
 void PlateDemo::physicsDebugDraw(int debugFlags)
 {
-	if (stepCount > syncedStep){
-		BT_PROFILE("m_guiHelper::syncPhysicsToGraphics");
-		m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
-		syncedStep = stepCount;
-	}
 	if (demo->raiseLoad){
 		raiseLoadAction();
 	}
 	updatePitch();
 	updateYaw();
-	updatePauseButtonText();
+//	updatePauseButtonText();
 	if (m_dynamicsWorld && m_dynamicsWorld->getDebugDrawer())
 	{
 		m_dynamicsWorld->getDebugDrawer()->setDebugMode(debugFlags);
@@ -1273,6 +1268,11 @@ void PlateDemo::physicsDebugDraw(int debugFlags)
 
 void PlateDemo::renderScene()
 {	
+	if (stepCount > syncedStep){
+		BT_PROFILE("m_guiHelper::syncPhysicsToGraphics");
+		m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
+		syncedStep = stepCount;
+	}
 	{
 		BT_PROFILE("m_guiHelper::render");
 		m_guiHelper->render(m_dynamicsWorld);
