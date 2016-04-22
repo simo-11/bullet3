@@ -40,9 +40,10 @@ void PlasticityDebugDrawer::reportErrorWarning(const char* warningString)
 {
 }
 
-void PlasticityDebugDrawer::draw3dText(const btVector3& location, 
-	const char* textString)
+void PlasticityDebugDrawer::draw3dText(const btVector3& l, 
+	const char* text)
 {
+	m_glApp->drawText3D(text, l.x(), l.y(), l.z(), textSize);
 }
 
 void PlasticityDebugDrawer::setDebugMode(int debugMode)

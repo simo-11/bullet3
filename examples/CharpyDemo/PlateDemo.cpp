@@ -100,7 +100,7 @@ public:
 	btScalar maxPlasticStrain;
 	long stepCount, maxStepCount, syncedStep;
 	btScalar stepTime;
-	bool gameBindings = false;
+	bool gameBindings;
 	bool solidPlate = true;
 	bool disableCollisionsBetweenLinkedBodies = true;
 	bool dumpPng = false;
@@ -988,7 +988,7 @@ void PlateDemo::reinit(){
 	maxPlasticStrain = 0.1;
 	maxPlasticRotation = 1;
 	driveClock.reset();
-	gameBindings = true;
+	gameBindings = false;
 	solidPlate = true;
 	numIterations = initialNumIterations;
 	m_fixedTimeStep = initialFixedTimeStep;
@@ -1142,7 +1142,7 @@ void PlateDemo::initPhysics()
 			btIDebugDraw::DBG_DrawWireframe
 			+ btIDebugDraw::DBG_DrawAabb
 			);
-		plasticityDebugDrawer->setTextSize(0.05*ws);
+		plasticityDebugDrawer->setTextSize(0.2*ws);
 	}
 	else{
 		m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
@@ -1239,7 +1239,7 @@ void PlateDemo::updateUI()
 //	setDumpFilename();
 	{
 		BT_PROFILE("PlateDemo::showMessage");
-//		showMessage();
+		showMessage();
 	}
 }
 void PlateDemo::physicsDebugDraw(int debugFlags)
