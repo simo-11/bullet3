@@ -1,6 +1,6 @@
 #ifndef PLASTICITY_DATA_H
 #define PLASTICITY_DATA_H
-#define BPT_EP2  21
+#define BPT_EP2 21
 #include <list>
 #include <string>
 #include "BulletDynamics/ConstraintSolver/btTypedConstraint.h"

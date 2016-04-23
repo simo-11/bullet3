@@ -1315,15 +1315,19 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 #define BLEN 6 
 void bt6DofElasticPlastic2Constraint::debugDraw(btIDebugDraw* debugDrawer)
 {
+	if (!isEnabled()){
+		return;
+	}
+	char buffer[BLEN];
+	sprintf_s(buffer, BLEN, "%d", id);
 	btVector3 color(1, 0, 0);
 	btVector3 from = m_rbA.getCenterOfMassPosition();
 	btVector3 to = from + m_frameInA.getOrigin();
-	char buffer[BLEN];
-	sprintf_s(buffer, BLEN, "%d", id);
 	debugDrawer->draw3dText(to, buffer);
 	debugDrawer->drawLine(from, to, color);
 	from = m_rbB.getCenterOfMassPosition();
 	to = from + m_frameInB.getOrigin();
+	debugDrawer->draw3dText(to, buffer);
 	debugDrawer->drawLine(from, to, color);
 }
 

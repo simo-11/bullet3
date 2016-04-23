@@ -2654,6 +2654,7 @@ void	CharpyDemo::exitPhysics()
 	mode7c.clear();
 	mode8c.clear();
 	tc.clear();
+	PlasticityData::setData(0);
 }
 CommonExampleInterface*    CharpyDemoCreateFunc(CommonExampleOptions& options)
 {

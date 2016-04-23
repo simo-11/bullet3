@@ -162,7 +162,7 @@ public:
 
 	virtual void resetCamera()
 	{
-		float dist = 16;
+		float dist = 5;
 		float pitch = -45;
 		float yaw = 32;
 		float targetPos[3] = { 0, 0, 0 };
@@ -1091,6 +1091,7 @@ void PlateDemo::exitPhysics()
 		delete plasticityDebugDrawer;
 		plasticityDebugDrawer = 0;
 	}
+	PlasticityData::setData(0);
 }
 
 PlateDemo::~PlateDemo()
@@ -1249,7 +1250,7 @@ void PlateDemo::physicsDebugDraw(int debugFlags)
 	}
 	updatePitch();
 	updateYaw();
-//	updatePauseButtonText();
+	updatePauseButtonText();
 	if (m_dynamicsWorld && m_dynamicsWorld->getDebugDrawer())
 	{
 		m_dynamicsWorld->getDebugDrawer()->setDebugMode(debugFlags);

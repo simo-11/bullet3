@@ -1733,6 +1733,7 @@ void DemolisherDemo::exitPhysics()
 		delete m_collisionConfiguration;
 		m_collisionConfiguration = 0;
 	}
+	PlasticityData::setData(0);
 }
 
 DemolisherDemo::~DemolisherDemo()
