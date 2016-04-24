@@ -1322,11 +1322,13 @@ void bt6DofElasticPlastic2Constraint::debugDraw(btIDebugDraw* debugDrawer)
 	sprintf_s(buffer, BLEN, "%d", id);
 	btVector3 color(1, 0, 0);
 	btVector3 from = m_rbA.getCenterOfMassPosition();
-	btVector3 to = from + m_frameInA.getOrigin();
+	btTransform tr = m_rbA.getCenterOfMassTransform();
+	btVector3 to = tr*m_frameInA.getOrigin();
 	debugDrawer->draw3dText(to, buffer);
 	debugDrawer->drawLine(from, to, color);
 	from = m_rbB.getCenterOfMassPosition();
-	to = from + m_frameInB.getOrigin();
+	tr = m_rbB.getCenterOfMassTransform();
+	to = tr*m_frameInB.getOrigin();
 	debugDrawer->draw3dText(to, buffer);
 	debugDrawer->drawLine(from, to, color);
 }
