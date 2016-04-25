@@ -52,6 +52,12 @@ class btCollisionShape;
 
 const char * PROFILE_PLATE_SLEEP = "PlateDemo::Sleep";
 
+static bool ep2c(bt6DofElasticPlastic2Constraint* p, bt6DofElasticPlastic2Constraint* q)
+{
+	return (p->m_maxRatio>q->m_maxRatio);
+}
+
+
 class PlateDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 {
 public:
@@ -775,20 +781,23 @@ public:
 		char buf[B_LEN * 2];
 		bool headerDone = false;
 		int ep2count = 0;
+		btAlignedObjectArray<bt6DofElasticPlastic2Constraint*> epca;
 		for (int i = 0; i < numConstraints; i++){
 			btTypedConstraint* sc = dw->getConstraint(i);
 			int type = sc->getUserConstraintType();
-			if (type != BPT_EP2){
-				continue;
+			if (type == BPT_EP2){
+				epca.push_back(static_cast<bt6DofElasticPlastic2Constraint*>(sc));
 			}
+		}
+		epca.quickSort(ep2c);
+		for (int i = 0; i < epca.size(); i++){
 			if (!headerDone){
 				sprintf_s(buf, B_LEN, "%2s %8s %5s %5s %5s %5s %5s",
 					"#", "max%", "m%dof", "mpr", "cpr", "mps", "cps");
 				infoMsg(buf);
 				headerDone = true;
 			}
-			bt6DofElasticPlastic2Constraint *epc =
-				static_cast<bt6DofElasticPlastic2Constraint*>(sc);
+			bt6DofElasticPlastic2Constraint *epc = epca[i];
 			btScalar mpr = epc->getMaxPlasticRotation(),
 				cpr = epc->getCurrentPlasticRotation(),
 				mps = epc->getMaxPlasticStrain(),
