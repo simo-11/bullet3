@@ -218,7 +218,28 @@ void b3GetJointState(b3PhysicsClientHandle physClient, b3SharedMemoryStatusHandl
 	  for (int ii(0); ii < 6; ++ii) {
 		state->m_jointForceTorque[ii] = status->m_sendActualStateArgs.m_jointReactionForces[6 * jointIndex + ii];
 	  }
-      state->m_jointTorque = status->m_sendActualStateArgs.m_jointMotorForce[jointIndex];
+      state->m_jointMotorTorque = status->m_sendActualStateArgs.m_jointMotorForce[jointIndex];
+  }
+}
+
+void b3GetLinkState(b3PhysicsClientHandle physClient, b3SharedMemoryStatusHandle statusHandle, int linkIndex, b3LinkState *state)
+{
+  const SharedMemoryStatus* status = (const SharedMemoryStatus* ) statusHandle;
+  b3Assert(status);
+  int bodyIndex = status->m_sendActualStateArgs.m_bodyUniqueId;
+  b3Assert(bodyIndex>=0);
+  if (bodyIndex>=0)
+  {
+    for (int i = 0; i < 3; ++i) 
+    {
+      state->m_worldPosition[i] = status->m_sendActualStateArgs.m_linkState[7 * linkIndex + i];
+      state->m_localInertialPosition[i] = status->m_sendActualStateArgs.m_linkLocalInertialFrames[7 * linkIndex + i];
+    }
+    for (int i = 0; i < 4; ++i) 
+    {
+      state->m_worldOrientation[i] = status->m_sendActualStateArgs.m_linkState[7 * linkIndex + 3 + i];
+      state->m_localInertialOrientation[i] = status->m_sendActualStateArgs.m_linkLocalInertialFrames[7 * linkIndex + 3 + i];
+    }
   }
 }
 

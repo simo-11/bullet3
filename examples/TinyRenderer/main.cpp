@@ -1,6 +1,8 @@
 #include "OpenGLWindow/SimpleOpenGL3App.h"
 #include "Bullet3Common/b3Quaternion.h"
 #include "Bullet3Common/b3CommandLineArgs.h"
+#include "Bullet3Common/b3Transform.h"
+
 #include "assert.h"
 #include <stdio.h>
 
@@ -54,14 +56,15 @@ void MyKeyboardCallback(int keycode, int state)
 	if (sOldKeyboardCB)
 		sOldKeyboardCB(keycode,state);
 }
-
+#include "TinyRenderer.h"
 
 int main(int argc, char* argv[])
 {
     b3CommandLineArgs myArgs(argc,argv);
 
-
-	SimpleOpenGL3App* app = new SimpleOpenGL3App("SimpleOpenGL3App",1024,768,true);
+  
+    
+	SimpleOpenGL3App* app = new SimpleOpenGL3App("SimpleOpenGL3App",640,480,true);
 	
 	app->m_instancingRenderer->getActiveCamera()->setCameraDistance(13);
 	app->m_instancingRenderer->getActiveCamera()->setCameraPitch(0);
@@ -77,7 +80,17 @@ int main(int argc, char* argv[])
 	sOldResizeCB = app->m_window->getResizeCallback();
 	app->m_window->setResizeCallback(MyResizeCallback);
   
-
+    int textureWidth = gWidth;
+    int textureHeight = gHeight;
+    
+	TinyRenderObjectData renderData(textureWidth, textureHeight);//, "african_head/african_head.obj");//floor.obj");
+	
+	//renderData.loadModel("african_head/african_head.obj");
+	//renderData.loadModel("floor.obj");
+	
+	renderData.createCube(1,1,1);
+    
+    
     myArgs.GetCmdLineArgument("mp4_file",gVideoFileName);
     if (gVideoFileName)
         app->dumpFramesToVideo(gVideoFileName);
@@ -85,8 +98,7 @@ int main(int argc, char* argv[])
     myArgs.GetCmdLineArgument("png_file",gPngFileName);
     char fileName[1024];
     
-    int textureWidth = 128;
-    int textureHeight = 128;
+ 
     
     unsigned char*	image=new unsigned char[textureWidth*textureHeight*4];
         
@@ -113,8 +125,72 @@ int main(int argc, char* argv[])
             sprintf(fileName,"%s%d.png",gPngFileName,frameCount++);
             app->dumpNextFrameToPng(fileName);
         }
-
         
+       	app->m_instancingRenderer->init();
+		app->m_instancingRenderer->updateCamera();
+
+   ///clear the color and z (depth) buffer
+        for(int y=0;y<textureHeight;++y)
+        {
+            unsigned char*	pi=image+(y)*textureWidth*3;
+            for(int x=0;x<textureWidth;++x)
+            {
+                
+                TGAColor color;
+                color.bgra[0] = 255;
+                color.bgra[1] = 255;
+                color.bgra[2] = 255;
+                color.bgra[3] = 255;
+                
+                renderData.m_rgbColorBuffer.set(x,y,color);
+				renderData.m_depthBuffer[x+y*textureWidth] = -1e30f;
+            }
+        }
+        
+        float projMat[16];
+        app->m_instancingRenderer->getActiveCamera()->getCameraProjectionMatrix(projMat);
+        float viewMat[16];
+        app->m_instancingRenderer->getActiveCamera()->getCameraViewMatrix(viewMat);
+        B3_ATTRIBUTE_ALIGNED16(float modelMat[16]);
+        
+        //sync the object transform
+        b3Transform tr;
+        tr.setIdentity();
+        static float posUp = 0.f;
+       // posUp += 0.001;
+        b3Vector3 org = b3MakeVector3(0,posUp,0);
+        tr.setOrigin(org);
+        tr.getOpenGLMatrix(modelMat);
+        
+        for (int i=0;i<4;i++)
+        {
+            for (int j=0;j<4;j++)
+            {
+                renderData.m_viewMatrix[i][j] = viewMat[i+4*j];
+                renderData.m_modelMatrix[i][j] = modelMat[i+4*j];
+            }
+        }
+        
+        //render the object
+        TinyRenderer::renderObject(renderData);
+  
+        #if 1
+         //update the texels of the texture using a simple pattern, animated using frame index
+        for(int y=0;y<textureHeight;++y)
+        {
+            unsigned char*	pi=image+(y)*textureWidth*3;
+            for(int x=0;x<textureWidth;++x)
+            {
+                
+                TGAColor color = renderData.m_rgbColorBuffer.get(x,y);
+				pi[0] = color.bgra[2];
+				pi[1] = color.bgra[1];
+				pi[2] = color.bgra[0];
+				pi[3] = 255;
+                pi+=3;
+            }
+        }
+        #else
         
         //update the texels of the texture using a simple pattern, animated using frame index
         for(int y=0;y<textureHeight;++y)
@@ -123,23 +199,26 @@ int main(int argc, char* argv[])
             unsigned char*	pi=image+y*textureWidth*3;
             for(int x=0;x<textureWidth;++x)
             {
+				TGAColor color = renderData.m_rgbColorBuffer.get(x,y);
+
                 const int		s=x>>4;
                 const unsigned char	b=180;					
                 unsigned char			c=b+((s+(t&1))&1)*(255-b);
-                pi[0]=pi[1]=pi[2]=pi[3]=c;pi+=3;
+				pi[0]=pi[1]=pi[2]=pi[3]=c;
+				pi+=3;
             }
         }
+        #endif 
+        
     
         app->m_renderer->activateTexture(textureHandle);
         app->m_renderer->updateTexture(textureHandle,image);
         
-        float color[4] = {255,1,1,1};
-        app->m_primRenderer->drawTexturedRect(100,200,gWidth/2-50,gHeight/2-50,color,0,0,1,1,true);
+        float color[4] = {1,1,1,1};
+        app->m_primRenderer->drawTexturedRect(0,0,gWidth/3,gHeight/3,color,0,0,1,1,true);
         
 		
-		app->m_instancingRenderer->init();
-		app->m_instancingRenderer->updateCamera();
-
+	
         app->m_renderer->renderScene();
 		app->drawGrid();
 		char bla[1024];
