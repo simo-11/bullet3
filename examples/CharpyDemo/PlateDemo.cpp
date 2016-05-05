@@ -568,19 +568,27 @@ public:
 		resetCamera();
 		int option = m_option;
 		reinit();
-		constraintType = (Constraint)(option % 100);
-		option /= 100;
-		while ((option /= 100) > 0){
-			switch (option % 100){
-			case 1:
-				break;
-			case 2:
-				break;
-			case 3:
-				break;
-			}
+		constraintType = (Constraint)(option % 10);
+		option /= 10;
+		if (option == 0){
+			return;
 		}
-
+		thickness = (option % 100)*0.001;
+		option /= 100;
+		if (option == 0){
+			return;
+		}
+		lsz = lsx = (option % 100);
+		option /= 100;
+		if (option == 0){
+			return;
+		}
+		cx = cz = (option % 100);
+		option /= 100;
+		if (option == 0){
+			return;
+		}
+		loadMass = (option % 100) * 1000;
 	}
 	void initParameterUi(){
 		gui = PlasticityExampleBrowser::getGui();
@@ -598,11 +606,11 @@ public:
 		addDensity();
 		switch (constraintType){
 		case Impulse:
-			addBreakingImpulseThreshold();
+			// addBreakingImpulseThreshold();
 			addCollisionBetweenLinkedBodies();
 			break;
 		case ElasticPlastic:
-			addMaxPlasticRotation();
+			//addMaxPlasticRotation();
 			addMaxPlasticStrain();
 			addCollisionBetweenLinkedBodies();
 			break;
@@ -732,6 +740,19 @@ public:
 			(loadRaiseX, getLoadRaiseY(), loadRaiseZ));
 		return tr;
 	}
+	boolean isLoadDown(){
+		int activationState=m_loadBody->getActivationState();
+		if (activationState == ACTIVE_TAG){
+			return false;
+		}
+		btScalar y = m_loadBody->getCenterOfMassPosition().y();
+		btScalar speed2 = m_loadBody->getLinearVelocity().length2();
+		if (y < -5 && speed2<1e-6){
+			return true;
+		}
+		m_loadBody->activate();
+		return false;
+	}
 	void raiseLoadAction(){
 		btVector3 zero(0, 0, 0);
 		btTransform tr;
@@ -747,6 +768,7 @@ public:
 		m_loadBody->setAngularVelocity(zero);
 		m_loadBody->setLinearVelocity(zero);
 		m_loadBody->activate();
+		PlasticityExampleBrowser::setPauseSimulation(false);
 		raiseLoad = false;
 	}
 	list<PlasticityData> pData;
@@ -781,12 +803,19 @@ public:
 		char buf[B_LEN * 2];
 		bool headerDone = false;
 		int ep2count = 0;
+		int fixedCount = 0;
 		btAlignedObjectArray<bt6DofElasticPlastic2Constraint*> epca;
 		for (int i = 0; i < numConstraints; i++){
 			btTypedConstraint* sc = dw->getConstraint(i);
-			int type = sc->getUserConstraintType();
-			if (type == BPT_EP2){
+			switch (sc->getConstraintType()){
+			case FIXED_CONSTRAINT_TYPE:
+				fixedCount++;
+				break;
+			}
+			switch (sc->getUserConstraintType()){
+			case BPT_EP2:
 				epca.push_back(static_cast<bt6DofElasticPlastic2Constraint*>(sc));
+				break;
 			}
 		}
 		epca.quickSort(ep2c);
@@ -809,8 +838,8 @@ public:
 			infoMsg(buf);
 			ep2count++;
 		}
-		sprintf_s(buf, B_LEN, "stepTime=%4.1f, stepCount=%d, ep2count=%d",
-			stepTime, stepCount, ep2count);
+		sprintf_s(buf, B_LEN, "stepTime=%4.1f, stepCount=%d, constraintCount=%d",
+			stepTime, stepCount, ep2count+fixedCount);
 		headerMsg(buf);
 		PlasticityData::setData(&pData);
 	}
@@ -980,6 +1009,7 @@ void PlateDemo::setMaxPlasticRotation(Gwen::Controls::Base* control){
 
 void PlateDemo::restartHandler(Gwen::Controls::Base* control){
 	demo->restartRequested = true;
+	PlasticityExampleBrowser::setPauseSimulation(false);
 }
 void PlateDemo::reinit(){
 	cx = 3;
@@ -1101,6 +1131,7 @@ void PlateDemo::exitPhysics()
 		plasticityDebugDrawer = 0;
 	}
 	PlasticityData::setData(0);
+	PlasticityExampleBrowser::setPauseSimulation(false);
 }
 
 PlateDemo::~PlateDemo()
@@ -1109,7 +1140,8 @@ PlateDemo::~PlateDemo()
 }
 
 void PlateDemo::initPhysics()
-{
+{	
+	PlasticityExampleBrowser::setPauseSimulation(false);
 	bt6DofElasticPlastic2Constraint::resetIdCounter();
 	if (maxStepCount != LONG_MAX){
 		// Single step is active
@@ -1118,6 +1150,7 @@ void PlateDemo::initPhysics()
 	else{
 		maxStepCount = LONG_MAX;
 	}
+	breakingImpulseThreshold = SIMD_PI*thickness*thickness*fy*m_fixedTimeStep;
 	stepCount = 0;
 	syncedStep = 0;
 	stepTime = 0;
@@ -1186,6 +1219,7 @@ void PlateDemo::initPhysics()
 		plateMaterial->setE(E);
 		plateMaterial->setDensity(density);
 		plateMaterial->setFy(fy);
+		plateMaterial->setMaxPlasticStrain(maxPlasticStrain);
 		btTransform localTrans;
 		localTrans.setIdentity();
 		localTrans.setOrigin(btVector3(0, -thickness / 2, 0));
@@ -1300,7 +1334,7 @@ void PlateDemo::stepSimulation(float deltaTime)
 		int maxSimSubSteps =  10;
 		btScalar timeStep = (btScalar)deltaTime;
 		stepCount += m_dynamicsWorld->stepSimulation(timeStep, maxSimSubSteps, m_fixedTimeStep);
-		if (stepCount > maxStepCount){
+		if (stepCount > maxStepCount || isLoadDown()){
 			PlasticityExampleBrowser::setPauseSimulation(true);
 		}
 		stepTime += timeStep;

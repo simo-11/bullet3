@@ -105,9 +105,57 @@ very stiff constraints cause instability",
 	ExampleEntry(1, "Plate:Impulse",
 	"Constraints breaks based on impulse",
 	PlateDemoCreateFunc, 2),
+	ExampleEntry(1, "i-10-3-3-5",
+	"Impulse constraint, \
+10 mm thick, \
+3 m width, \
+3x3 objects, \
+5 t load\
+",
+	PlateDemoCreateFunc, 50303102),
+	ExampleEntry(1, "i-10-3-3-10",
+	"Impulse constraint, \
+10 mm thick, \
+3 m width, \
+3x3 objects, \
+10 t load\
+",
+	PlateDemoCreateFunc, 100303102),
+	ExampleEntry(1, "i-20-6-3-40",
+	"Impulse constraint, \
+20 mm thick, \
+6 m width, \
+3x3 objects, \
+40 t load\
+",
+	PlateDemoCreateFunc, 400306202),
 	ExampleEntry(1, "Plate:ElasticPlastic",
 	"ElasticPlastic constraints which break based on work",
 	PlateDemoCreateFunc, 3),
+	ExampleEntry(1, "ep-10-3-3-05",
+	"ElasticPlastic constraint, \
+10 mm thick, \
+3 m width, \
+3x3 objects, \
+5 t load\
+	",
+	PlateDemoCreateFunc, 50303103),
+	ExampleEntry(1, "ep-10-3-3-10",
+	"ElasticPlastic constraint, \
+10 mm thick, \
+3 m width, \
+3x3 objects, \
+10 t load\
+",
+	PlateDemoCreateFunc, 100303103),
+	ExampleEntry(1, "ep-20-6-3-40",
+	"ElasticPlastic constraint, \
+20 mm thick, \
+6 m width, \
+3x3 objects, \
+40 t load\
+",
+	PlateDemoCreateFunc, 400306203),
 };
 struct ExampleEntriesInternalData
 {
