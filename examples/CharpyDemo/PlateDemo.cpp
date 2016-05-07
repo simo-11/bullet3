@@ -54,6 +54,12 @@ const char * PROFILE_PLATE_SLEEP = "PlateDemo::Sleep";
 
 static bool ep2c(bt6DofElasticPlastic2Constraint* p, bt6DofElasticPlastic2Constraint* q)
 {
+	if (p->getCurrentPlasticRotation() != q->getCurrentPlasticRotation()){
+		return (p->getCurrentPlasticRotation() > q->getCurrentPlasticRotation());
+	}
+	if (p->getCurrentPlasticStrain() != q->getCurrentPlasticStrain()){
+		return (p->getCurrentPlasticStrain() > q->getCurrentPlasticStrain());
+	}
 	return (p->m_maxRatio>q->m_maxRatio);
 }
 
@@ -106,7 +112,7 @@ public:
 	btScalar maxPlasticStrain;
 	long stepCount, maxStepCount, syncedStep;
 	btScalar stepTime;
-	bool gameBindings;
+	bool gameBindings, pauseOnBreak;
 	bool solidPlate = true;
 	bool disableCollisionsBetweenLinkedBodies = true;
 	bool dumpPng = false;
@@ -280,6 +286,7 @@ public:
 	void setMaxPlasticStrain(Gwen::Controls::Base* control);
 	void setMaxPlasticRotation(Gwen::Controls::Base* control);
 	void setGameBindings(Gwen::Controls::Base* control);
+	void setPauseOnBreak(Gwen::Controls::Base* control);
 	void setSolidPlate(Gwen::Controls::Base* control);
 	void setDisableCollisionsBetweenLinkedBodies(Gwen::Controls::Base* control);
 	void setLogDir(Gwen::Controls::Base* control);
@@ -306,6 +313,15 @@ public:
 		gy += gyInc;
 		gc->onCheckChanged.Add(pPage, &PlateDemo::setGameBindings);
 	}
+	void addPauseOnBreak(){
+		Gwen::Controls::Label* label = addLabel("pauseOnBreak");
+		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
+		gc->SetToolTip("pause simulation when constraint breaks");
+		gc->SetPos(gxi, gy);
+		gc->SetChecked(pauseOnBreak);
+		gy += gyInc;
+		gc->onCheckChanged.Add(pPage, &PlateDemo::setPauseOnBreak);
+	}
 	void addSolidPlate(){
 		Gwen::Controls::Label* label = addLabel("solidPlate");
 		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
@@ -319,6 +335,7 @@ public:
 	void addDumpPng(){
 		Gwen::Controls::Label* label = addLabel("dumpPng");
 		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
+		gc->SetToolTip("Write png file to logDir for each frame");
 		gc->SetPos(gxi, gy);
 		gc->SetChecked(dumpPng);
 		dumpPngGc = gc;
@@ -620,6 +637,7 @@ public:
 		addLoadRaiseX();
 		addLoadRaiseZ();
 		addGameBindings();
+		addPauseOnBreak();
 		addDumpPng();
 		addLogDir();
 		addNumIterations();
@@ -699,7 +717,6 @@ public:
 		if (dumpPng){
 			pngNro++;
 			sprintf_s(dumpFilename, FN_SIZE, "%s/plate-%d.png", logDir, pngNro);
-			dumpPngGc->SetToolTip(dumpFilename);
 			app->dumpNextFrameToPng(dumpFilename);
 		}
 		else{
@@ -803,14 +820,15 @@ public:
 		char buf[B_LEN * 2];
 		bool headerDone = false;
 		int ep2count = 0;
-		int fixedCount = 0;
+		int otherCount = 0;
 		btAlignedObjectArray<bt6DofElasticPlastic2Constraint*> epca;
 		for (int i = 0; i < numConstraints; i++){
 			btTypedConstraint* sc = dw->getConstraint(i);
-			switch (sc->getConstraintType()){
-			case FIXED_CONSTRAINT_TYPE:
-				fixedCount++;
-				break;
+			if (!sc->isEnabled()){
+				dw->removeConstraint(sc);
+				numConstraints--;
+				i--;
+				continue;
 			}
 			switch (sc->getUserConstraintType()){
 			case BPT_EP2:
@@ -838,10 +856,32 @@ public:
 			infoMsg(buf);
 			ep2count++;
 		}
-		sprintf_s(buf, B_LEN, "stepTime=%4.1f, stepCount=%d, constraintCount=%d",
-			stepTime, stepCount, ep2count+fixedCount);
+		if (dumpPng){
+			sprintf_s(buf, B_LEN, "dumpFilename=%s",
+				dumpFilename
+				);
+			headerMsg(buf);
+		}
+		sprintf_s(buf, B_LEN, "stepTime=%4.3f, stepCount=%d, constraintCount=%d",
+			stepTime, stepCount, numConstraints);
 		headerMsg(buf);
 		PlasticityData::setData(&pData);
+	}
+	void activateSingleStep(){
+		maxStepCount = stepCount + 1;
+		PlasticityExampleBrowser::setPauseSimulation(false);
+	}
+	int previousNumConstraints;
+	void handlePauseOnBreak(){
+		if (!pauseOnBreak){
+			return;
+		}
+		btDiscreteDynamicsWorld *dw = m_dynamicsWorld;
+		int numConstraints = dw->getNumConstraints();
+		if (previousNumConstraints > numConstraints){
+			activateSingleStep();
+		}
+		previousNumConstraints = numConstraints;
 	}
 };
 PlateDemo *demo = 0;
@@ -889,8 +929,7 @@ void PlateDemo::setFy(Gwen::Controls::Base* control){
 void PlateDemo::handleSingleStep(Gwen::Controls::Base* control){
 	Gwen::Controls::Button* gc =
 		static_cast<Gwen::Controls::Button*>(control);
-	demo->maxStepCount = demo->stepCount + 1;
-	PlasticityExampleBrowser::setPauseSimulation(false);
+	demo->activateSingleStep();
 }
 
 void PlateDemo::handlePauseSimulation(Gwen::Controls::Base* control){
@@ -926,6 +965,11 @@ void PlateDemo::setGameBindings(Gwen::Controls::Base* control){
 	Gwen::Controls::CheckBox* cb =
 		static_cast<Gwen::Controls::CheckBox*>(control);
 	demo->gameBindings = cb->IsChecked();
+}
+void PlateDemo::setPauseOnBreak(Gwen::Controls::Base* control){
+	Gwen::Controls::CheckBox* cb =
+		static_cast<Gwen::Controls::CheckBox*>(control);
+	demo->pauseOnBreak = cb->IsChecked();
 }
 void PlateDemo::setSolidPlate(Gwen::Controls::Base* control){
 	Gwen::Controls::CheckBox* cb =
@@ -1028,6 +1072,7 @@ void PlateDemo::reinit(){
 	maxPlasticRotation = 1;
 	driveClock.reset();
 	gameBindings = false;
+	pauseOnBreak = true;
 	solidPlate = true;
 	numIterations = initialNumIterations;
 	m_fixedTimeStep = initialFixedTimeStep;
@@ -1151,6 +1196,7 @@ void PlateDemo::initPhysics()
 		maxStepCount = LONG_MAX;
 	}
 	breakingImpulseThreshold = SIMD_PI*thickness*thickness*fy*m_fixedTimeStep;
+	previousNumConstraints = 0;
 	stepCount = 0;
 	syncedStep = 0;
 	stepTime = 0;
@@ -1280,11 +1326,12 @@ void PlateDemo::initPhysics()
 /** called at end of stepSimulation */
 void PlateDemo::updateUI()
 {
-//	setDumpFilename();
+	setDumpFilename();
 	{
 		BT_PROFILE("PlateDemo::showMessage");
 		showMessage();
 	}
+	handlePauseOnBreak();
 }
 void PlateDemo::physicsDebugDraw(int debugFlags)
 {
