@@ -490,7 +490,7 @@ public:
 		addLabel("maxPlasticStrain");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
 		std::string text = uif(maxPlasticStrain, "%.2f");
-		gc->SetToolTip("maxPlasticStrain");
+		gc->SetToolTip("maxPlasticStrain [m/m]");
 		gc->SetText(text);
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setMaxPlasticStrain);
