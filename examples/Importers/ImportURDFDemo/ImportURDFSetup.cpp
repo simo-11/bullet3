@@ -10,10 +10,8 @@
 #include "BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h"
 #include "../CommonInterfaces/CommonParameterInterface.h"
 #include "../../Utils/b3ResourcePath.h"
+#include "DefaultVisualShapeConverter.h"
 
-#ifdef ENABLE_ROS_URDF
-#include "ROSURDFImporter.h"
-#endif
 #include "BulletUrdfImporter.h"
 
 
@@ -163,7 +161,7 @@ static btVector4 colors[4] =
 };
 
 
-btVector3 selectColor()
+static btVector3 selectColor()
 {
 
 	static int curColor = 0;
@@ -203,25 +201,10 @@ void ImportUrdfSetup::initPhysics()
 	m_dynamicsWorld->setGravity(gravity);
 
 	
-
-    //now print the tree using the new interface
-    URDFImporterInterface* bla=0;
+	DefaultVisualShapeConverter visualConverter(m_guiHelper);
+    BulletURDFImporter u2b(m_guiHelper, &visualConverter);
 	
-    static bool newURDF = true;
-	if (newURDF)
-	{
-		b3Printf("using new URDF\n");
-		bla = new  BulletURDFImporter(m_guiHelper);
-	}
-#ifdef USE_ROS_URDF
- else
-	{
-		b3Printf("using ROS URDF\n");
-		bla = new ROSURDFImporter(m_guiHelper);
-	}
-  	newURDF = !newURDF;
-#endif//USE_ROS_URDF
-	URDFImporterInterface& u2b = *bla;
+	
 	bool loadOk =  u2b.loadURDF(m_fileName);
 
 #ifdef TEST_MULTIBODY_SERIALIZATION	

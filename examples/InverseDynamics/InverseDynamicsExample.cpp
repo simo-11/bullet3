@@ -23,6 +23,8 @@ subject to the following restrictions:
 #include "../Importers/ImportURDFDemo/BulletUrdfImporter.h"
 #include "../Importers/ImportURDFDemo/URDF2Bullet.h"
 #include "../Importers/ImportURDFDemo/MyMultiBodyCreator.h"
+#include "../Importers/ImportURDFDemo/DefaultVisualShapeConverter.h"
+
 #include "../CommonInterfaces/CommonMultiBodyBase.h"
 
 #include "btBulletDynamicsCommon.h"
@@ -129,13 +131,15 @@ void InverseDynamicsExample::initPhysics()
         SliderParams slider("Kp",&kp);
         slider.m_minVal=0;
         slider.m_maxVal=2000;
-        m_guiHelper->getParameterInterface()->registerSliderFloatParameter(slider);
+		if (m_guiHelper->getParameterInterface())
+	        m_guiHelper->getParameterInterface()->registerSliderFloatParameter(slider);
     }
     {
         SliderParams slider("Kd",&kd);
         slider.m_minVal=0;
         slider.m_maxVal=50;
-        m_guiHelper->getParameterInterface()->registerSliderFloatParameter(slider);
+		if (m_guiHelper->getParameterInterface())
+	        m_guiHelper->getParameterInterface()->registerSliderFloatParameter(slider);
     }
 
     if (m_option == BT_ID_PROGRAMMATICALLY)
@@ -148,9 +152,13 @@ void InverseDynamicsExample::initPhysics()
    
     switch (m_option)
     {
+    case 0:
     case BT_ID_LOAD_URDF:
         {
-            BulletURDFImporter u2b(m_guiHelper);
+
+
+			DefaultVisualShapeConverter visualConverter(m_guiHelper);
+            BulletURDFImporter u2b(m_guiHelper, &visualConverter);
             bool loadOk =  u2b.loadURDF("kuka_lwr/kuka.urdf");
             if (loadOk)
             {
@@ -189,9 +197,11 @@ void InverseDynamicsExample::initPhysics()
 
     if(m_multiBody) {
         {
-            m_timeSeriesCanvas = new TimeSeriesCanvas(m_guiHelper->getAppInterface()->m_2dCanvasInterface,512,230, "Joint Space Trajectory");
-            m_timeSeriesCanvas ->setupTimeSeries(3,100, 0);
-           
+			if (m_guiHelper->getAppInterface() && m_guiHelper->getParameterInterface())
+			{
+				m_timeSeriesCanvas = new TimeSeriesCanvas(m_guiHelper->getAppInterface()->m_2dCanvasInterface,512,230, "Joint Space Trajectory");
+				m_timeSeriesCanvas ->setupTimeSeries(3,100, 0);
+			}           
         }
         
         // construct inverse model
@@ -203,23 +213,30 @@ void InverseDynamicsExample::initPhysics()
         }
         // add joint target controls
         qd.resize(m_multiBody->getNumDofs());
+		
         qd_name.resize(m_multiBody->getNumDofs());
        	q_name.resize(m_multiBody->getNumDofs()); 
-	for(std::size_t dof=0;dof<qd.size();dof++) {
-            qd[dof] = 0;
-            char tmp[25];
-            sprintf(tmp,"q_desired[%zu]",dof);
-            qd_name[dof] = tmp;
-            SliderParams slider(qd_name[dof].c_str(),&qd[dof]);
-            slider.m_minVal=-3.14;
-            slider.m_maxVal=3.14;
-         sprintf(tmp,"q[%zu]",dof); 
-		q_name[dof] = tmp;   
-		m_guiHelper->getParameterInterface()->registerSliderFloatParameter(slider);
-		btVector4 color = sJointCurveColors[dof&7];
-		m_timeSeriesCanvas->addDataSource(q_name[dof].c_str(), color[0]*255,color[1]*255,color[2]*255);
-         }
-        
+
+		if (m_timeSeriesCanvas && m_guiHelper->getParameterInterface())
+		{
+			for(std::size_t dof=0;dof<qd.size();dof++) 
+			{
+				qd[dof] = 0;
+				char tmp[25];
+				sprintf(tmp,"q_desired[%zu]",dof);
+				qd_name[dof] = tmp;
+				SliderParams slider(qd_name[dof].c_str(),&qd[dof]);
+				slider.m_minVal=-3.14;
+				slider.m_maxVal=3.14;
+				
+				sprintf(tmp,"q[%zu]",dof); 
+				q_name[dof] = tmp;   
+				m_guiHelper->getParameterInterface()->registerSliderFloatParameter(slider);
+				btVector4 color = sJointCurveColors[dof&7];
+				m_timeSeriesCanvas->addDataSource(q_name[dof].c_str(), color[0]*255,color[1]*255,color[2]*255);
+		
+			}
+		}
         
     }
     
@@ -246,7 +263,8 @@ void InverseDynamicsExample::stepSimulation(float deltaTime)
 
             const btScalar qd_dot=0;
             const btScalar qd_ddot=0;
-            m_timeSeriesCanvas->insertDataAtCurrentTime(q[dof],dof,true);
+			if (m_timeSeriesCanvas)
+	            m_timeSeriesCanvas->insertDataAtCurrentTime(q[dof],dof,true);
             
             // pd_control is either desired joint torque for pd control,
             // or the feedback contribution to nu
@@ -330,3 +348,4 @@ CommonExampleInterface*    InverseDynamicsExampleCreateFunc(CommonExampleOptions
 
 
 
+B3_STANDALONE_EXAMPLE(InverseDynamicsExampleCreateFunc)
