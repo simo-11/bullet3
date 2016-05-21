@@ -132,13 +132,13 @@ very stiff constraints cause instability",
 	ExampleEntry(1, "Plate:ElasticPlastic",
 	"ElasticPlastic constraints which break based on work",
 	PlateDemoCreateFunc, 3),
-	ExampleEntry(1, "ep-10-3-3-05",
+	ExampleEntry(1, "ep-10-3-3-5",
 	"ElasticPlastic constraint, \
 10 mm thick, \
 3 m width, \
 3x3 objects, \
 5 t load\
-	",
+",
 	PlateDemoCreateFunc, 50303103),
 	ExampleEntry(1, "ep-10-3-3-10",
 	"ElasticPlastic constraint, \
