@@ -190,8 +190,8 @@ public:
 	virtual void resetCamera()
 	{
 		float dist = 30;
-		float pitch = 85;
-		float yaw = 32;
+		float pitch = 15;
+		float yaw = 38;
 		float targetPos[3] = { -0.33, -0.72, 4.5 };
 		m_guiHelper->resetCamera(dist, pitch, yaw, targetPos[0], targetPos[1], targetPos[2]);
 		CommonCameraInterface* camera =
@@ -1788,8 +1788,8 @@ void DemolisherDemo::initPhysics()
 		suspensionRestLength = 0.8*yhl;
 	}
 	connectionHeight = 1.2*yhl;
-	tolerance = 0.003*bridgeLsx;
 	bridgeLsx = 5*lsx/6;
+	tolerance = 0.003*bridgeLsx;
 	bridgeLsy = 0.0007*bridgeLsx*bridgeLsx;
 	bridgeLsz = 6 * xhl;
 	bridgeSupportY = max(2.5*lsy,2*yhl+wheelRadius);
