@@ -12,7 +12,7 @@
 #include "../OpenGLWindow/ShapeData.h"
 #include "LinearMath/btAlignedObjectArray.h"
 #include "LinearMath/btVector3.h"
-Vec3f light_dir_world(0,0,0);
+
 
 
 struct Shader : public IShader {
@@ -20,24 +20,28 @@ struct Shader : public IShader {
     Model* m_model;
     Vec3f m_light_dir_local;
     Matrix& m_modelMat;
+	Matrix m_invModelMat;
+
     Matrix& m_modelView1;
     Matrix& m_projectionMatrix;
     Vec3f m_localScaling;
+    Vec4f m_colorRGBA;
 
     mat<2,3,float> varying_uv;  // triangle uv coordinates, written by the vertex shader, read by the fragment shader
     mat<4,3,float> varying_tri; // triangle coordinates (clip coordinates), written by VS, read by FS
     mat<3,3,float> varying_nrm; // normal per vertex to be interpolated by FS
     //mat<3,3,float> ndc_tri;     // triangle in normalized device coordinates
 
-    Shader(Model* model, Vec3f light_dir_local, Matrix& modelView, Matrix& projectionMatrix, Matrix& modelMat, Vec3f localScaling)
+    Shader(Model* model, Vec3f light_dir_local, Matrix& modelView, Matrix& projectionMatrix, Matrix& modelMat, Vec3f localScaling, const Vec4f& colorRGBA)
     :m_model(model),
     m_light_dir_local(light_dir_local),
     m_modelView1(modelView),
     m_projectionMatrix(projectionMatrix),
     m_modelMat(modelMat),
-	m_localScaling(localScaling)
+	m_localScaling(localScaling),
+    m_colorRGBA(colorRGBA)
     {
-        
+        m_invModelMat = m_modelMat.invert_transpose();
     }
     
     virtual Vec4f vertex(int iface, int nthvert) {
@@ -47,10 +51,15 @@ struct Shader : public IShader {
         varying_uv.set_col(nthvert, uv);
 		
         //varying_nrm.set_col(nthvert, proj<3>((m_projectionMatrix*m_modelView).invert_transpose()*embed<4>(m_model->normal(iface, nthvert), 0.f)));
-        varying_nrm.set_col(nthvert, proj<3>((m_modelMat).invert_transpose()*embed<4>(m_model->normal(iface, nthvert), 0.f)));
+        varying_nrm.set_col(nthvert, proj<3>(m_invModelMat*embed<4>(m_model->normal(iface, nthvert), 0.f)));
+		//m_localNormal = m_model->normal(iface, nthvert);
+		//varying_nrm.set_col(nthvert, m_model->normal(iface, nthvert));
+		
 		Vec3f unScaledVert = m_model->vert(iface, nthvert);
+		
 		Vec3f scaledVert=Vec3f(unScaledVert[0]*m_localScaling[0],unScaledVert[1]*m_localScaling[1],unScaledVert[2]*m_localScaling[2]);
-        Vec4f gl_Vertex = m_projectionMatrix*m_modelView1*embed<4>(scaledVert);
+        
+		Vec4f gl_Vertex = m_projectionMatrix*m_modelView1*embed<4>(scaledVert);
 		
         varying_tri.set_col(nthvert, gl_Vertex);
         //ndc_tri.set_col(nthvert, proj<3>(gl_Vertex/gl_Vertex[3]));
@@ -63,9 +72,15 @@ struct Shader : public IShader {
 
 		//float diff = 1;//full-bright
 		float ambient = 0.7;
-		float diff = ambient+b3Min(b3Max(0.f, bn*light_dir_world),(1-ambient));
+		//float diff = ambient+b3Min(b3Max(0.f, bn*light_dir_world),(1-ambient));
+		float diff = ambient+b3Min(b3Max(0.f, bn*m_light_dir_local),(1-ambient));
 		//float diff = b3Max(0.f, n*m_light_dir_local);
         color = m_model->diffuse(uv)*diff;
+        //colors are store in BGRA?
+        color = TGAColor(color[0]*m_colorRGBA[2],
+                            color[1]*m_colorRGBA[1],
+                            color[2]*m_colorRGBA[0],
+                            color[3]*m_colorRGBA[3]);
 
         return false;
     }
@@ -109,22 +124,24 @@ void TinyRenderObjectData::loadModel(const char* fileName)
 }
 
 
-void TinyRenderObjectData::registerMeshShape(const float* vertices, int numVertices,const int* indices, int numIndices,
+void TinyRenderObjectData::registerMeshShape(const float* vertices, int numVertices,const int* indices, int numIndices, const float rgbaColor[4],
 	unsigned char* textureImage, int textureWidth, int textureHeight)
 {
 	if (0==m_model)
     {
         m_model = new Model();
+        m_model->setColorRGBA(rgbaColor);
 		if (textureImage)
 		{
 			m_model->setDiffuseTextureFromData(textureImage,textureWidth,textureHeight);
 		} else
 		{
-			char relativeFileName[1024];
+			/*char relativeFileName[1024];
 			if (b3ResourcePath::findResourcePath("floor_diffuse.tga", relativeFileName, 1024))
 			{
 				m_model->loadDiffuseTexture(relativeFileName);
 			}
+             */
 		}
 		
         for (int i=0;i<numVertices;i++)
@@ -222,7 +239,7 @@ TinyRenderObjectData::~TinyRenderObjectData()
 
 void TinyRenderer::renderObject(TinyRenderObjectData& renderData)
 {
-	light_dir_world = Vec3f(renderData.m_lightDirWorld[0],renderData.m_lightDirWorld[1],renderData.m_lightDirWorld[2]);
+	Vec3f light_dir_local = Vec3f(renderData.m_lightDirWorld[0],renderData.m_lightDirWorld[1],renderData.m_lightDirWorld[2]);
     Model* model = renderData.m_model;
     if (0==model)
         return;
@@ -235,23 +252,21 @@ void TinyRenderer::renderObject(TinyRenderObjectData& renderData)
 	//renderData.m_viewportMatrix = viewport(width/8, height/8, width*3/4, height*3/4);
 	renderData.m_viewportMatrix = viewport(0,0,renderData.m_width,renderData.m_height);
     //renderData.m_projectionMatrix = projection(-1.f/(eye-center).norm());
- 
-
 
     b3AlignedObjectArray<float>& zbuffer = renderData.m_depthBuffer;
     
     TGAImage& frame = renderData.m_rgbColorBuffer;
 
-	Vec3f light_dir_local = proj<3>((renderData.m_projectionMatrix*renderData.m_viewMatrix*renderData.m_modelMatrix*embed<4>(light_dir_world, 0.f))).normalize();
+	
 
     {
         Matrix modelViewMatrix = renderData.m_viewMatrix*renderData.m_modelMatrix;
         Vec3f localScaling(renderData.m_localScaling[0],renderData.m_localScaling[1],renderData.m_localScaling[2]);
-        Shader shader(model, light_dir_local, modelViewMatrix, renderData.m_projectionMatrix,renderData.m_modelMatrix, localScaling);
-        
-		
-		
-		for (int i=0; i<model->nfaces(); i++) {
+        Shader shader(model, light_dir_local, modelViewMatrix, renderData.m_projectionMatrix,renderData.m_modelMatrix, localScaling, model->getColorRGBA());
+        		
+		printf("Render %d triangles.\n",model->nfaces());
+		for (int i=0; i<model->nfaces(); i++) 
+		{
 			 
             for (int j=0; j<3; j++) {
                 shader.vertex(i, j);

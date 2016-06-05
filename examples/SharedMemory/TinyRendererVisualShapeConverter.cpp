@@ -12,26 +12,26 @@ subject to the following restrictions:
 */
 
 
-#include "DefaultVisualShapeConverter.h"
+#include "TinyRendererVisualShapeConverter.h"
 
 
 
-#include "URDFImporterInterface.h"
+#include "../Importers/ImportURDFDemo/URDFImporterInterface.h"
 #include "btBulletCollisionCommon.h"
-#include "../ImportObjDemo/LoadMeshFromObj.h"
-#include "../ImportSTLDemo/LoadMeshFromSTL.h"
-#include "../ImportColladaDemo/LoadMeshFromCollada.h"
+#include "../Importers/ImportObjDemo/LoadMeshFromObj.h"
+#include "../Importers/ImportSTLDemo/LoadMeshFromSTL.h"
+#include "../Importers/ImportColladaDemo/LoadMeshFromCollada.h"
 #include "BulletCollision/CollisionShapes/btShapeHull.h"//to create a tesselation of a generic btConvexShape
-#include "../../CommonInterfaces/CommonGUIHelperInterface.h"
+#include "../CommonInterfaces/CommonGUIHelperInterface.h"
 #include "Bullet3Common/b3FileUtils.h"
 #include <string>
-#include "../../Utils/b3ResourcePath.h"
-
-
+#include "../Utils/b3ResourcePath.h"
+#include "../TinyRenderer/TinyRenderer.h"
+#include "../OpenGLWindow/SimpleCamera.h"
 
 #include <iostream>
 #include <fstream>
-#include "UrdfParser.h"
+#include "../Importers/ImportURDFDemo/UrdfParser.h"
 
 
 enum MyFileType
@@ -41,21 +41,53 @@ enum MyFileType
     MY_FILE_OBJ=3,
 };
 
-
-struct DefaultVisualShapeConverterInternalData
+struct TinyRendererObjectArray
 {
-	struct GUIHelperInterface* m_guiHelper;
-	//char m_pathPrefix[1024];
-	btHashMap<btHashInt,btVector4> m_linkColors;
+  btAlignedObjectArray<  TinyRenderObjectData*> m_renderObjects;
+};
+
+#define START_WIDTH 640
+#define START_HEIGHT 480
+
+struct TinyRendererVisualShapeConverterInternalData
+{
+	
+    btHashMap<btHashPtr,TinyRendererObjectArray*> m_swRenderInstances;
+    
+   	int m_upAxis;
+	int m_swWidth;
+	int m_swHeight;
+	TGAImage m_rgbColorBuffer;
+	b3AlignedObjectArray<float> m_depthBuffer;
+	SimpleCamera m_camera;
+	
+	TinyRendererVisualShapeConverterInternalData()
+	:m_upAxis(2),
+	m_swWidth(START_WIDTH),
+	m_swHeight(START_HEIGHT),
+	m_rgbColorBuffer(START_WIDTH,START_HEIGHT,TGAImage::RGB)
+	{
+	    m_depthBuffer.resize(m_swWidth*m_swHeight);
+	}
+	
 };
 
 
-DefaultVisualShapeConverter::DefaultVisualShapeConverter(struct GUIHelperInterface* guiHelper)
+
+TinyRendererVisualShapeConverter::TinyRendererVisualShapeConverter()
 {
-	m_data = new DefaultVisualShapeConverterInternalData();
-	m_data->m_guiHelper = guiHelper;
+	m_data = new TinyRendererVisualShapeConverterInternalData();
+	
+	float dist = 1.5;
+	float pitch = -80;
+	float yaw = 10;
+	float targetPos[3]={0,0,0};
+	m_data->m_camera.setCameraUpAxis(m_data->m_upAxis);
+	resetCamera(dist,pitch,yaw,targetPos[0],targetPos[1],targetPos[2]);
+
+
 }
-DefaultVisualShapeConverter::~DefaultVisualShapeConverter()
+TinyRendererVisualShapeConverter::~TinyRendererVisualShapeConverter()
 {
 	delete m_data;
 }
@@ -385,8 +417,9 @@ void convertURDFToVisualShape(const UrdfVisual* visual, const char* urdfPathPref
 
 
 
-int DefaultVisualShapeConverter::convertVisualShapes(int linkIndex, const char* pathPrefix, const btTransform& localInertiaFrame, const UrdfModel& model, class btCollisionShape* colShape)
+void TinyRendererVisualShapeConverter::convertVisualShapes(int linkIndex, const char* pathPrefix, const btTransform& localInertiaFrame, const UrdfModel& model, class btCollisionObject* colObj)
 {
+    
 	btAlignedObjectArray<GLInstanceVertex> vertices;
 	btAlignedObjectArray<int> indices;
 	btTransform startTrans; startTrans.setIdentity();
@@ -404,33 +437,201 @@ int DefaultVisualShapeConverter::convertVisualShapes(int linkIndex, const char* 
 			btTransform childTrans = vis.m_linkLocalFrame;
 			btHashString matName(vis.m_materialName.c_str());
 			UrdfMaterial *const * matPtr = model.m_materials[matName];
+            
+            float rgbaColor[4] = {1,1,1,1};
+            
 			if (matPtr)
 			{
 				UrdfMaterial *const  mat = *matPtr;
+                for (int i=0;i<4;i++)
+                    rgbaColor[i] = mat->m_rgbaColor[i];
 				//printf("UrdfMaterial %s, rgba = %f,%f,%f,%f\n",mat->m_name.c_str(),mat->m_rgbaColor[0],mat->m_rgbaColor[1],mat->m_rgbaColor[2],mat->m_rgbaColor[3]);
-				m_data->m_linkColors.insert(linkIndex,mat->m_rgbaColor);
+				//m_data->m_linkColors.insert(linkIndex,mat->m_rgbaColor);
 			}
+			
+			TinyRendererObjectArray** visualsPtr = m_data->m_swRenderInstances[colObj];
+            if (visualsPtr==0)
+            {
+                m_data->m_swRenderInstances.insert(colObj,new TinyRendererObjectArray);
+            }
+            visualsPtr = m_data->m_swRenderInstances[colObj];
+            btAssert(visualsPtr);
+            TinyRendererObjectArray* visuals = *visualsPtr;
+            
 			convertURDFToVisualShape(&vis, pathPrefix, localInertiaFrame.inverse()*childTrans, vertices, indices);
-		
-		
+
+            if (vertices.size() && indices.size())
+            {
+                TinyRenderObjectData* tinyObj = new TinyRenderObjectData(m_data->m_swWidth,m_data->m_swHeight,m_data->m_rgbColorBuffer,m_data->m_depthBuffer);
+                tinyObj->registerMeshShape(&vertices[0].xyzw[0],vertices.size(),&indices[0],indices.size(),rgbaColor);
+                visuals->m_renderObjects.push_back(tinyObj);
+            }
 		}
 	}
-	if (vertices.size() && indices.size())
-	{
-		graphicsIndex  = m_data->m_guiHelper->registerGraphicsShape(&vertices[0].xyzw[0], vertices.size(), &indices[0], indices.size());
-	}
-	return graphicsIndex;
 }
 
-bool DefaultVisualShapeConverter::getLinkColor(int linkIndex, btVector4& colorRGBA) const
+void TinyRendererVisualShapeConverter::setUpAxis(int axis)
 {
-	const btVector4* rgbaPtr = m_data->m_linkColors[linkIndex];
-	if (rgbaPtr)
-	{
-		colorRGBA = *rgbaPtr;
-		return true;
-	}
-	return false;
+    m_data->m_upAxis = axis;
+    m_data->m_camera.setCameraUpAxis(axis);
+    m_data->m_camera.update();
+}
+void TinyRendererVisualShapeConverter::resetCamera(float camDist, float pitch, float yaw, float camPosX,float camPosY, float camPosZ)
+{
+    m_data->m_camera.setCameraDistance(camDist);
+    m_data->m_camera.setCameraPitch(pitch);
+    m_data->m_camera.setCameraYaw(yaw);
+    m_data->m_camera.setCameraTargetPosition(camPosX,camPosY,camPosZ);
+    m_data->m_camera.setAspectRatio((float)m_data->m_swWidth/(float)m_data->m_swHeight);
+    m_data->m_camera.update();
+
 }
 
+void TinyRendererVisualShapeConverter::clearBuffers(TGAColor& clearColor)
+{
+    for(int y=0;y<m_data->m_swHeight;++y)
+    {
+        for(int x=0;x<m_data->m_swWidth;++x)
+        {
+            m_data->m_rgbColorBuffer.set(x,y,clearColor);
+            m_data->m_depthBuffer[x+y*m_data->m_swWidth] = -1e30f;
+        }
+    }
+    
+}
+
+void TinyRendererVisualShapeConverter::render() 
+{
+
+    ATTRIBUTE_ALIGNED16(float viewMat[16]);
+    ATTRIBUTE_ALIGNED16(float projMat[16]);
+
+    m_data->m_camera.getCameraProjectionMatrix(projMat);
+    m_data->m_camera.getCameraViewMatrix(viewMat);
+
+	render(viewMat,projMat);
+}    
+
+void TinyRendererVisualShapeConverter::render(const float viewMat[16], const float projMat[16]) 
+{
+    //clear the color buffer
+    TGAColor clearColor;
+    clearColor.bgra[0] = 255;
+    clearColor.bgra[1] = 255;
+    clearColor.bgra[2] = 255;
+    clearColor.bgra[3] = 255;
+    
+    clearBuffers(clearColor);
+
+    
+    ATTRIBUTE_ALIGNED16(btScalar modelMat[16]);
+    
+    
+    btVector3 lightDirWorld(-5,200,-40);
+    switch (m_data->m_upAxis)
+    {
+    case 1:
+            lightDirWorld = btVector3(-50.f,100,30);
+        break;
+    case 2:
+            lightDirWorld = btVector3(-50.f,30,100);
+            break;
+    default:{}
+    };
+    
+    lightDirWorld.normalize();
+    
+    printf("num m_swRenderInstances = %d\n", m_data->m_swRenderInstances.size());
+    for (int i=0;i<m_data->m_swRenderInstances.size();i++)
+    {
+        TinyRendererObjectArray** visualArrayPtr = m_data->m_swRenderInstances.getAtIndex(i);
+        if (0==visualArrayPtr)
+            continue;//can this ever happen?
+        TinyRendererObjectArray* visualArray = *visualArrayPtr;
+
+        btHashPtr colObjHash = m_data->m_swRenderInstances.getKeyAtIndex(i);
+        
+        
+        const btCollisionObject* colObj = (btCollisionObject*) colObjHash.getPointer();
+        
+        for (int v=0;v<visualArray->m_renderObjects.size();v++)
+        {
+            
+            TinyRenderObjectData* renderObj = visualArray->m_renderObjects[v];
+            
+        
+            //sync the object transform
+            const btTransform& tr = colObj->getWorldTransform();
+            tr.getOpenGLMatrix(modelMat);
+    
+            for (int i=0;i<4;i++)
+            {
+                for (int j=0;j<4;j++)
+                {
+                    
+                    renderObj->m_projectionMatrix[i][j] = projMat[i+4*j];
+                    renderObj->m_modelMatrix[i][j] = modelMat[i+4*j];
+                    renderObj->m_viewMatrix[i][j] = viewMat[i+4*j];
+                    renderObj->m_localScaling = colObj->getCollisionShape()->getLocalScaling();
+                    renderObj->m_lightDirWorld = lightDirWorld;
+                }
+            }
+            TinyRenderer::renderObject(*renderObj);
+        }
+    }
+	//printf("write tga \n");
+	m_data->m_rgbColorBuffer.write_tga_file("camera.tga");
+
+}
+
+void TinyRendererVisualShapeConverter::getWidthAndHeight(int& width, int& height)
+{
+    width = m_data->m_swWidth;
+    height = m_data->m_swHeight;
+}
+
+void TinyRendererVisualShapeConverter::copyCameraImageData(unsigned char* pixelsRGBA, int rgbaBufferSizeInPixels, float* depthBuffer, int depthBufferSizeInPixels, int startPixelIndex, int* widthPtr, int* heightPtr, int* numPixelsCopied)
+{
+    int w = m_data->m_rgbColorBuffer.get_width();
+    int h = m_data->m_rgbColorBuffer.get_height();
+    
+    if (numPixelsCopied)
+        *numPixelsCopied = 0;
+    
+    if (widthPtr)
+        *widthPtr = w;
+    
+    if (heightPtr)
+        *heightPtr = h;
+    
+    int numTotalPixels = w*h;
+    int numRemainingPixels = numTotalPixels - startPixelIndex;
+    int numBytesPerPixel = 4;//RGBA
+    int numRequestedPixels  = btMin(rgbaBufferSizeInPixels,numRemainingPixels);
+    if (numRequestedPixels)
+    {
+        for (int i=0;i<numRequestedPixels;i++)
+        {
+            if (pixelsRGBA)
+            {
+                pixelsRGBA[i*numBytesPerPixel] =   m_data->m_rgbColorBuffer.buffer()[(i+startPixelIndex)*3+0];
+                pixelsRGBA[i*numBytesPerPixel+1] = m_data->m_rgbColorBuffer.buffer()[(i+startPixelIndex)*3+1];
+                pixelsRGBA[i*numBytesPerPixel+2] = m_data->m_rgbColorBuffer.buffer()[(i+startPixelIndex)*3+2];
+                pixelsRGBA[i*numBytesPerPixel+3] = 255;
+                
+            }
+        }
+        
+        if (numPixelsCopied)
+            *numPixelsCopied = numRequestedPixels;
+        
+    }    
+}
+
+
+void TinyRendererVisualShapeConverter::resetAll()
+{
+	//todo: free memory
+	m_data->m_swRenderInstances.clear();
+}
 
