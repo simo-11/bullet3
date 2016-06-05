@@ -580,7 +580,7 @@ bool PlasticityExampleBrowser::init(int argc, char* argv[])
 #endif
 #define BLEN 256
 	char buf[BLEN];
-	sprintf_s(buf, BLEN, "0.9.0 - %d-%02d-%02d - %s",
+	sprintf_s(buf, BLEN, "0.9.1 - %d-%02d-%02d - %s",
 		tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
 		btScalarType);
 #if defined (_DEBUG) || defined (DEBUG)
