@@ -171,7 +171,23 @@ public:
 
 	void initPhysics();
 	void exitPhysics();
+	int getLongCount(){
+		if (lsx>=lsz){
+			return cx;
+		}
+		else{
+			return cz;
+		}
+	}
+	int getMiddleCount(){
+		if (lsx >= lsz){
+			return cz;
+		}
+		else{
+			return cx;
+		}
 
+	}
 	virtual void resetCamera()
 	{
 		float dist = 5;
@@ -1274,8 +1290,8 @@ void PlateDemo::initPhysics()
 		elasticPlasticPlate = new btElasticPlasticPlate();
 		elasticPlasticPlate->setMaterial(plateMaterial);
 		elasticPlasticPlate->setShape(plateShape);
-		elasticPlasticPlate->setLongCount(cx);
-		elasticPlasticPlate->setMiddleCount(cz);
+		elasticPlasticPlate->setLongCount(getLongCount());
+		elasticPlasticPlate->setMiddleCount(getMiddleCount());
 		elasticPlasticPlate->setTransform(localTrans);
 		elasticPlasticPlate->join(m_dynamicsWorld);
 	}
