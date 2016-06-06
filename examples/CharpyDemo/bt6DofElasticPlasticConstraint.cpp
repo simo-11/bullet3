@@ -289,7 +289,6 @@ void bt6DofElasticPlasticConstraint::updatePlasticity(btJointFeedback& forces){
 				}
 				setEquilibriumPoint(i, newVal);
 				m_currentPlasticStrain += plasticDelta;
-
 			}
 		}
 	}
