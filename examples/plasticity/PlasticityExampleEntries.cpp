@@ -140,6 +140,14 @@ very stiff constraints cause instability",
 5 t load\
 ",
 	PlateDemoCreateFunc, 50303103),
+	ExampleEntry(1, "ep-10-3-6-5",
+	"ElasticPlastic constraint, \
+10 mm thick, \
+3 m width, \
+6x6 objects, \
+5 t load\
+",
+	PlateDemoCreateFunc, 50603103),
 	ExampleEntry(1, "ep-10-3-3-10",
 	"ElasticPlastic constraint, \
 10 mm thick, \
@@ -148,6 +156,14 @@ very stiff constraints cause instability",
 10 t load\
 ",
 	PlateDemoCreateFunc, 100303103),
+	ExampleEntry(1, "ep-10-3-6-10",
+	"ElasticPlastic constraint, \
+10 mm thick, \
+3 m width, \
+6x6 objects, \
+10 t load\
+	",
+	PlateDemoCreateFunc, 100603103),
 	ExampleEntry(1, "ep-20-6-3-40",
 	"ElasticPlastic constraint, \
 20 mm thick, \
@@ -156,6 +172,14 @@ very stiff constraints cause instability",
 40 t load\
 ",
 	PlateDemoCreateFunc, 400306203),
+	ExampleEntry(1, "ep-20-6-6-40",
+	"ElasticPlastic constraint, \
+20 mm thick, \
+6 m width, \
+6x6 objects, \
+40 t load\
+",
+	PlateDemoCreateFunc, 400606203),
 };
 struct ExampleEntriesInternalData
 {
