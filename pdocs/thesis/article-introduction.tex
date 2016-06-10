@@ -1,0 +1,21 @@
+\section{Introduction}
+
+Physics engine is computer software that provides an approximate simulation of physical system. 
+E.g. ODE - \cite{ode}, \bullet - \cite{bullet}, Box2D - \cite{box2d} are open source physics engines that are  widely used in 
+areas where fast solutions are required. Typical industries are games and film productions.
+
+Computational methods used in physics engines are divided to modules that handle collision detection and modules that handle simulation.
+In this work focus is on solving new types of contraints between rigid objects.
+Detailed description of various components can be found in e.g. \cite{erleben.thesis}.
+
+Plasticity is not typically taken into account in gaming solutions. 
+Breaking of various objects typically takes place based on collision or impulse.
+Theory for handling of plasticity has been presented already in \cite{cg1988}. \cite{muller2004point} presents a method for modeling and animating of elastic and plastic objects in realtime using point based animation but it is not widely used.
+
+Goal of this work is to find method that can be used in widely used physics engines to make simulation more realistic
+by connecting rigid objects by  spring based constraints which have additional properties for handling plasticity.
+Main feature is that plastic deformation takes place if force or moment exceeds given limit and deformation absorbs energy.
+This is done by reusing motor code that is already available in most physics engines.
+
+Methods presented in this work can be used in gaming industry to provide more realistic simulations without significant extra work. 
+This kind of metodology also opens quite large area of combining old structural analysis methods to modern simulation frameworks.
