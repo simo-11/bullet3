@@ -5,17 +5,23 @@ E.g. ODE - \cite{ode}, \bullet - \cite{bullet}, Box2D - \cite{box2d} are open so
 areas where fast solutions are required. Typical industries are games and film productions.
 
 Computational methods used in physics engines are divided to modules that handle collision detection and modules that handle simulation.
-In this work focus is on solving new types of contraints between rigid objects.
-Detailed description of various components can be found in e.g. \cite{erleben.thesis}.
+Simulation can further be subdivided into time control, motion solver, constraint solver and collision solver modules.
+Velocity-based formulation is used in constraint based rigid body simulation frameworks as collisions cannot be handled easily in acceleration based formulations. Friction is typically taken into account. Joints are handled by constraint equations.
+Detailed description of various components  can be found in e.g. \cite{erleben.thesis}.
+In this work focus is on solving new types of joints between rigid objects.
 
 Plasticity is not typically taken into account in gaming solutions. 
-Breaking of various objects typically takes place based on collision or impulse.
-Theory for handling of plasticity has been presented already in \cite{cg1988}. \cite{muller2004point} presents a method for modeling and animating of elastic and plastic objects in realtime using point based animation but it is not widely used.
+Breaking of various objects typically takes place based on collision or impulse and breaking of steel or 
+reinforced concrete structures does not look realistic.
+Theory for handling of plasticity has been presented already in \cite{cg1988}. 
+\cite{muller2004point} presents a method for modeling and animating of elastic and plastic objects in realtime using point based animation but it is not widely used.
 
 Goal of this work is to find method that can be used in widely used physics engines to make simulation more realistic
 by connecting rigid objects by  spring based constraints which have additional properties for handling plasticity.
-Main feature is that plastic deformation takes place if force or moment exceeds given limit and deformation absorbs energy.
-This is done by reusing motor code that is already available in most physics engines.
+Main target is that plastic deformation takes place if force or moment exceeds given limit, deformation absorbs energy and 
+joint breaks if plastic capacity is exeeced.
 
 Methods presented in this work can be used in gaming industry to provide more realistic simulations without significant extra work. 
+For gaming purposes presented method works best in scenarios where connected parts are relatively heavy. 
+This allows normal integration timestep to be used without stability issues.
 This kind of metodology also opens quite large area of combining old structural analysis methods to modern simulation frameworks.
