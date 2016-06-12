@@ -462,7 +462,7 @@ void TinyRendererVisualShapeConverter::convertVisualShapes(int linkIndex, const 
 
             if (vertices.size() && indices.size())
             {
-                TinyRenderObjectData* tinyObj = new TinyRenderObjectData(m_data->m_swWidth,m_data->m_swHeight,m_data->m_rgbColorBuffer,m_data->m_depthBuffer);
+                TinyRenderObjectData* tinyObj = new TinyRenderObjectData(m_data->m_rgbColorBuffer,m_data->m_depthBuffer);
                 tinyObj->registerMeshShape(&vertices[0].xyzw[0],vertices.size(),&indices[0],indices.size(),rgbaColor);
                 visuals->m_renderObjects.push_back(tinyObj);
             }
@@ -541,7 +541,7 @@ void TinyRendererVisualShapeConverter::render(const float viewMat[16], const flo
     
     lightDirWorld.normalize();
     
-    printf("num m_swRenderInstances = %d\n", m_data->m_swRenderInstances.size());
+  //  printf("num m_swRenderInstances = %d\n", m_data->m_swRenderInstances.size());
     for (int i=0;i<m_data->m_swRenderInstances.size();i++)
     {
         TinyRendererObjectArray** visualArrayPtr = m_data->m_swRenderInstances.getAtIndex(i);
@@ -580,7 +580,9 @@ void TinyRendererVisualShapeConverter::render(const float viewMat[16], const flo
         }
     }
 	//printf("write tga \n");
-	m_data->m_rgbColorBuffer.write_tga_file("camera.tga");
+	//m_data->m_rgbColorBuffer.write_tga_file("camera.tga");
+//	printf("flipped!\n");
+	m_data->m_rgbColorBuffer.flip_vertically();
 
 }
 
@@ -588,6 +590,17 @@ void TinyRendererVisualShapeConverter::getWidthAndHeight(int& width, int& height
 {
     width = m_data->m_swWidth;
     height = m_data->m_swHeight;
+}
+
+
+void TinyRendererVisualShapeConverter::setWidthAndHeight(int width, int height)
+{
+	m_data->m_swWidth = width;
+	m_data->m_swHeight = height;
+
+	m_data->m_depthBuffer.resize(m_data->m_swWidth*m_data->m_swHeight);
+	m_data->m_rgbColorBuffer = TGAImage(width, height, TGAImage::RGB);
+		
 }
 
 void TinyRendererVisualShapeConverter::copyCameraImageData(unsigned char* pixelsRGBA, int rgbaBufferSizeInPixels, float* depthBuffer, int depthBufferSizeInPixels, int startPixelIndex, int* widthPtr, int* heightPtr, int* numPixelsCopied)
@@ -612,6 +625,10 @@ void TinyRendererVisualShapeConverter::copyCameraImageData(unsigned char* pixels
     {
         for (int i=0;i<numRequestedPixels;i++)
         {
+			if (depthBuffer)
+			{
+				depthBuffer[i] = m_data->m_depthBuffer[i+startPixelIndex];
+			}
             if (pixelsRGBA)
             {
                 pixelsRGBA[i*numBytesPerPixel] =   m_data->m_rgbColorBuffer.buffer()[(i+startPixelIndex)*3+0];
