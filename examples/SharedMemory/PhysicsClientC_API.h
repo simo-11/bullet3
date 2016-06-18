@@ -40,6 +40,8 @@ b3SharedMemoryStatusHandle	b3ProcessServerStatus(b3PhysicsClientHandle physClien
 /// Get the physics server return status type. See EnumSharedMemoryServerStatus in SharedMemoryPublic.h for error codes.
 int b3GetStatusType(b3SharedMemoryStatusHandle statusHandle);
 
+int b3GetStatusBodyIndices(b3SharedMemoryStatusHandle statusHandle, int* bodyIndicesOut, int bodyIndicesCapacity);
+
 int b3GetStatusBodyIndex(b3SharedMemoryStatusHandle statusHandle);
 
 int b3GetStatusActualState(b3SharedMemoryStatusHandle statusHandle,
@@ -55,7 +57,7 @@ int b3GetStatusActualState(b3SharedMemoryStatusHandle statusHandle,
 int	b3GetNumJoints(b3PhysicsClientHandle physClient, int bodyIndex);
 
 ///given a body and link index, return the joint information. See b3JointInfo in SharedMemoryPublic.h
-void	b3GetJointInfo(b3PhysicsClientHandle physClient, int bodyIndex, int linkIndex, struct b3JointInfo* info);
+int	b3GetJointInfo(b3PhysicsClientHandle physClient, int bodyIndex, int linkIndex, struct b3JointInfo* info);
 
 ///Request debug lines for debug visualization. The flags in debugMode are the same as used in Bullet
 ///See btIDebugDraw::DebugDrawModes in Bullet/src/LinearMath/btIDebugDraw.h
@@ -68,6 +70,8 @@ void    b3GetDebugLines(b3PhysicsClientHandle physClient, struct b3DebugLines* l
 ///request an image from a simulated camera, using a software renderer.
 b3SharedMemoryCommandHandle b3InitRequestCameraImage(b3PhysicsClientHandle physClient);
 void b3RequestCameraImageSetCameraMatrices(b3SharedMemoryCommandHandle command, float viewMatrix[16], float projectionMatrix[16]);
+void b3RequestCameraImageSetViewMatrix(b3SharedMemoryCommandHandle command, const float cameraPosition[3], const float cameraTargetPosition[3], const float cameraUp[3]);
+void b3RequestCameraImageSetProjectionMatrix(b3SharedMemoryCommandHandle command, float left, float right, float bottom, float top, float nearVal, float farVal);
 void b3RequestCameraImageSetPixelResolution(b3SharedMemoryCommandHandle command, int width, int height );
 void b3GetCameraImageData(b3PhysicsClientHandle physClient, struct b3CameraImageData* imageData);
 
@@ -93,7 +97,7 @@ b3SharedMemoryCommandHandle	b3LoadSdfCommandInit(b3PhysicsClientHandle physClien
 
 ///Set joint control variables such as desired position/angle, desired velocity,
 ///applied joint forces, dependent on the control mode (CONTROL_MODE_VELOCITY or CONTROL_MODE_TORQUE)
-b3SharedMemoryCommandHandle  b3JointControlCommandInit(b3PhysicsClientHandle physClient, int controlMode);
+b3SharedMemoryCommandHandle  b3JointControlCommandInit(b3PhysicsClientHandle physClient, int bodyUniqueId, int controlMode);
 ///Only use when controlMode is CONTROL_MODE_POSITION_VELOCITY_PD
 int b3JointControlSetDesiredPosition(b3SharedMemoryCommandHandle commandHandle, int qIndex, double value);
 int b3JointControlSetKp(b3SharedMemoryCommandHandle commandHandle, int dofIndex, double value);
@@ -130,7 +134,7 @@ int	b3CreatePoseCommandSetJointPosition(b3PhysicsClientHandle physClient, b3Shar
 
 ///We are currently not reading the sensor information from the URDF file, and programmatically assign sensors.
 ///This is rather inconsistent, to mix programmatical creation with loading from file.
-b3SharedMemoryCommandHandle b3CreateSensorCommandInit(b3PhysicsClientHandle physClient);
+b3SharedMemoryCommandHandle b3CreateSensorCommandInit(b3PhysicsClientHandle physClient, int bodyUniqueId);
 int b3CreateSensorEnable6DofJointForceTorqueSensor(b3SharedMemoryCommandHandle commandHandle, int jointIndex, int enable);
 ///b3CreateSensorEnableIMUForLink is not implemented yet.
 ///For now, if the IMU is located in the root link, use the root world transform to mimic an IMU.
