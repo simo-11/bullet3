@@ -25,7 +25,7 @@ On major issue is collision handling of deformable objects.
 This study will introduce an approach to account plastic deformation in game applications.   
 In the introduced method, the plastic deformation takes place if force or moment exceeds given 
 limit, deformation absorbs energy and joint breaks if plastic capacity is exceeced. 
-The approach is based on using joint motors to model plasticity. \cite[p.~90]{erleben.thesis} 
+The approach is based on using joint motors to model plasticity. \citet[p.~90]{erleben.thesis} 
 suggests similar method for modelling friction in joints. Adjacent objects are connected by motors. 
 Motor power production limits are estimated based on plastic section modulus. 
 Joint breaking is accounted by summing plastic deformation and comparing it to 
@@ -39,106 +39,3 @@ integration timestep to be used without stability issues.
 This kind of metodology also opens large area of combining old structural analysis
 methods to modern simulation frameworks.
 
-\section{Using physics engine for structural analysis}
-
-Velocity-based formulation is not typically used in structural or mechanical engineering.
- \cite[p.~45]{erleben.thesis} provides reasoning and theoretical details. 
-In structural finite element analysis solution method is selected based on needed features.
-In most cases static small displacement solution using displacement based boudary conditions is used.
-For large displacement static analysis analysis loading is applied in substeps and 
-displacements are used to update element mesh.
-Further enhancements are material nonlinearity and dynamic analysis.
-In scope of this work physics engine provides dynamics analysis 
-with large displacements but elements are rigid objects connected by flexible joints.
-
-Material plasticity has not been taken into account in games and some basics are provided here.
-Typical stress strain curve of ductile steel is shown in \ref{fig:areas}.
-Stress-strain curve is not drawn to scale as elastic strain could not be seen as it is typically 0.001 to 0.005.
-Straing hardening is taken into account mainly by assuming that plasticity in bending expands.
-This can be seen e.g. by bending paperclip. It does not break at low angles but can take few full bends. 
-
-\begin{figure}[htb!]
-\centering
-\begin{tikzpicture}
-\coordinate (Y) at (0.2,4);
-\draw[->] (0,0) -- (10,0) node[right] {\large{$\epsilon$}};
-\draw[->] (0,0) -- (0,6) node[above] {\large{$\sigma$}};
-\draw(0,0) -- (Y) -- (2,4) .. controls (7,6) .. (10,5);
-\draw[dashed](0,4) -- (Y);
-\node at (-0.2,4) [align=right] {$f_y$};
-\end{tikzpicture}
-\caption{Stress-strain curve of ductile steel (not to scale).}
-\label{fig:areas}
-\end{figure}
-
-Difference between elastic and plastic section modulus is shown in \ref{fig:wp}. 
-If stress is below yield limit, stress and strain are linear within cross section.
-If cross section is fully plastic, stress is assumed to be at yield level over whole cross section and 
-so plastic section modulus is higher than elastic section modulus.
-Elastic part is often ignored in this work as displacements due to to elastic deformation are very small.
-Basic idea in this work can be tested with any framework having motors and hinge constraints.
-Setting target velocity of motor to zero and limiting maximum motor impulse to plastic moment 
-multiplied by timestep.
-
-\begin{figure}[htb!]
-\centering
-\begin{tikzpicture}
-\coordinate (S) at (2.5,5);
-\draw (0,5) -- (4,5) ;
-\draw (0,0) -- (4,0) ;
-\draw (2,0) -- (2,5) ;
-\draw (1.5,0) -- (S); 
-\node[above] at (S) [align=center] {\large{$\sigma<f_y$}};
-\end{tikzpicture}
-\hspace{1cm}
-\begin{tikzpicture}
-\coordinate (S) at (3,5);
-\draw (0,5) -- (4,5) ;
-\draw (0,0) -- (4,0) ;
-\draw (2,0) -- (2,5) ;
-\draw (1,0) -- (1,2.5) -- (3,2.5) -- (S); 
-\node[above] at (S) [align=center] {\large{$\sigma=f_y$}};
-\end{tikzpicture}
-\caption{Stress distribution under elastic and plastic loads.}
-\label{fig:wp}
-\end{figure}
-
-Constraint processing in \bullet\ is based on ODE, \cite{ode}.
-Mathematical background and detailed examples are available by \cite{ode.joints}.
-Equations \ref{eq:constraintEquation}, \ref{eq:lambdaLow} and
-\ref{eq:lambdaHigh} 
-are created for each constraint.
-
-\begin{equation} \label{eq:constraintEquation}
-J_1 v_1 + \Omega_1 \omega_1 + J_2 v_2 + \Omega_2 \omega_2 = c + C \lambda
-\end{equation}
-
-\begin{equation} \label{eq:lambdaLow}
-\lambda \geq l
-\end{equation}
-
-\begin{equation} \label{eq:lambdaHigh}
-\lambda \leq h
-\end{equation}
-
-Main parameters  and corresponding fields in \bullet\  
- are described in table \ref{tab:constraintParameters}.
-
-\begin {table}[htb!]
-\begin{center}
-\begin{tabular}{|c| l| l|}
-\hline
-{\bf Parameter} & {\bf Description} & {\bf btConstraintInfo2 pointer}\\  \hline
-$J_1, \Omega_1$ & Jacobian & m\_J1linearAxis, m\_J1angularAxis \\ 
-$J_2, \Omega_2$ & & m\_J2linearAxis, m\_J2angularAxis \\ \hline
-$v$ & linear velocity & \\ \hline
-$\omega$ & angular velocity & \\ \hline
-$c$        &  right side vector   & m\_constraintError \\ \hline
-$C$  & constraint force mixing & cfm \\  \hline
-$\lambda$ & constraint force &  \\ \hline
-$l$ & low limit for constraint force & m\_lowerLimit \\ \hline
-$h$ & high limit for constraint force & m\_upperLimit \\ \hline
-\end {tabular}
-\end{center}
-\caption {Constraint parameters} \label{tab:constraintParameters} 
-\end {table}
