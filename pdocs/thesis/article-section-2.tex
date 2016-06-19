@@ -1,4 +1,7 @@
-\section{Using physics engine for structural analysis}
+\section{Adding plasticity to physics engine}
+
+In this section some central terms are explained and main differences between traditional structural 
+analysis and physics engines are reviewed.
 
 Velocity-based formulation is not typically used in structural or mechanical engineering.
  \citet[p.~45]{erleben.thesis} provides reasoning and theoretical details why it is so popular in 
@@ -19,7 +22,7 @@ to multiple parts which are connected by energy absorbing joints.
 As stress-strain curve may not be familiar to all readers some basics are provided here.
 Typical stress strain curve of ductile steel is shown in \ref{fig:areas}.
 Stress-strain curve is not drawn to scale as elastic strain could not be seen as it is typically 0.001 to 0.005.
-Straing hardening is taken into account mainly by assuming that plasticity in bending expands.
+Straing hardening is taken into account in this work mainly by assuming that plasticity in bending expands.
 Material that starts to yield first is hardened and yielding moves slightly.
 This can be seen e.g. by bending paperclip. It does not break at low angles but can take few full bends. 
 
