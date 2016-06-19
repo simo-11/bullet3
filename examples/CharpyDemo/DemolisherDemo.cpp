@@ -18,6 +18,7 @@ Based on ForkLiftDemo by Simo Nikula 2015-
 */
 #define _CRT_SECURE_NO_WARNINGS
 #include "DemolisherDemo.h"
+#include "AxisMapper.h"
 #include "LinearMath/btQuickprof.h"
 #include <stdio.h> 
 #include <string>
@@ -89,8 +90,9 @@ public:
 	btScalar bridgeLsx, bridgeLsy, bridgeLsz, bridgeSupportY;
 	bool twoSupportsForGate = false;
 	btScalar gateLsx, gateLsy, gateLsz;
-	btScalar poleLsx, poleLsy;
-	btScalar poleZ=60, bridgeZ = 40, gateZ = -20, fenceZ=5, bridgeSupportX=1;
+	btScalar rodLsx, rodLsy, rodLsz;
+	btScalar bridgeZ = 40, gateZ = -20, fenceZ=5, bridgeSupportX=1;
+	btScalar rodZ = bridgeZ;
 	btScalar tolerance;
 	// vehicle body measures
 	btScalar yhl,xhl,zhl;
@@ -101,7 +103,7 @@ public:
 	int lpc;
 	btScalar breakingImpulseThreshold, breakingSpeed;
 	btScalar m_fixedTimeStep = btScalar(1) / btScalar(60);
-	btScalar bridgeSteelScale,gateSteelScale,fenceSteelScale, poleSteelScale;
+	btScalar bridgeSteelScale,gateSteelScale,fenceSteelScale, rodSteelScale;
 	btScalar density;
 	btScalar defaultCarMass = 50000;
 	btScalar carMass;
@@ -137,7 +139,7 @@ public:
 	CommonWindowInterface* window;
 	int m_option;
 	enum Constraint { None = 0, Rigid = 1, Impulse = 2, ElasticPlastic = 3 };
-	enum CarPosition { Gate, Fence, Bridge};
+	enum CarPosition { Gate, Fence, Bridge, Rod};
 	Constraint constraintType;
 	btRaycastVehicle::btVehicleTuning	m_tuning;
 	btVehicleRaycaster*	m_vehicleRayCaster=0;
@@ -488,7 +490,7 @@ public:
 	void setFenceSteelScale(Gwen::Controls::Base* control);
 	void setBridgeSteelScale(Gwen::Controls::Base* control);
 	void setGateSteelScale(Gwen::Controls::Base* control);
-	void setPoleSteelScale(Gwen::Controls::Base* control);
+	void setRodSteelScale(Gwen::Controls::Base* control);
 	void setMaxPlasticStrain(Gwen::Controls::Base* control);
 	void setMaxPlasticRotation(Gwen::Controls::Base* control);
 	void setGameBindings(Gwen::Controls::Base* control);
@@ -790,14 +792,14 @@ public:
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setBridgeSteelScale);
 	}
-	void addPoleSteelScale(){
-		addLabel("pole steel%");
+	void addRodSteelScale(){
+		addLabel("rod steel%");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(poleSteelScale * 100, "%.3f");
+		std::string text = uif(rodSteelScale * 100, "%.3f");
 		gc->SetToolTip("Area of enforcement steel [%] [0-100]");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setPoleSteelScale);
+		gc->onReturnPressed.Add(pPage, &DemolisherDemo::setRodSteelScale);
 	}
 	void addCarMass(){
 		addLabel("car mass");
@@ -916,7 +918,7 @@ public:
 			addGateSteelScale();
 			addFenceSteelScale();
 			addBridgeSteelScale();
-			addPoleSteelScale();
+			addRodSteelScale();
 			addBreakingSpeed();
 			break;
 		case ElasticPlastic:
@@ -926,7 +928,7 @@ public:
 			addGateSteelScale();
 			addFenceSteelScale();
 			addBridgeSteelScale();
-			addPoleSteelScale();
+			addRodSteelScale();
 			break;
 		}
 		addCarMass();
@@ -1003,7 +1005,7 @@ public:
 		}
 	}
 	/**
-	*
+	* for case where local length=xlen
 	*/
 	void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha,
 		btScalar xlen, btScalar ylen, btScalar zlen, btScalar steelScale){
@@ -1011,7 +1013,6 @@ public:
 		addElasticPlasticConstraint(ha, cpos, xlen, ylen, zlen, steelScale);
 	}
 	/**
-	xlen is length of body to be used for axial and torsional stiffness
 	TODO, use cpos for selecting global dofs
 	*/
 	void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha,
@@ -1029,14 +1030,19 @@ public:
 		trb.setIdentity();
 		tra.setOrigin(cpos);
 		trb.setOrigin(-cpos);
-		btScalar k0(E*ylen*zlen*steelScale / xlen);
+		AxisMapper axisMapper(xlen,ylen,zlen,cpos);
+		btScalar len = cpos.length() * 2;
+		btScalar h = axisMapper.getH(); // ylen
+		btScalar b = axisMapper.getB(); // zlen
+		btScalar k0(E*h*b*steelScale / len);
 		// I=bh^3/12, k for end moment with fixed end is EI/l
-		btScalar im(E* steelScale / xlen / 12);
-		btScalar k1(ylen*ylen*ylen*zlen*im);
-		btScalar k2(ylen*zlen*zlen*zlen*im);
-		btScalar w0(fy*ylen*zlen*steelScale);
-		btScalar w1(fy*zlen*ylen*ylen*steelScale / 4);
-		btScalar w2(fy*zlen*zlen*ylen*steelScale / 4);
+		btScalar im(E* steelScale / len / 12);
+		btScalar k1(h*h*h*b*im);
+		btScalar k2(h*b*b*b*im);
+		btScalar w0(fy*h*b*steelScale);
+		btScalar w1(fy*b*h*h*steelScale / 4);
+		btScalar w2(fy*b*b*h*steelScale / 4);
+		int *ami = axisMapper.getIndexes();
 		for (int i = 0; i < loopSize; i++){
 			bt6DofElasticPlastic2Constraint *sc =
 				new bt6DofElasticPlastic2Constraint(*ha[i], *ha[i + 1],
@@ -1044,18 +1050,18 @@ public:
 			sc->setUserConstraintType(BPT_EP2);
 			sc->setMaxPlasticRotation(maxPlasticRotation);
 			sc->setMaxPlasticStrain(maxPlasticStrain);
-			sc->setStiffness(2, k0, limitIfNeeded);
-			sc->setMaxForce(2, w0/2);
-			sc->setStiffness(0, k0, limitIfNeeded);
-			sc->setMaxForce(0, w0);
-			sc->setStiffness(1, k0, limitIfNeeded);
-			sc->setMaxForce(1, w0/2);
-			sc->setStiffness(5, k1); 
-			sc->setMaxForce(5, w1); 
-			sc->setStiffness(4, k1); 
-			sc->setMaxForce(4, w1);
-			sc->setStiffness(3, k2, limitIfNeeded); 
-			sc->setMaxForce(3, w2);
+			sc->setStiffness(ami[2], k0, limitIfNeeded);
+			sc->setMaxForce(ami[2], w0/2);
+			sc->setStiffness(ami[0], k0, limitIfNeeded);
+			sc->setMaxForce(ami[0], w0);
+			sc->setStiffness(ami[1], k0, limitIfNeeded);
+			sc->setMaxForce(ami[1], w0 / 2);
+			sc->setStiffness(ami[5], k1);
+			sc->setMaxForce(ami[5], w1);
+			sc->setStiffness(ami[4], k1);
+			sc->setMaxForce(ami[4], w1);
+			sc->setStiffness(ami[3], k2, limitIfNeeded);
+			sc->setMaxForce(ami[3], w2);
 			m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
 			for (int i = 0; i<6; i++)
 			{
@@ -1115,7 +1121,7 @@ public:
 		btScalar gy = m_dynamicsWorld->getGravity().getY();
 		/*
 		* this scaler was obtained by fitting data
-		* physical backgrund remains to be solved
+		* physical background remains to be solved
 		*/
 		btScalar scaler = 0.00018;
 		btScalar sy = scaler* gy* carMass	/ suspensionStiffness / 4;
@@ -1123,28 +1129,39 @@ public:
 			sy = -suspensionRestLength;
 		}
 		btScalar yStart = connectionHeight+sy;
-		btScalar zStart, xStart;
+		btScalar zStart=0, xStart=0;
 		btTransform tr;
 		tr.setIdentity();
 		switch (position){
 		default:
 		case Fence:
-			xStart = 0;
-			zStart = -zhl;
-			break;
+			if (fenceSteelScale > 0){
+				xStart = 0;
+				zStart = -zhl;
+				break;
+			}
 		case Bridge:
+			if (bridgeSteelScale>0)
 			{
 				btQuaternion q(SIMD_HALF_PI,0,0);
 				tr.setRotation(q);
 				xStart = -bridgeLsx / 2-2*zhl ;
 				zStart = bridgeZ;
 				yStart += bridgeSupportY + bridgeLsy-0.2*zhl;
+				break;
 			}
-			break;
 		case Gate:
-			xStart = 0;
-			zStart = gateZ-3*zhl;
-			break;
+			if (gateSteelScale > 0){
+				xStart = 0;
+				zStart = gateZ - 3 * zhl;
+				break;
+			}
+		case Rod:
+			if (rodSteelScale > 0){
+				xStart = 0;
+				zStart = rodZ - 3 * zhl;
+				break;
+			}
 		}
 		tr.setOrigin(btVector3(xStart, yStart, zStart));
 		return tr;
@@ -1220,17 +1237,17 @@ public:
 		}
 		PlasticityData::setData(&pData);
 	}
-	void addPole(){
+	void addRod(){
 		btAlignedObjectArray<btRigidBody*> ha;
-		btScalar ylen = poleLsy / lpc;
-		btCollisionShape* loadShape = new btBoxShape(btVector3(poleLsx / 2, ylen / 2, poleLsx / 2));
+		btScalar ylen = rodLsy / lpc;
+		btCollisionShape* loadShape = new btBoxShape(btVector3(rodLsx / 2, ylen / 2, rodLsz / 2));
 		btScalar mass;
 		switch (constraintType){
 		case Rigid:
 			mass = 0;
 			break;
 		default:
-			mass = poleLsx*ylen*poleLsx*getDensity(poleSteelScale) / lpc;
+			mass = rodLsx*ylen*rodLsz*getDensity(rodSteelScale) / lpc;
 			break;
 		}
 		m_collisionShapes.push_back(loadShape);
@@ -1238,7 +1255,7 @@ public:
 		for (int i = 0; i < lpc; i++){
 			btTransform loadTrans;
 			loadTrans.setIdentity();
-			btVector3 pos = btVector3(0, yloc, poleZ);
+			btVector3 pos = btVector3(0, yloc, rodZ);
 			loadTrans.setOrigin(pos);
 			ha.push_back(localCreateRigidBody(mass, loadTrans, loadShape));
 			yloc += ylen;
@@ -1246,10 +1263,10 @@ public:
 		btVector3 cpos(0, ylen / 2, 0);
 		switch (constraintType){
 		case Impulse:
-			addFixedConstraint(ha, cpos, poleSteelScale);
+			addFixedConstraint(ha, cpos, rodSteelScale);
 			break;
 		case ElasticPlastic:
-			addElasticPlasticConstraint(ha, cpos, ylen, poleLsx, poleLsx, poleSteelScale);
+			addElasticPlasticConstraint(ha, cpos, rodLsx, ylen, rodLsz, rodSteelScale);
 			break;
 		}
 	}
@@ -1653,10 +1670,10 @@ void DemolisherDemo::setGateSteelScale(Gwen::Controls::Base* control){
 	demo->gateSteelScale = tv / 100;
 	restartHandler(control);
 }
-void DemolisherDemo::setPoleSteelScale(Gwen::Controls::Base* control){
-	btScalar tv(demo->poleSteelScale * 100);
+void DemolisherDemo::setRodSteelScale(Gwen::Controls::Base* control){
+	btScalar tv(demo->rodSteelScale * 100);
 	setScalar(control, &tv);
-	demo->poleSteelScale = tv / 100;
+	demo->rodSteelScale = tv / 100;
 	restartHandler(control);
 }
 void DemolisherDemo::setMaxPlasticStrain(Gwen::Controls::Base* control){
@@ -1689,10 +1706,10 @@ void DemolisherDemo::reinit(){
 	suspensionDamping = .5;
 	suspensionCompression=0.3;
 	suspensionRestLength=0.8;
-	gateSteelScale = 0.05;
-	fenceSteelScale = 0.01;
+	gateSteelScale = -0.05;
+	fenceSteelScale = -0.01;
 	bridgeSteelScale = 0.05;
-	poleSteelScale = 0.01;
+	rodSteelScale = 0.01;
 	maxPlasticStrain = 0.2;
 	maxPlasticRotation = 3;
 	gameBindings = true;
@@ -1865,10 +1882,11 @@ void DemolisherDemo::initPhysics()
 	gateLsz = 0.2*lsz;
 	b3Printf("gateLsx=%.1f, gateLsy=%.1f, gateLsz=%.1f",
 		gateLsx, gateLsy, gateLsz);
-	poleLsx = 0.1;
-	poleLsy = lsx;
-	b3Printf("poleLsx=%.1f, poleLsy=%.1f",
-		poleLsx, poleLsy);
+	rodLsx = 0.01*lsx;
+	rodLsy = bridgeSupportY;
+	rodLsz = 0.1*lsz;
+	b3Printf("rodLsx=%.1f, rodLsy=%.1f, rodLsz=%.1f",
+		rodLsx, rodLsy, rodLsz);
 	int upAxis = 1;
 	m_guiHelper->setUpAxis(upAxis);
 	btVector3 groundExtents(200,200,200);
@@ -1915,8 +1933,8 @@ void DemolisherDemo::initPhysics()
 	if (bridgeSteelScale >= 0){
 		addBridge();
 	}
-	if (poleSteelScale >= 0){
-		addPole();
+	if (rodSteelScale >= 0){
+		addRod();
 	}
 	if (wheelFriction >= 0){
 		addVehicle();
@@ -2186,6 +2204,12 @@ bool	DemolisherDemo::keyboardCallback(int key, int state)
 		{
 			handled = true;
 			setCarPosition(Bridge);
+			break;
+		}
+		case B3G_F4:
+		{
+			handled = true;
+			setCarPosition(Rod);
 			break;
 		}
 		case B3G_F7:
