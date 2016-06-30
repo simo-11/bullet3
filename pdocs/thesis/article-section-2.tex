@@ -20,9 +20,21 @@ This provides reasonable means to simulate loss of energy in collisions.
 Simulation of breaking of objects made of ductile material can be made more realistic by splitting rigid objects
 to multiple parts which are connected by energy absorbing joints.
 As stress-strain curve may not be familiar to all readers some basics are provided here.
-Typical stress strain curve of ductile steel is shown in \ref{fig:areas}.
+Typical engineering stress-strain curve of ductile steel is shown in \ref{fig:sscurve}.
+E.g. \citet{dowling} provides detailed descriptions of engineering and true stress-strain curves.
 Stress-strain curve is not drawn to scale as elastic strain could not be seen as it is typically 0.001 to 0.005.
-Straing hardening is taken into account in this work mainly by assuming that plasticity in bending expands.
+
+In this work elastic-fully plastic material model is used in most scenarios.
+It allows realistic simulations for most scenarios.
+Having elastic part allows elastic displacements for slender structures. 
+Elastic part is ignored in method suggested in this work if deformation is related
+to higher frequency than integration stability would allow.
+Strain hardening part of stress-straing curve could probably be taken into account but it has not been tried in this work.
+It should be noted that geometry
+of objects is not updated during analysis and thus engineering stress-strain properties should
+be used even with strain hardening.
+
+Strain hardening is taken into account in this work mainly by assuming that plasticity in bending expands, \citet[p.~672]{dowling}.
 Material that starts to yield first is hardened and yielding moves slightly.
 This can be seen e.g. by bending paperclip. It does not break at low angles but can take few full bends. 
 
@@ -36,15 +48,14 @@ This can be seen e.g. by bending paperclip. It does not break at low angles but 
 \draw[dashed](0,4) -- (Y);
 \node at (-0.2,4) [align=right] {$f_y$};
 \end{tikzpicture}
-\caption{Stress-strain curve of ductile steel (not to scale).}
-\label{fig:areas}
+\caption{Engineering stress-strain curve of ductile steel (not to scale).}
+\label{fig:sscurve}
 \end{figure}
 
 Difference between elastic and plastic section modulus is shown in \ref{fig:wp}. 
 If stress is below yield limit, stress and strain are linear within cross section.
 If cross section is fully plastic, stress is assumed to be at yield level over whole cross section and 
 so plastic section modulus is higher than elastic section modulus.
-Elastic part is often ignored in this work as displacements due to to elastic deformation are very small.
 
 \begin{figure}[htb!]
 \centering
