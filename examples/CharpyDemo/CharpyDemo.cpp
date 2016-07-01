@@ -48,7 +48,7 @@ bool firstRun = true;
 bool hammerHitsSpecimen;
 btScalar initialStartAngle(1.8);
 btScalar startAngle(initialStartAngle);
-long  initialDisplayWait = 50;
+long  initialDisplayWait = 0;
 long displayWait = initialDisplayWait;
 long setDisplayWait = displayWait;
 btScalar ccdMotionThreshHold(0.001);
@@ -460,6 +460,7 @@ public:
 				l = btScalar(4.1);
 				spaceBetweenAnvils = btScalar(4.0);
 				setTimeStep = 0.001;
+				variableTimeStep = false;
 				break;
 			case 4: // cutting
 				hammerDraft = btScalar(0);
