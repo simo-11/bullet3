@@ -459,6 +459,7 @@ public:
 			case 3: // slender
 				l = btScalar(4.1);
 				spaceBetweenAnvils = btScalar(4.0);
+				setTimeStep = 0.001;
 				break;
 			case 4: // cutting
 				hammerDraft = btScalar(0);
@@ -1094,8 +1095,10 @@ public:
 		return hammerBody->getCenterOfMassTransform().getRotation().getAngle();
 	}
 	void tuneDisplayWait(){
-		if (timeStep<1e-3){
-			displayWait = 2;
+		long smallStepWait = 2;
+		btScalar smallStepLimit(1e-3);
+		if (timeStep<smallStepLimit && setDisplayWait>smallStepWait){
+			displayWait = smallStepWait;
 		}
 		else{
 			displayWait = setDisplayWait;

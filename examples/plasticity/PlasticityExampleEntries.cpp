@@ -62,6 +62,12 @@ static ExampleEntry gDefaultExamples[]=
 	"two objects and 6DofElasticPlastic2Constraint",
 	CharpyDemoCreateFunc, 8),
 	ExampleEntry(2, "elastic",
+	"10 objects using 6DofElasticPlasticConstraint, \
+MLCP solver, \
+no hammer, \
+elastic deflection, l=4 m",
+	CharpyDemoCreateFunc, 102030507),
+	ExampleEntry(2, "elastic2",
 	"10 objects using 6DofElasticPlastic2Constraint, \
 MLCP solver, \
 no hammer, \
