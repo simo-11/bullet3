@@ -73,7 +73,7 @@ bt6DofElasticPlastic2Constraint::bt6DofElasticPlastic2Constraint(btRigidBody& rb
 	initPlasticity();
 }
 
-int idCounter = 0;
+int bt6DofElasticPlastic2Constraint::idCounter; 
 void bt6DofElasticPlastic2Constraint::resetIdCounter(){
 	idCounter = 0;
 }

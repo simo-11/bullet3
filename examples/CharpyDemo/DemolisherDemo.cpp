@@ -30,7 +30,9 @@ Based on ForkLiftDemo by Simo Nikula 2015-
 #include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
 #include "BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h"
 #include "BulletDynamics/MLCPSolvers/btMLCPSolver.h"
+#include "bt6DofElasticPlasticConstraint.h"
 #include "bt6DofElasticPlastic2Constraint.h"
+#include "btElasticPlasticConstraint.h"
 #include "../plasticity/PlasticityExampleBrowser.h"
 #include "../plasticity/PlasticityData.h"
 #include "../plasticity/PlasticityStatistics.h"
@@ -138,7 +140,7 @@ public:
 	Gwen::Controls::Canvas* canvas;
 	CommonWindowInterface* window;
 	int m_option;
-	enum Constraint { None = 0, Rigid = 1, Impulse = 2, ElasticPlastic = 3 };
+	enum Constraint { None = 0, Rigid = 1, Impulse = 2, ElasticPlastic = 3, ElasticPlastic2 = 4 };
 	enum CarPosition { Gate, Fence, Bridge, Rod};
 	Constraint constraintType;
 	btRaycastVehicle::btVehicleTuning	m_tuning;
@@ -922,6 +924,7 @@ public:
 			addBreakingSpeed();
 			break;
 		case ElasticPlastic:
+		case ElasticPlastic2:
 			addCollisionBetweenLinkedBodies();
 			addMaxPlasticRotation();
 			addMaxPlasticStrain();
@@ -1013,9 +1016,78 @@ public:
 		addElasticPlasticConstraint(ha, cpos, xlen, ylen, zlen, steelScale);
 	}
 	/**
-	TODO, use cpos for selecting global dofs
 	*/
 	void addElasticPlasticConstraint(btAlignedObjectArray<btRigidBody*> ha,
+		btVector3& cpos,
+		btScalar xlen, btScalar ylen, btScalar zlen, btScalar steelScale){
+		int loopSize = ha.size() - 1;
+		btScalar E(200E9);
+		btScalar G(80E9);
+		btScalar fy(200E6);
+		bool limitIfNeeded = true;
+		btScalar damping(0.1);
+		btTransform tra;
+		btTransform trb;
+		tra.setIdentity();
+		trb.setIdentity();
+		tra.setOrigin(cpos);
+		trb.setOrigin(-cpos);
+		AxisMapper axisMapper(xlen, ylen, zlen, cpos);
+		btScalar len = cpos.length() * 2;
+		btScalar h = axisMapper.getH(); // ylen
+		btScalar b = axisMapper.getB(); // zlen
+		btScalar k0(E*h*b*steelScale / len);
+		// I=bh^3/12, k for end moment with fixed end is EI/l
+		btScalar im(E* steelScale / len / 12);
+		btScalar k1(h*h*h*b*im);
+		btScalar k2(h*b*b*b*im);
+		btScalar w0(fy*h*b*steelScale);
+		btScalar w1(fy*b*h*h*steelScale / 4);
+		btScalar w2(fy*b*b*h*steelScale / 4);
+		int *ami = axisMapper.getIndexes();
+		for (int i = 0; i < loopSize; i++){
+			bt6DofElasticPlasticConstraint *sc =
+				new bt6DofElasticPlasticConstraint(*ha[i], *ha[i + 1],
+				tra, trb,true);
+			sc->setUserConstraintType(BPT_EP);
+			sc->setMaxPlasticRotation(maxPlasticRotation);
+			sc->setMaxPlasticStrain(maxPlasticStrain);
+			sc->setStiffness(ami[2], k0);
+			sc->setMaxForce(ami[2], w0 / 2);
+			sc->setStiffness(ami[0], k0);
+			sc->setMaxForce(ami[0], w0);
+			sc->setStiffness(ami[1], k0);
+			sc->setMaxForce(ami[1], w0 / 2);
+			sc->setStiffness(ami[5], k1);
+			sc->setMaxForce(ami[5], w1);
+			sc->setStiffness(ami[4], k1);
+			sc->setMaxForce(ami[4], w1);
+			sc->setStiffness(ami[3], k2);
+			sc->setMaxForce(ami[3], w2);
+			m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
+			for (int i = 0; i<6; i++)
+			{
+				sc->enableSpring(i, true);
+			}
+			for (int i = 0; i<6; i++)
+			{
+				sc->setDamping(i, damping);
+			}
+			sc->setEquilibriumPoint();
+			m_dynamicsWorld->addAction(sc);
+		}
+	}
+	/**
+	* for case where local length=xlen
+	*/
+	void addElasticPlastic2Constraint(btAlignedObjectArray<btRigidBody*> ha,
+		btScalar xlen, btScalar ylen, btScalar zlen, btScalar steelScale){
+		btVector3 cpos(xlen / 2, 0, 0);
+		addElasticPlastic2Constraint(ha, cpos, xlen, ylen, zlen, steelScale);
+	}
+	/**
+	*/
+	void addElasticPlastic2Constraint(btAlignedObjectArray<btRigidBody*> ha,
 		btVector3& cpos,
 		btScalar xlen, btScalar ylen, btScalar zlen, btScalar steelScale){
 		int loopSize = ha.size() - 1;
@@ -1214,7 +1286,7 @@ public:
 		for (int i = 0; i < numConstraints; i++){
 			btTypedConstraint* sc = dw->getConstraint(i);
 			int type = sc->getUserConstraintType();
-			if (type != BPT_EP2){
+			if (type != BPT_EP2 && type!=BPT_EP){
 				continue;
 			}
 			if (!headerDone){
@@ -1223,8 +1295,8 @@ public:
 				infoMsg(buf);
 				headerDone = true;
 			}
-			bt6DofElasticPlastic2Constraint *epc =
-				static_cast<bt6DofElasticPlastic2Constraint*>(sc);
+			btElasticPlasticConstraint *epc =
+				dynamic_cast<btElasticPlasticConstraint*>(sc);
 			btScalar mpr = epc->getMaxPlasticRotation(),
 				cpr = epc->getCurrentPlasticRotation(),
 				mps = epc->getMaxPlasticStrain(),
@@ -1268,6 +1340,9 @@ public:
 		case ElasticPlastic:
 			addElasticPlasticConstraint(ha, cpos, rodLsx, ylen, rodLsz, rodSteelScale);
 			break;
+		case ElasticPlastic2:
+			addElasticPlastic2Constraint(ha, cpos, rodLsx, ylen, rodLsz, rodSteelScale);
+			break;
 		}
 	}
 	void addFence(){
@@ -1299,6 +1374,9 @@ public:
 			break;
 		case ElasticPlastic:
 			addElasticPlasticConstraint(ha, xlen, lsy, lsz, fenceSteelScale);
+			break;
+		case ElasticPlastic2:
+			addElasticPlastic2Constraint(ha, xlen, lsy, lsz, fenceSteelScale);
 			break;
 		}
 	}
@@ -1356,6 +1434,9 @@ public:
 			break;
 		case ElasticPlastic:
 			addElasticPlasticConstraint(ha, xlen, bridgeLsy, bridgeLsz, bridgeSteelScale);
+			break;
+		case ElasticPlastic2:
+			addElasticPlastic2Constraint(ha, xlen, bridgeLsy, bridgeLsz, bridgeSteelScale);
 			break;
 		}
 	}
@@ -1422,6 +1503,9 @@ public:
 			break;
 		case ElasticPlastic:
 			addElasticPlasticConstraint(ha, xlen, gateLsy, gateLsz, gateSteelScale);
+			break;
+		case ElasticPlastic2:
+			addElasticPlastic2Constraint(ha, xlen, gateLsy, gateLsz, gateSteelScale);
 			break;
 		}
 	}
@@ -1706,8 +1790,8 @@ void DemolisherDemo::reinit(){
 	suspensionDamping = .5;
 	suspensionCompression=0.3;
 	suspensionRestLength=0.8;
-	gateSteelScale = -0.05;
-	fenceSteelScale = -0.01;
+	gateSteelScale = 0.05;
+	fenceSteelScale = 0.01;
 	bridgeSteelScale = 0.05;
 	rodSteelScale = 0.01;
 	maxPlasticStrain = 0.2;

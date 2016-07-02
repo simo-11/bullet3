@@ -46,6 +46,7 @@ http://gimpact.sf.net
 #include "BulletDynamics/ConstraintSolver/btTypedConstraint.h"
 #include "BulletDynamics/ConstraintSolver/btGeneric6DofSpring2Constraint.h"
 #include "BulletDynamics/Dynamics/btActionInterface.h"
+#include "btElasticPlasticConstraint.h"
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 class btRigidBody;
 #include "BulletDynamics/Dynamics/btDynamicsWorld.h"
@@ -59,7 +60,8 @@ class btDynamicsWorld;
 #define bt6DofElasticPlastic2ConstraintDataName	"bt6DofElasticPlastic2ConstraintData"
 #endif //BT_USE_DOUBLE_PRECISION
 
-ATTRIBUTE_ALIGNED16(class) bt6DofElasticPlastic2Constraint : public btTypedConstraint, public btActionInterface
+ATTRIBUTE_ALIGNED16(class) bt6DofElasticPlastic2Constraint : 
+public btTypedConstraint, public btActionInterface, public btElasticPlasticConstraint
 {
 protected:
 
@@ -276,6 +278,7 @@ public:
 	virtual void setParam(int num, btScalar value, int axis = -1);
 	virtual btScalar getParam(int num, int axis = -1) const;
 	// bcc
+	static int idCounter;
 	static void resetIdCounter();
 	int id;
 	int getId(){ return id; }
@@ -292,12 +295,12 @@ public:
 	void setMaxPlasticStrain(btScalar value);
 	void setMaxPlasticRotation(btScalar value);
 	void scalePlasticity(btScalar scale);
-	btScalar getMaxPlasticStrain();
-	btScalar getMaxPlasticRotation();
-	btScalar getCurrentPlasticStrain();
-	btScalar getCurrentPlasticRotation();
-	btScalar getMaxRatio();
-	int getMaxRatioDof();
+	virtual btScalar getMaxPlasticStrain();
+	virtual btScalar getMaxPlasticRotation();
+	virtual btScalar getCurrentPlasticStrain();
+	virtual btScalar getCurrentPlasticRotation();
+	virtual btScalar getMaxRatio();
+	virtual int getMaxRatioDof();
 	void initPlasticity();
 	void updatePlasticity(btJointFeedback& forces);
 	///btActionInterface interface

@@ -23,6 +23,12 @@ April 2015 based on btGeneric6DofSpringConstraint
 #include "LinearMath/btVector3.h"
 #include "BulletDynamics/ConstraintSolver/btTypedConstraint.h"
 #include "BulletDynamics/ConstraintSolver/btGeneric6DofConstraint.h"
+#include "BulletDynamics/Dynamics/btActionInterface.h"
+#include "btElasticPlasticConstraint.h"
+#include "BulletDynamics/Dynamics/btRigidBody.h"
+class btRigidBody;
+#include "BulletDynamics/Dynamics/btDynamicsWorld.h"
+class btDynamicsWorld;
 
 #ifdef BT_USE_DOUBLE_PRECISION
 #define bt6DofElasticPlasticConstraintData2		bt6DofElasticPlasticConstraintDoubleData2
@@ -44,7 +50,8 @@ April 2015 based on btGeneric6DofSpringConstraint
 /// 4 : rotation Y (2nd Euler rotational around new position of Y axis, range [-PI/2+epsilon, PI/2-epsilon] )
 /// 5 : rotation Z (1st Euler rotational around Z axis, range [-PI+epsilon, PI-epsilon] )
 
-ATTRIBUTE_ALIGNED16(class) bt6DofElasticPlasticConstraint : public btGeneric6DofConstraint
+ATTRIBUTE_ALIGNED16(class) bt6DofElasticPlasticConstraint : 
+public btGeneric6DofConstraint, public btActionInterface, public btElasticPlasticConstraint
 {
 protected:
 	bool		m_springEnabled[6];
@@ -52,6 +59,10 @@ protected:
 	btScalar	m_springStiffness[6];
 	btScalar	m_springDamping[6];
 	// bcc, new fields for plasticity
+	static int idCounter;
+	static void resetIdCounter();
+	int id;
+	int getId(){ return id; }
 	btScalar	m_maxForce[6];
 	btScalar	m_fpsLimit[6];
 	// how many integration steps is needed for single period before
@@ -62,6 +73,8 @@ protected:
 	btScalar    m_maxPlasticStrain;
 	btScalar    m_maxPlasticRotation = 3;
 	btScalar    m_currentPlasticRotation = 0;
+	btScalar m_maxRatio;
+	int m_maxRatioDof;
 	// bcc end of new fields for plasticity
 	void init();
 	void internalUpdateSprings(btConstraintInfo2* info);
@@ -79,14 +92,17 @@ public:
 	void setMaxPlasticStrain(btScalar value);
 	void setMaxPlasticRotation(btScalar value);
 	void scalePlasticity(btScalar scale);
-	btScalar getMaxPlasticStrain();
-	btScalar getMaxPlasticRotation();
-	btScalar getCurrentPlasticStrain();
-	btScalar getCurrentPlasticRotation();
+	virtual btScalar getMaxPlasticStrain();
+	virtual btScalar getMaxPlasticRotation();
+	virtual btScalar getCurrentPlasticStrain();
+	virtual btScalar getCurrentPlasticRotation();
+	virtual btScalar getMaxRatio(){ return m_maxRatio; }
+	virtual int getMaxRatioDof(){ return m_maxRatioDof; }
 	void updatePlasticity(btJointFeedback& forces);
 	void calculateFpsLimit(int index);
 	void setFrequencyRatio(btScalar frequencyRatio);
 	btScalar getFrequencyRatio();
+	btJointFeedback jointFeedback;
 	// bcc
 	void setEquilibriumPoint(); // set the current constraint position/orientation as an equilibrium point for all DOF
 	void setEquilibriumPoint(int index);  // set the current constraint position/orientation as an equilibrium point for given DOF
@@ -99,6 +115,17 @@ public:
 	virtual	int	calculateSerializeBufferSize() const;
 	///fills the dataBuffer and returns the struct name (and 0 on failure)
 	virtual	const char*	serialize(void* dataBuffer, btSerializer* serializer) const;
+	///btActionInterface interface
+	virtual void updateAction(btCollisionWorld* collisionWorld, btScalar step)
+	{
+		updatePlasticity(jointFeedback);
+		if (!isEnabled()){
+			btDynamicsWorld *dw = (btDynamicsWorld *)collisionWorld;
+			dw->removeConstraint(this);
+		}
+	}
+	///btActionInterface interface
+	void	debugDraw(btIDebugDraw* debugDrawer);
 
 };
 

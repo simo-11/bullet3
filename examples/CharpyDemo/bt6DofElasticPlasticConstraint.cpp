@@ -16,6 +16,8 @@ subject to the following restrictions:
 #include "bt6DofElasticPlasticConstraint.h"
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 #include "LinearMath/btTransformUtil.h"
+#include "LinearMath/btIDebugDraw.h"
+#include "LinearMath/btQuickprof.h"
 
 
 bt6DofElasticPlasticConstraint::bt6DofElasticPlasticConstraint(btRigidBody& rbA, btRigidBody& rbB, const btTransform& frameInA, const btTransform& frameInB ,bool useLinearReferenceFrameA)
@@ -31,6 +33,11 @@ bt6DofElasticPlasticConstraint::bt6DofElasticPlasticConstraint(btRigidBody& rbB,
     init();
 }
 
+// bcc
+int bt6DofElasticPlasticConstraint::idCounter;
+void bt6DofElasticPlasticConstraint::resetIdCounter(){
+	idCounter = 0;
+}
 
 void bt6DofElasticPlasticConstraint::init()
 {
@@ -48,6 +55,8 @@ void bt6DofElasticPlasticConstraint::init()
 		m_maxPlasticRotation = btScalar(0.f);
 		m_currentPlasticRotation = btScalar(0.f);
 	}
+	id = ++idCounter;
+	setJointFeedback(&jointFeedback);
 }
 
 
@@ -265,6 +274,12 @@ void bt6DofElasticPlasticConstraint::scalePlasticity(btScalar scale){
 	m_maxPlasticRotation *= scale;
 }
 void bt6DofElasticPlasticConstraint::updatePlasticity(btJointFeedback& forces){
+	BT_PROFILE("updatePlasticity");
+	if (!isEnabled()){
+		return;
+	}
+	m_maxRatio = 0;
+	m_maxRatioDof = -1;
 	int i;
 	for (i = 0; i < 3; i++)
 	{
@@ -273,7 +288,13 @@ void bt6DofElasticPlasticConstraint::updatePlasticity(btJointFeedback& forces){
 			btScalar currPos = m_calculatedLinearDiff[i];
 			btScalar delta = currPos - m_equilibriumPoint[i];
 			btScalar force = forces.m_appliedForceBodyA[i];
-			if (btFabs(force)>m_maxForce[i]){
+			btScalar absForce = btFabs(force);
+			btScalar ratio = absForce / m_maxForce[i];
+			if (ratio > m_maxRatio){
+				m_maxRatio = ratio;
+				m_maxRatioDof = i;
+			}
+			if (absForce>m_maxForce[i]){
 				btScalar elasticPart = m_maxForce[i] / m_springStiffness[i];
 				btScalar newVal = currPos;
 				if (btFabs(elasticPart)<btFabs(currPos)){
@@ -303,7 +324,13 @@ void bt6DofElasticPlasticConstraint::updatePlasticity(btJointFeedback& forces){
 			btScalar currPos = m_calculatedAxisAngleDiff[i];
 			btScalar delta = currPos - m_equilibriumPoint[i + 3];
 			btScalar force = forces.m_appliedTorqueBodyA[i];
-			if (btFabs(force)>m_maxForce[i + 3]){
+			btScalar absForce = btFabs(force);
+			btScalar ratio = absForce / m_maxForce[i + 3];
+			if (ratio > m_maxRatio){
+				m_maxRatio = ratio;
+				m_maxRatioDof = i + 3;
+			}
+			if (absForce>m_maxForce[i + 3]){
 				btScalar elasticPart = m_maxForce[i+3] / m_springStiffness[i+3];
 				btScalar newVal = currPos;
 				if (btFabs(elasticPart)<btFabs(currPos)){
@@ -327,4 +354,24 @@ void bt6DofElasticPlasticConstraint::updatePlasticity(btJointFeedback& forces){
 	}
 }
 
+#define BLEN 6 
+void bt6DofElasticPlasticConstraint::debugDraw(btIDebugDraw* debugDrawer)
+{
+	if (!isEnabled()){
+		return;
+	}
+	char buffer[BLEN];
+	sprintf_s(buffer, BLEN, "%d", id);
+	btVector3 color(1, 0, 0);
+	btVector3 from = m_rbA.getCenterOfMassPosition();
+	btTransform tr = m_rbA.getCenterOfMassTransform();
+	btVector3 to = tr*m_frameInA.getOrigin();
+	debugDrawer->draw3dText(to, buffer);
+	debugDrawer->drawLine(from, to, color);
+	from = m_rbB.getCenterOfMassPosition();
+	tr = m_rbB.getCenterOfMassTransform();
+	to = tr*m_frameInB.getOrigin();
+	debugDrawer->draw3dText(to, buffer);
+	debugDrawer->drawLine(from, to, color);
+}
 

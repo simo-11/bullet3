@@ -6,7 +6,8 @@
 
 enum btPlasticConstraintType
 {
-	BPT_EP2=21
+	BPT_EP=0x21,
+	BPT_EP2=0x22
 };
 
 using namespace std;
