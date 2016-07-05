@@ -921,7 +921,7 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 				maxf = f < fd ? fd : f;
 			}
 			/*
-			contrainError is set:
+			constraintError is set:
 			For frequencyLimited limited case same as above for constraint case 
 			(upper==lower/limot->m_currentLimit==3) is used 
 			If maximum impulse has been reached error is set to zero.
