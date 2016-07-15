@@ -1,25 +1,29 @@
 \section{Adding plasticity to physics engine}
 
-In this section some central terms are explained and main differences between traditional structural 
-analysis and physics engines are reviewed.
+In this section, key concepts related to the introduced model are explained. Main differences between 
+traditional structural analysis and physics engines are reviewed and discussed.
 
-Velocity-based formulation is not typically used in structural or mechanical engineering.
- \citet[p.~45]{erleben.thesis} provides reasoning and theoretical details why it is so popular in 
-constraint-based rigid body simulation. 
+Velocity-based formulation is not often used in structural or mechanical engineering while, 
+however, it is popular within physics based game developers and film production teams.
+ \citet[p.~45]{erleben.thesis} provides reasoning and theoretical details on why 
+velocity-based formulation is  popular in constraint-based rigid body simulation. 
 Main reason is that collision handling can be done without additional procedures.
-In structural analysis solution method is selected carefully based on needed features.
+Acceleration-based formulations need to stop at collision and switch to an impulse based method.
+In structural analysis, a formulation and associated numerical solution procedure are selected 
+based on needed features.
 For most complex scenarios finite element method is used.
-In most cases static small displacement solution using displacement based boundary conditions is used.
-For large displacement static analysis analysis loading is applied in substeps and 
-displacements are used to update element mesh.
+In most cases, static solution with assumption of linear strain-displacement relation small 
+displacement solution using displacement based boundary conditions is used.
+\citet{bathe-1975} provides description for handling of various nonlinearities.
+In large displacement analysis, formulation may be based on updated formulation (Eulerian) or
+Lagrangian formulation where initial configuration is used.
 Further enhancements are material nonlinearity and dynamic analysis.
-Physics engine provides dynamic analysis with large displacements.
+Physics engine provides dynamic analysis with large large reference translations and rotations.
 
 Material plasticity has typically taken into account in games by using suitable coefficient of restitution.
 This provides reasonable means to simulate loss of energy in collisions.
-Simulation of breaking of objects made of ductile material can be made more realistic by splitting rigid objects
-to multiple parts which are connected by energy absorbing joints.
-As stress-strain curve may not be familiar to all readers some basics are provided here.
+Simulation of breaking of objects made of ductile material can be made more realistic by splitting rigid bodies
+to multiple bodies which are connected by energy absorbing joints.
 Typical engineering stress-strain curve of ductile steel is shown in \ref{fig:sscurve}.
 E.g. \citet{dowling} provides detailed descriptions of engineering and true stress-strain curves.
 Stress-strain curve is not drawn to scale as elastic strain could not be seen as it is typically 0.001 to 0.005.
@@ -53,7 +57,7 @@ This can be seen e.g. by bending paperclip. It does not break at low angles but 
 \end{figure}
 
 Difference between elastic and plastic section modulus is shown in \ref{fig:wp}. 
-If stress is below yield limit, stress and strain are linear within cross section.
+If stress is below yield limit, stress and strain are linear within material.
 If cross section is fully plastic, stress is assumed to be at yield level over whole cross section and 
 so plastic section modulus is higher than elastic section modulus.
 
@@ -88,6 +92,7 @@ Further enhancements were created and tested by forking \bullet\ source code
 and adding new constraints \cite{pbullet}.
 Constraint processing in \bullet\ is based on ODE, \cite{ode}.
 Mathematical background and detailed examples are available by \cite{ode.joints}.
+In following section, these equations will be clarified by simple example.
 Equations \ref{eq:constraintEquation}, \ref{eq:lambdaLow} and
 \ref{eq:lambdaHigh} 
 are created for each constraint.
