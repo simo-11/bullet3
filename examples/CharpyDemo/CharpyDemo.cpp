@@ -8,6 +8,9 @@ missing graphics
 or structural analysis background should be able to follow.
 
 It also helps myself as this work has had many long pauses
+This example cannot be used as template for copying due to
+having non class related variables.
+Other examples are better suited for usage as template.
 */
 
 
@@ -124,6 +127,7 @@ float maxEnergy;
 btDynamicsWorld* dw;
 btVector3 y_up(0.01, 1., 0.01);
 btRigidBody *specimenBody, *hammerBody=0, *specimenBody2;
+long stepCount, maxStepCount, syncedStep;
 btHingeConstraint *hammerHinge;
 btJointFeedback hammerHingeJointFeedback;
 btAlignedObjectArray<btJointFeedback*> specimenJointFeedback;
@@ -225,6 +229,7 @@ static Gwen::Controls::Canvas* canvas;
 int gx = 10; // for labels
 int gxi = 120; // for inputs elements
 int wxi = 60; // width
+int swxi = 30; // short width
 int gy;
 int gyInc=25;
 bool restartRequested = false;
@@ -442,6 +447,7 @@ public:
 	void initOptions(){
 		int option = m_option;
 		reinit();
+		maxStepCount = LONG_MAX;
 		m_guiHelper->resetCamera(0.5, -70, 15,	0, 0.2, 0.0);
 		m_mode = option % 100;
 		option /= 100;
@@ -626,7 +632,7 @@ public:
 		gc->SetPos(gx, gy);
 		return gc;
 	}
-	Gwen::Controls::Button* pauseButton;
+	Gwen::Controls::Button* pauseButton, *singleStepButton;
 	void addPauseSimulationButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
 		pauseButton = gc;
@@ -635,17 +641,25 @@ public:
 		gc->SetSize(wxi - 4, gyInc - 4);
 		gc->onPress.Add(pPage, &CharpyDemo::handlePauseSimulation);
 	}
+	void addSingleStepButton(){
+		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
+		gc->SetText(L"SS");
+		gc->SetToolTip(L"Single Step");
+		gc->SetPos(gx + wxi, gy);
+		gc->SetSize(swxi - 4, gyInc - 4);
+		gc->onPress.Add(pPage, &CharpyDemo::handleSingleStep);
+	}
 	void addRestartButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
 		gc->SetText(L"Restart");
-		gc->SetPos(gx + wxi, gy);
+		gc->SetPos(gx + wxi+swxi, gy);
 		gc->SetSize(wxi - 4, gyInc - 4);
 		gc->onPress.Add(pPage, &CharpyDemo::restartHandler);
 	}
 	void addResetButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
 		gc->SetText(L"Reset");
-		gc->SetPos(gx + 2 * wxi, gy);
+		gc->SetPos(gx + 2 * wxi+swxi, gy);
 		gc->SetSize(wxi - 4, gyInc - 4);
 		gy += gyInc;
 		gc->onPress.Add(pPage, &CharpyDemo::resetHandler);
@@ -659,11 +673,24 @@ public:
 			pauseButton->SetText(L"Pause");
 		}
 	}
+	void activateSingleStep(){
+		maxStepCount = stepCount + 1;
+		PlasticityExampleBrowser::setPauseSimulation(false);
+	}
+	void handleSingleStep(Gwen::Controls::Base* control){
+		Gwen::Controls::Button* gc =
+			static_cast<Gwen::Controls::Button*>(control);
+		activateSingleStep();
+	}
+
 	void handlePauseSimulation(Gwen::Controls::Base* control){
 		Gwen::Controls::Button* gc =
 			static_cast<Gwen::Controls::Button*>(control);
 		bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
 		pauseSimulation=!pauseSimulation;
+		if (!pauseSimulation){
+			maxStepCount = LONG_MAX;
+		}
 		PlasticityExampleBrowser::setPauseSimulation(pauseSimulation);
 	}
 
@@ -917,6 +944,7 @@ public:
 			addNumIterations();
 		}
 		addPauseSimulationButton();
+		addSingleStepButton();
 		addRestartButton();
 		addResetButton();
 	}
@@ -1855,6 +1883,14 @@ Z axis is horizontal and Z=0 is symmetry plane
 */
 void	CharpyDemo::initPhysics()
 {
+	if (maxStepCount != LONG_MAX){
+		// Single step is active
+		maxStepCount = 1;
+	}
+	else{
+		maxStepCount = LONG_MAX;
+	}
+	stepCount = 0;
 	timeStep = setTimeStep;
 	energy = 0;
 	maxEnergy = energy;
@@ -1979,7 +2015,10 @@ void CharpyDemo::stepSimulation(float deltaTime){
 	}
 	if (m_dynamicsWorld)	{
 		PlasticityData::setTime(currentTime);
-		m_dynamicsWorld->stepSimulation(timeStep, 30, timeStep);
+		stepCount += m_dynamicsWorld->stepSimulation(timeStep, 30, timeStep);
+		if (stepCount > maxStepCount) {
+			PlasticityExampleBrowser::setPauseSimulation(true);
+		}
 		{
 			BT_PROFILE("CharpyDemo::stepStimulationExtras");
 			checkCollisions();
