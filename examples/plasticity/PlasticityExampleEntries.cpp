@@ -6,6 +6,7 @@
 #include "../CharpyDemo/CharpyDemo.h"
 #include "../CharpyDemo/DemolisherDemo.h"
 #include "../CharpyDemo/PlateDemo.h"
+#include "../CharpyDemo/TensionDemo.h"
 #include "../ExampleBrowser/ExampleEntries.h"
 
 #ifdef ENABLE_LUA
@@ -189,6 +190,32 @@ very stiff constraints cause instability",
 40 t load\
 ",
 	PlateDemoCreateFunc, 400606203),
+	ExampleEntry(0, "Tension"),
+	ExampleEntry(1, "Tension:None",
+	"no constraint",
+	TensionDemoCreateFunc, 0),
+	ExampleEntry(1, "Tension:Rigid",
+	"rigid constraint using zero limits",
+	TensionDemoCreateFunc, 1),
+	ExampleEntry(1, "Tension:Spring",
+	"springConstraint",
+	TensionDemoCreateFunc, 2),
+	ExampleEntry(1, "Tension:Impulse",
+	"breakable constraint with zero limits",
+	TensionDemoCreateFunc, 3),
+	ExampleEntry(1, "Tension:Spring2",
+	"spring2Constraint",
+	TensionDemoCreateFunc, 4),
+	ExampleEntry(1, "Tension:Slider",
+	"SliderConstraint",
+	TensionDemoCreateFunc, 5),
+	ExampleEntry(1, "Tension:ElasticPlastic",
+	"6DofElasticPlasticConstraint",
+	TensionDemoCreateFunc, 6),
+	ExampleEntry(2, "Tension:ElasticPlastic2",
+	"6DofElasticPlastic2Constraint",
+	TensionDemoCreateFunc, 7),
+
 };
 struct ExampleEntriesInternalData
 {
