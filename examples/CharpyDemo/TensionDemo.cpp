@@ -38,6 +38,8 @@ Based on DemolisherDemo by Simo Nikula 2016-
 #include "../plasticity/PlasticityStatistics.h"
 
 #include "BulletDynamics/ConstraintSolver/btSliderConstraint.h"
+#include "BulletDynamics/ConstraintSolver/btGeneric6DofSpringConstraint.h"
+#include "BulletDynamics/ConstraintSolver/btGeneric6DofSpring2Constraint.h"
 
 #include "../CommonInterfaces/CommonExampleInterface.h"
 #include "LinearMath/btAlignedObjectArray.h"
@@ -79,18 +81,23 @@ public:
 	btMLCPSolver* sol=0;
 	btVector3*	m_vertices;
 	btScalar lsx, lsy, lsz;
-	btRigidBody* m_body;
+	btRigidBody* m_body=0;
+	btTypedConstraint* m_constraint=0;
+	btJointFeedback jf;
 	long stepCount,maxStepCount,syncedStep;
 	btScalar stepTime,gravityRampUpTime;
 	btVector3 m_gravity;
 	btScalar breakingImpulseThreshold;
+	btScalar E=200E9;
+	btScalar G=80E9;
+	btScalar fy=200E6;
+	btScalar damping=0.1;
 	bool hasFullGravity;
 	btScalar m_fixedTimeStep = btScalar(1) / btScalar(60);
 	btScalar rodSteelScale;
 	btScalar density;
 	btScalar maxPlasticRotation;
 	btScalar maxPlasticStrain;
-	bool gameBindings = true;
 	bool disableCollisionsBetweenLinkedBodies = true;
 	bool dumpPng = false;
 	char *logDir = _strdup("d:/wrk");
@@ -393,7 +400,6 @@ public:
 	void setRodSteelScale(Gwen::Controls::Base* control);
 	void setMaxPlasticStrain(Gwen::Controls::Base* control);
 	void setMaxPlasticRotation(Gwen::Controls::Base* control);
-	void setGameBindings(Gwen::Controls::Base* control);
 	void handlePauseSimulation(Gwen::Controls::Base* control);
 	void handleSingleStep(Gwen::Controls::Base* control);
 	void setDisableCollisionsBetweenLinkedBodies(Gwen::Controls::Base* control);
@@ -418,15 +424,21 @@ public:
 		sprintf_s(buffer, UIF_SIZE, "%-3d ", mps);
 		str = std::string(buffer);
 		db15->SetText(str);
-		sprintf_s(buffer, UIF_SIZE, "%-+9.0f ", 10.);
-		str = std::string(buffer);
-		db21->SetText(str);
-		sprintf_s(buffer, UIF_SIZE, "%9.0f ", 10.);
-		str = std::string(buffer);
-		db22->SetText(str);
-		sprintf_s(buffer, UIF_SIZE, "%9.0f ", -dragForce);
-		str = std::string(buffer);
-		db23->SetText(str);
+		if (m_body){
+			sprintf_s(buffer, UIF_SIZE, "%9.3f ", m_body->getLinearVelocity().length());
+			str = std::string(buffer);
+			db21->SetText(str);
+		}
+		if (m_constraint){
+			sprintf_s(buffer, UIF_SIZE, "%9.0f ", m_constraint->getAppliedImpulse());
+			str = std::string(buffer);
+			db22->SetText(str);
+		}
+		if (m_body){
+			sprintf_s(buffer, UIF_SIZE, "%9.0f ", m_body->getGravity().y());
+			str = std::string(buffer);
+			db23->SetText(str);
+		}
 		if (useMCLPSolver && sol){
 			sprintf_s(buffer, UIF_SIZE, "%5d ", sol->getNumFallbacks());
 			str = std::string(buffer);
@@ -444,15 +456,6 @@ public:
 			&TensionDemo::setDisableCollisionsBetweenLinkedBodies);
 	}
 
-	void addGameBindings(){
-		Gwen::Controls::Label* label = addLabel("gameBindings");
-		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
-		gc->SetToolTip("set game style keyboard bindings for e.g. asdw");
-		gc->SetPos(gxi, gy);
-		gc->SetChecked(gameBindings);
-		gy += gyInc;
-		gc->onCheckChanged.Add(pPage, &TensionDemo::setGameBindings);
-	}
 	Gwen::Controls::CheckBox* dumpPngGc;
 	void addDumpPng(){
 		Gwen::Controls::Label* label = addLabel("dumpPng");
@@ -672,20 +675,20 @@ public:
 		addLsz();
 		addDensity();
 		switch (constraintType){
+		case Spring:
 		case Impulse:
-			addCollisionBetweenLinkedBodies();
+		case Spring2:
+		case Slider:
 			addRodSteelScale();
 			break;
 		case ElasticPlastic:
 		case ElasticPlastic2:
-			addCollisionBetweenLinkedBodies();
 			addMaxPlasticRotation();
 			addMaxPlasticStrain();
 			addRodSteelScale();
 			break;
 		}
 		addGravityRampUpTime();
-		addGameBindings();
 		addDumpPng();
 		addLogDir();
 		addPauseSimulationButton();
@@ -710,122 +713,121 @@ public:
 		resetClocks();
 		initPhysics();
 	}
-	void addFixedConstraint(btRigidBody* rb, btVector3& cpos, btScalar scale){
+	btTypedConstraint* addFixedConstraint(btRigidBody* rb, btVector3& cpos, btScalar scale){
 		btTransform tr;
 		tr.setIdentity();
 		tr.setOrigin(cpos);
 		btGeneric6DofConstraint *sc =
 		new btGeneric6DofConstraint(*rb, tr, true);
-		sc->setBreakingImpulseThreshold(scale*breakingImpulseThreshold);
+		if (scale > 0){
+			sc->setBreakingImpulseThreshold(scale*breakingImpulseThreshold);
+		}
 		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
 		for (int i = 0; i < 6; i++){
 			sc->setLimit(i, 0, 0); // make fixed
 		}
+		return sc;
+	}
+	btTypedConstraint* addSpringConstraint(btRigidBody* rb, btVector3& cpos, btScalar scale){
+		btTransform tr;
+		tr.setIdentity();
+		tr.setOrigin(cpos);
+		btGeneric6DofSpringConstraint *sc =
+			new btGeneric6DofSpringConstraint(*rb, tr, true);
+		if (scale > 0){
+			sc->setBreakingImpulseThreshold(scale*breakingImpulseThreshold);
+		}
+		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
+		AxisMapper axisMapper(lsx, lsy, lsz, cpos);
+		for (int i = 0; i < 6; i++){
+			sc->enableSpring(i,true);
+			sc->setStiffness(i, axisMapper.getStiffness(i));
+			sc->setDamping(i, damping);
+		}
+		sc->setEquilibriumPoint();
+		return sc;
+	}
+	btTypedConstraint* addSliderConstraint(btRigidBody* rb, btVector3& cpos, btScalar scale){
+		btTransform tr;
+		tr.setIdentity();
+		tr.setOrigin(cpos);
+		btSliderConstraint *sc =
+			new btSliderConstraint(*rb, tr, true);
+		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
+		AxisMapper axisMapper(lsx, lsy, lsz, cpos);
+		axisMapper.setFy(scale*fy);
+		sc->setMaxLinMotorForce(axisMapper.getMaxForce(1));
+		return sc;
+	}
+	btTypedConstraint* addSpring2Constraint(btRigidBody* rb, btVector3& cpos, btScalar scale){
+		btTransform tr;
+		tr.setIdentity();
+		tr.setOrigin(cpos);
+		btGeneric6DofSpring2Constraint *sc =
+			new btGeneric6DofSpring2Constraint(*rb, tr);
+		if (scale > 0){
+			sc->setBreakingImpulseThreshold(scale*breakingImpulseThreshold);
+		}
+		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
+		AxisMapper axisMapper(lsx, lsy, lsz, cpos);
+		for (int i = 0; i < 6; i++){
+			sc->enableSpring(i, true);
+			sc->setStiffness(i, axisMapper.getStiffness(i));
+			sc->setDamping(i, damping);
+		}
+		sc->setEquilibriumPoint();
+		return sc;
 	}
 	/**
 	*/
-	void addElasticPlasticConstraint(btRigidBody* rb, btVector3& cpos, btScalar steelScale){
-		btScalar E(200E9);
-		btScalar G(80E9);
-		btScalar fy(200E6);
-		bool limitIfNeeded = true;
-		btScalar damping(0.1);
+	btTypedConstraint* addElasticPlasticConstraint(btRigidBody* rb, btVector3& cpos, btScalar steelScale){
 		btTransform tr;
 		tr.setIdentity();
 		tr.setOrigin(cpos);
 		AxisMapper axisMapper(lsx, lsy, lsz, cpos);
-		btScalar len = lsy/2;
-		btScalar h = lsz; 
-		btScalar b = lsx; // zlen
-		btScalar k0(E*h*b*steelScale / len);
-		// I=bh^3/12, k for end moment with fixed end is EI/l
-		btScalar im(E* steelScale / len / 12);
-		btScalar k1(h*h*h*b*im);
-		btScalar k2(h*b*b*b*im);
-		btScalar w0(fy*h*b*steelScale);
-		btScalar w1(fy*b*h*h*steelScale / 4);
-		btScalar w2(fy*b*b*h*steelScale / 4);
-		int *ami = axisMapper.getIndexes();
+		axisMapper.setE(E*steelScale);
+		axisMapper.setFy(fy*steelScale);
 		bt6DofElasticPlasticConstraint *sc =
 			new bt6DofElasticPlasticConstraint(*rb,
 			tr, true);
 		sc->setUserConstraintType(BPT_EP);
 		sc->setMaxPlasticRotation(maxPlasticRotation);
 		sc->setMaxPlasticStrain(maxPlasticStrain);
-		sc->setStiffness(ami[2], k0);
-		sc->setMaxForce(ami[2], w0 / 2);
-		sc->setStiffness(ami[0], k0);
-		sc->setMaxForce(ami[0], w0);
-		sc->setStiffness(ami[1], k0);
-		sc->setMaxForce(ami[1], w0 / 2);
-		sc->setStiffness(ami[5], k1);
-		sc->setMaxForce(ami[5], w1);
-		sc->setStiffness(ami[4], k1);
-		sc->setMaxForce(ami[4], w1);
-		sc->setStiffness(ami[3], k2);
-		sc->setMaxForce(ami[3], w2);
 		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
 		for (int i = 0; i<6; i++)
 		{
 			sc->enableSpring(i, true);
-		}
-		for (int i = 0; i<6; i++)
-		{
 			sc->setDamping(i, damping);
+			sc->setStiffness(i, axisMapper.getStiffness(i));
+			sc->setMaxForce(i, axisMapper.getMaxForce(i));
 		}
 		sc->setEquilibriumPoint();
 		m_dynamicsWorld->addAction(sc);
+		return sc;
 	}
-	void addElasticPlastic2Constraint(btRigidBody* rb, btVector3& cpos, btScalar steelScale){
-		btScalar E(200E9);
-		btScalar G(80E9);
-		btScalar fy(200E6);
-		bool limitIfNeeded = true;
-		btScalar damping(0.1);
+	btTypedConstraint* addElasticPlastic2Constraint(btRigidBody* rb, btVector3& cpos, btScalar steelScale){
 		btTransform tr;
 		tr.setIdentity();
 		tr.setOrigin(cpos);
 		AxisMapper axisMapper(lsx, lsy, lsz, cpos);
-		btScalar len = lsy / 2;
-		btScalar h = lsz;
-		btScalar b = lsx; // zlen
-		btScalar k0(E*h*b*steelScale / len);
-		// I=bh^3/12, k for end moment with fixed end is EI/l
-		btScalar im(E* steelScale / len / 12);
-		btScalar k1(h*h*h*b*im);
-		btScalar k2(h*b*b*b*im);
-		btScalar w0(fy*h*b*steelScale);
-		btScalar w1(fy*b*h*h*steelScale / 4);
-		btScalar w2(fy*b*b*h*steelScale / 4);
-		int *ami = axisMapper.getIndexes();
+		axisMapper.setE(E*steelScale);
+		axisMapper.setFy(fy*steelScale);
 		bt6DofElasticPlastic2Constraint *sc =
 			new bt6DofElasticPlastic2Constraint(*rb,tr);
 		sc->setUserConstraintType(BPT_EP2);
 		sc->setMaxPlasticRotation(maxPlasticRotation);
 		sc->setMaxPlasticStrain(maxPlasticStrain);
-		sc->setStiffness(ami[2], k0, limitIfNeeded);
-		sc->setMaxForce(ami[2], w0/2);
-		sc->setStiffness(ami[0], k0, limitIfNeeded);
-		sc->setMaxForce(ami[0], w0);
-		sc->setStiffness(ami[1], k0, limitIfNeeded);
-		sc->setMaxForce(ami[1], w0 / 2);
-		sc->setStiffness(ami[5], k1);
-		sc->setMaxForce(ami[5], w1);
-		sc->setStiffness(ami[4], k1);
-		sc->setMaxForce(ami[4], w1);
-		sc->setStiffness(ami[3], k2, limitIfNeeded);
-		sc->setMaxForce(ami[3], w2);
 		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
 		for (int i = 0; i<6; i++)
 		{
 			sc->enableSpring(i, true);
-		}
-		for (int i = 0; i<6; i++)
-		{
 			sc->setDamping(i, damping);
+			sc->setStiffness(i, axisMapper.getStiffness(i));
+			sc->setMaxForce(i, axisMapper.getMaxForce(i));
 		}
 		sc->setEquilibriumPoint();
 		m_dynamicsWorld->addAction(sc);
+		return sc;
 	}
 	int pngNro = 0;
 	char dumpFilename[FN_SIZE];
@@ -901,15 +903,7 @@ public:
 	void addRod(){
 		btAlignedObjectArray<btRigidBody*> ha;
 		btCollisionShape* loadShape = new btBoxShape(btVector3(lsx / 2, lsy / 2, lsz / 2));
-		btScalar mass;
-		switch (constraintType){
-		case Rigid:
-			mass = 0;
-			break;
-		default:
-			mass = lsx*lsy*lsz*getDensity(rodSteelScale);
-			break;
-		}
+		btScalar mass=lsx*lsy*lsz*getDensity(rodSteelScale);
 		m_collisionShapes.push_back(loadShape);
 		btTransform loadTrans;
 		loadTrans.setIdentity();
@@ -918,15 +912,31 @@ public:
 		m_body=localCreateRigidBody(mass, loadTrans, loadShape);
 		btVector3 cpos(0, lsy / 2, 0);
 		switch (constraintType){
+		case Rigid:
+			m_constraint=addFixedConstraint(m_body, cpos, 0);
+			break;
+		case Spring:
+			m_constraint = addSpringConstraint(m_body, cpos, rodSteelScale);
+			break;
 		case Impulse:
-			addFixedConstraint(m_body, cpos, rodSteelScale);
+			m_constraint = addFixedConstraint(m_body, cpos, rodSteelScale);
+			break;
+		case Spring2:
+			m_constraint = addSpring2Constraint(m_body, cpos, rodSteelScale);
+			break;
+		case Slider:
+			m_constraint = addSliderConstraint(m_body, cpos, rodSteelScale);
 			break;
 		case ElasticPlastic:
-			addElasticPlasticConstraint(m_body, cpos, rodSteelScale);
+			m_constraint = addElasticPlasticConstraint(m_body, cpos, rodSteelScale);
 			break;
 		case ElasticPlastic2:
-			addElasticPlastic2Constraint(m_body, cpos, rodSteelScale);
+			m_constraint = addElasticPlastic2Constraint(m_body, cpos, rodSteelScale);
 			break;
+		}
+		if (m_constraint != 0){
+			m_constraint->enableFeedback(true);
+			m_constraint->setJointFeedback(&jf);
 		}
 	}
 	void switchSolver(){
@@ -976,11 +986,6 @@ void TensionDemo::handleSingleStep(Gwen::Controls::Base* control){
 	PlasticityExampleBrowser::setPauseSimulation(false);
 }
 
-void TensionDemo::setGameBindings(Gwen::Controls::Base* control){
-	Gwen::Controls::CheckBox* cb =
-		static_cast<Gwen::Controls::CheckBox*>(control);
-	demo->gameBindings = cb->IsChecked();
-}
 void TensionDemo::setDisableCollisionsBetweenLinkedBodies
 (Gwen::Controls::Base* control){
 	Gwen::Controls::CheckBox* cb =
@@ -1043,7 +1048,7 @@ void TensionDemo::restartHandler(Gwen::Controls::Base* control){
 }
 void TensionDemo::reinit(){
 	m_gravity = btVector3(0, -10, 0);
-	gravityRampUpTime = 4;
+	gravityRampUpTime = 0;
 	lsx = 1;
 	lsy = 3;
 	lsz = 1;
@@ -1051,7 +1056,6 @@ void TensionDemo::reinit(){
 	rodSteelScale = 0.01;
 	maxPlasticStrain = 0.2;
 	maxPlasticRotation = 3;
-	gameBindings = true;
 	maxStepCount = LONG_MAX;
 	resetClocks();
 }
@@ -1142,6 +1146,8 @@ void TensionDemo::exitPhysics()
 		delete m_collisionConfiguration;
 		m_collisionConfiguration = 0;
 	}
+	m_body = 0;
+	m_constraint = 0;
 	PlasticityData::setData(0);
 }
 
@@ -1152,6 +1158,7 @@ TensionDemo::~TensionDemo()
 
 void TensionDemo::initPhysics()
 {	
+	breakingImpulseThreshold = fy*lsx*lsx;
 	hasFullGravity = false;
 	if (maxStepCount != LONG_MAX){
 		// Single step is active
@@ -1198,7 +1205,6 @@ void TensionDemo::initPhysics()
 	tr.setOrigin(btVector3(0,-3,0));
 	//create ground object
 	btRigidBody* ground=localCreateRigidBody(0, tr, groundShape);
-	ground->setFriction(1);
 	if (rodSteelScale >= 0){
 		addRod();
 	}
@@ -1304,7 +1310,7 @@ bool	TensionDemo::keyboardCallback(int key, int state)
 	idleClock.reset();
 	if (state)
 	{
-	if (isShiftPressed||gameBindings)
+	if (true)
 	{
 		switch (key) 
 			{
@@ -1347,68 +1353,6 @@ bool	TensionDemo::keyboardCallback(int key, int state)
 	{
 		switch (key) 
 		{
-		case 'a':if (!gameBindings){break;}
-		case B3G_LEFT_ARROW :
-			{
-				handled = true;
-				break;
-			}
-		case 'd':if (!gameBindings){ break; }
-		case B3G_RIGHT_ARROW:
-			{
-				handled = true;
-				break;
-			}
-		case 'w':if (!gameBindings){ break; }
-		case B3G_UP_ARROW:
-			{
-				handled = true;
-				break;
-			}
-		case 's':if (!gameBindings){ break; }
-		case B3G_DOWN_ARROW:
-			{
-				handled = true;
-				break;
-			}
-		case 'r':
-		{
-			handled = true;
-			break;
-		}
-		case 'f':
-		{
-			handled = true;
-			break;
-		}
-		case B3G_F1:
-		{
-			handled = true;
-			break;
-		}
-		case B3G_F2:
-		{
-			handled = true;
-			break;
-		}
-		case B3G_F3:
-		{
-			handled = true;
-			break;
-		}
-		case B3G_F4:
-		{
-			handled = true;
-			break;
-		}
-		case B3G_F7:
-			{
-				handled = true;
-				btDiscreteDynamicsWorld* world = (btDiscreteDynamicsWorld*)m_dynamicsWorld;
-				world->setLatencyMotionStateInterpolation(!world->getLatencyMotionStateInterpolation());
-				printf("world latencyMotionStateInterpolation = %d\n", world->getLatencyMotionStateInterpolation());
-				break;
-			}
 		case B3G_F6:
 			{
 				handled = true;
@@ -1435,8 +1379,8 @@ bool	TensionDemo::keyboardCallback(int key, int state)
 				isArrow = true;
 				break;
 		}
-		bool isCommon = !(gameBindings&&isArrow);
-		if (gameBindings || isArrow){
+		bool isCommon = !(isArrow);
+		if (isArrow){
 			switch (key)
 			{
 			case 'w':
