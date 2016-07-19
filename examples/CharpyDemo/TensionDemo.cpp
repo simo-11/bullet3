@@ -83,7 +83,9 @@ public:
 	btScalar lsx, lsy, lsz;
 	btRigidBody* m_body=0;
 	btTypedConstraint* m_constraint=0;
+	btScalar maxImpulse;
 	btJointFeedback jf;
+	AxisMapper* axisMapper=0;
 	long stepCount,maxStepCount,syncedStep;
 	btScalar stepTime,gravityRampUpTime;
 	btVector3 m_gravity;
@@ -245,6 +247,10 @@ public:
 		fps = updateViewCount / timeDelta;
 		speedometerUpdated = now;
 		updateViewCount = 0;
+		if (m_constraint){
+			c_impulse = btFabs(m_constraint->getAppliedImpulse());
+			c_percent = 100.*c_impulse/maxImpulse;
+		}
 	}
 	float pitchDelta = 0;
 	void setPitchDelta(float delta){
@@ -411,17 +417,16 @@ public:
 	Gwen::Controls::Label *db21, *db22, *db23;
 	Gwen::Controls::Label *db31, *db32;
 	int fps = 0;
-	int kmph = 0;
-	int mps = 0;
+	btScalar c_impulse = 0, c_percent=0;
 	void updateDashboards(){
 		char buffer[UIF_SIZE];
 		sprintf_s(buffer, UIF_SIZE, "%-3d ", fps);
 		std::string str = std::string(buffer);
 		db11->SetText(str);
-		sprintf_s(buffer, UIF_SIZE, "%-3d ", kmph);
+		sprintf_s(buffer, UIF_SIZE, "%4.0f ", c_impulse);
 		str = std::string(buffer);
 		db13->SetText(str);
-		sprintf_s(buffer, UIF_SIZE, "%-3d ", mps);
+		sprintf_s(buffer, UIF_SIZE, "%4.0f ", c_percent);
 		str = std::string(buffer);
 		db15->SetText(str);
 		if (m_body){
@@ -492,16 +497,17 @@ public:
 		db12->SetText("fps");
 		db12->SizeToContents();
 		db12->SetPos(gx + wxi / 2, gy);
-		db13->SizeToContents();
+		db13->SetText("        ");
+		db13->SizeToContents(); // impulse
 		db13->SetPos(gx + wxi, gy);
-		db14->SetText("km/h");
+		db14->SetText("Ns");
 		db14->SizeToContents();
-		db14->SetPos(gx + 14 * wxi / 10, gy);
-		db15->SizeToContents();
-		db15->SetPos(gx + 2*wxi, gy);
-		db16->SetText("m/s");
+		db14->SetPos(gx + 18 * wxi / 10, gy);
+		db15->SizeToContents(); // c_percent
+		db15->SetPos(gx + 22*wxi/10, gy);
+		db16->SetText("%");
 		db16->SizeToContents();
-		db16->SetPos(gx + 24 * wxi / 10, gy);
+		db16->SetPos(gx + 28 * wxi / 10, gy);
 		gy += gyInc;
 		db21->SizeToContents();
 		db21->SetPos(gx, gy);
@@ -631,7 +637,7 @@ public:
 	void addRodSteelScale(){
 		addLabel("rod steel%");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(rodSteelScale * 100, "%.3f");
+		std::string text = uif(rodSteelScale * 100, "%.6f");
 		gc->SetToolTip("Area of enforcement steel [%] [0-100]");
 		gc->SetText(text);
 		place(gc);
@@ -713,66 +719,53 @@ public:
 		resetClocks();
 		initPhysics();
 	}
-	btTypedConstraint* addFixedConstraint(btRigidBody* rb, btVector3& cpos, btScalar scale){
+	btTypedConstraint* addFixedConstraint(btRigidBody* rb, btVector3& cpos){
 		btTransform tr;
 		tr.setIdentity();
 		tr.setOrigin(cpos);
 		btGeneric6DofConstraint *sc =
 		new btGeneric6DofConstraint(*rb, tr, true);
-		if (scale > 0){
-			sc->setBreakingImpulseThreshold(scale*breakingImpulseThreshold);
-		}
 		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
 		for (int i = 0; i < 6; i++){
 			sc->setLimit(i, 0, 0); // make fixed
 		}
 		return sc;
 	}
-	btTypedConstraint* addSpringConstraint(btRigidBody* rb, btVector3& cpos, btScalar scale){
+	btTypedConstraint* addSpringConstraint(btRigidBody* rb, btVector3& cpos){
 		btTransform tr;
 		tr.setIdentity();
 		tr.setOrigin(cpos);
 		btGeneric6DofSpringConstraint *sc =
 			new btGeneric6DofSpringConstraint(*rb, tr, true);
-		if (scale > 0){
-			sc->setBreakingImpulseThreshold(scale*breakingImpulseThreshold);
-		}
 		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
-		AxisMapper axisMapper(lsx, lsy, lsz, cpos);
 		for (int i = 0; i < 6; i++){
 			sc->enableSpring(i,true);
-			sc->setStiffness(i, axisMapper.getStiffness(i));
+			sc->setStiffness(i, axisMapper->getStiffness(i));
 			sc->setDamping(i, damping);
 		}
 		sc->setEquilibriumPoint();
 		return sc;
 	}
-	btTypedConstraint* addSliderConstraint(btRigidBody* rb, btVector3& cpos, btScalar scale){
+	btTypedConstraint* addSliderConstraint(btRigidBody* rb, btVector3& cpos){
 		btTransform tr;
 		tr.setIdentity();
 		tr.setOrigin(cpos);
 		btSliderConstraint *sc =
 			new btSliderConstraint(*rb, tr, true);
 		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
-		AxisMapper axisMapper(lsx, lsy, lsz, cpos);
-		axisMapper.setFy(scale*fy);
-		sc->setMaxLinMotorForce(axisMapper.getMaxForce(1));
+		sc->setMaxLinMotorForce(axisMapper->getMaxForce(1));
 		return sc;
 	}
-	btTypedConstraint* addSpring2Constraint(btRigidBody* rb, btVector3& cpos, btScalar scale){
+	btTypedConstraint* addSpring2Constraint(btRigidBody* rb, btVector3& cpos){
 		btTransform tr;
 		tr.setIdentity();
 		tr.setOrigin(cpos);
 		btGeneric6DofSpring2Constraint *sc =
 			new btGeneric6DofSpring2Constraint(*rb, tr);
-		if (scale > 0){
-			sc->setBreakingImpulseThreshold(scale*breakingImpulseThreshold);
-		}
 		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
-		AxisMapper axisMapper(lsx, lsy, lsz, cpos);
 		for (int i = 0; i < 6; i++){
 			sc->enableSpring(i, true);
-			sc->setStiffness(i, axisMapper.getStiffness(i));
+			sc->setStiffness(i, axisMapper->getStiffness(i));
 			sc->setDamping(i, damping);
 		}
 		sc->setEquilibriumPoint();
@@ -780,13 +773,10 @@ public:
 	}
 	/**
 	*/
-	btTypedConstraint* addElasticPlasticConstraint(btRigidBody* rb, btVector3& cpos, btScalar steelScale){
+	btTypedConstraint* addElasticPlasticConstraint(btRigidBody* rb, btVector3& cpos){
 		btTransform tr;
 		tr.setIdentity();
 		tr.setOrigin(cpos);
-		AxisMapper axisMapper(lsx, lsy, lsz, cpos);
-		axisMapper.setE(E*steelScale);
-		axisMapper.setFy(fy*steelScale);
 		bt6DofElasticPlasticConstraint *sc =
 			new bt6DofElasticPlasticConstraint(*rb,
 			tr, true);
@@ -798,20 +788,17 @@ public:
 		{
 			sc->enableSpring(i, true);
 			sc->setDamping(i, damping);
-			sc->setStiffness(i, axisMapper.getStiffness(i));
-			sc->setMaxForce(i, axisMapper.getMaxForce(i));
+			sc->setStiffness(i, axisMapper->getStiffness(i));
+			sc->setMaxForce(i, axisMapper->getMaxForce(i));
 		}
 		sc->setEquilibriumPoint();
 		m_dynamicsWorld->addAction(sc);
 		return sc;
 	}
-	btTypedConstraint* addElasticPlastic2Constraint(btRigidBody* rb, btVector3& cpos, btScalar steelScale){
+	btTypedConstraint* addElasticPlastic2Constraint(btRigidBody* rb, btVector3& cpos){
 		btTransform tr;
 		tr.setIdentity();
 		tr.setOrigin(cpos);
-		AxisMapper axisMapper(lsx, lsy, lsz, cpos);
-		axisMapper.setE(E*steelScale);
-		axisMapper.setFy(fy*steelScale);
 		bt6DofElasticPlastic2Constraint *sc =
 			new bt6DofElasticPlastic2Constraint(*rb,tr);
 		sc->setUserConstraintType(BPT_EP2);
@@ -822,8 +809,8 @@ public:
 		{
 			sc->enableSpring(i, true);
 			sc->setDamping(i, damping);
-			sc->setStiffness(i, axisMapper.getStiffness(i));
-			sc->setMaxForce(i, axisMapper.getMaxForce(i));
+			sc->setStiffness(i, axisMapper->getStiffness(i));
+			sc->setMaxForce(i, axisMapper->getMaxForce(i));
 		}
 		sc->setEquilibriumPoint();
 		m_dynamicsWorld->addAction(sc);
@@ -911,32 +898,48 @@ public:
 		loadTrans.setOrigin(pos);
 		m_body=localCreateRigidBody(mass, loadTrans, loadShape);
 		btVector3 cpos(0, lsy / 2, 0);
+		axisMapper=new AxisMapper(lsx, lsy, lsz, cpos);
+		axisMapper->setE(E*rodSteelScale);
+		axisMapper->setFy(fy*rodSteelScale);
 		switch (constraintType){
 		case Rigid:
-			m_constraint=addFixedConstraint(m_body, cpos, 0);
+			m_constraint=addFixedConstraint(m_body, cpos);
 			break;
 		case Spring:
-			m_constraint = addSpringConstraint(m_body, cpos, rodSteelScale);
+			m_constraint = addSpringConstraint(m_body, cpos);
 			break;
 		case Impulse:
-			m_constraint = addFixedConstraint(m_body, cpos, rodSteelScale);
+			m_constraint = addFixedConstraint(m_body, cpos);
 			break;
 		case Spring2:
-			m_constraint = addSpring2Constraint(m_body, cpos, rodSteelScale);
+			m_constraint = addSpring2Constraint(m_body, cpos);
 			break;
 		case Slider:
-			m_constraint = addSliderConstraint(m_body, cpos, rodSteelScale);
+			m_constraint = addSliderConstraint(m_body, cpos);
 			break;
 		case ElasticPlastic:
-			m_constraint = addElasticPlasticConstraint(m_body, cpos, rodSteelScale);
+			m_constraint = addElasticPlasticConstraint(m_body, cpos);
 			break;
 		case ElasticPlastic2:
-			m_constraint = addElasticPlastic2Constraint(m_body, cpos, rodSteelScale);
+			m_constraint = addElasticPlastic2Constraint(m_body, cpos);
 			break;
 		}
 		if (m_constraint != 0){
 			m_constraint->enableFeedback(true);
 			m_constraint->setJointFeedback(&jf);
+			switch (constraintType){
+			case Rigid:
+				maxImpulse = m_constraint->getBreakingImpulseThreshold();
+				break;
+			default:
+				maxImpulse = m_fixedTimeStep*axisMapper->getMaxForce(1);
+				break;
+			}
+			switch (constraintType){
+			case Impulse:
+				m_constraint->setBreakingImpulseThreshold(maxImpulse);
+				break;
+			}
 		}
 	}
 	void switchSolver(){
@@ -1053,7 +1056,7 @@ void TensionDemo::reinit(){
 	lsy = 3;
 	lsz = 1;
 	density = 2000;
-	rodSteelScale = 0.01;
+	rodSteelScale = 0.001;
 	maxPlasticStrain = 0.2;
 	maxPlasticRotation = 3;
 	maxStepCount = LONG_MAX;
@@ -1148,6 +1151,10 @@ void TensionDemo::exitPhysics()
 	}
 	m_body = 0;
 	m_constraint = 0;
+	if (axisMapper){
+		delete axisMapper;
+		axisMapper = 0;
+	}
 	PlasticityData::setData(0);
 }
 
@@ -1266,16 +1273,19 @@ void TensionDemo::stepSimulation(float deltaTime)
 		int maxSimSubSteps =  10;
 		updateGravity();
 		btScalar timeStep = (btScalar)deltaTime;
+		if (stepCount + (deltaTime/m_fixedTimeStep)>=maxStepCount){
+			timeStep = m_fixedTimeStep;
+		}
 		stepCount += m_dynamicsWorld->stepSimulation(timeStep, maxSimSubSteps, m_fixedTimeStep);
-		if (stepCount > maxStepCount){
+		if (stepCount >= maxStepCount){
 			PlasticityExampleBrowser::setPauseSimulation(true);
 		}
 		stepTime += timeStep;
 		updateView();
 	}
 	else{
-		kmph = 0;
-		mps = 0;
+		c_impulse = 0;
+		c_percent = 0;
 	}
 }
 

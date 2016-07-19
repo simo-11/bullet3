@@ -50,6 +50,7 @@ void AxisMapper::initStiffness(){
 	m_stiffness[3] = k0;
 	m_stiffness[4] = k1;
 	m_stiffness[5] = k2;
+	stiffnessDone = true;
 }
 btScalar AxisMapper::getStiffness(int index){
 	if (!stiffnessDone){
@@ -71,12 +72,15 @@ void AxisMapper::initMaxForce(){
 	m_maxForce[3] = w1;
 	m_maxForce[4] = w1;
 	m_maxForce[5] = w2;
+	maxForceDone = true;
 }
 
 btScalar AxisMapper::getMaxForce(int index){
 	if (!maxForceDone){
 		initMaxForce();
 	}
-	return m_maxForce[m_ami[index]];
+	int i = m_ami[index];
+	btScalar value = m_maxForce[i];
+	return value;
 }
 
