@@ -414,6 +414,10 @@ public:
 		return btScalar(lsx*lsy*lsz*getDensity(rodSteelScale));
 	}
 	btScalar getEquilibriumPoint(){
+		bool useZero = true;
+		if (useZero){
+			return 0;
+		}
 		btScalar f = -10 * getMass();
 		btScalar k = axisMapper->getStiffness(1);
 		btScalar val(f / k);
