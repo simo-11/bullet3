@@ -248,8 +248,12 @@ public:
 		speedometerUpdated = now;
 		updateViewCount = 0;
 		if (m_constraint){
-			c_impulse = btFabs(m_constraint->getAppliedImpulse());
+			c_impulse = btFabs(jf.m_appliedForceBodyB[1]*m_fixedTimeStep);
 			c_percent = 100.*c_impulse/maxImpulse;
+		}
+		if (m_body){
+			b_y_location = m_body->getWorldTransform().getOrigin().y() - yStart;
+			b_y_velocity = m_body->getLinearVelocity().y();
 		}
 	}
 	float pitchDelta = 0;
@@ -391,18 +395,6 @@ public:
 	void setLsy(Gwen::Controls::Base* control);
 	void setLsz(Gwen::Controls::Base* control);
 	void setDensity(Gwen::Controls::Base* control);
-	void setBreakingSpeed(Gwen::Controls::Base* control);
-	void setCarMass(Gwen::Controls::Base* control);
-	void setDefaultBreakingForce(Gwen::Controls::Base* control);
-	void setMaxEngineForce(Gwen::Controls::Base* control);
-	void setSuspensionStiffness(Gwen::Controls::Base* control);
-	void setSuspensionMaxForce(Gwen::Controls::Base* control);
-	void setSuspensionDamping(Gwen::Controls::Base* control);
-	void setSuspensionCompression(Gwen::Controls::Base* control);
-	void setSuspensionRestLength(Gwen::Controls::Base* control);
-	void setFenceSteelScale(Gwen::Controls::Base* control);
-	void setBridgeSteelScale(Gwen::Controls::Base* control);
-	void setGateSteelScale(Gwen::Controls::Base* control);
 	void setRodSteelScale(Gwen::Controls::Base* control);
 	void setMaxPlasticStrain(Gwen::Controls::Base* control);
 	void setMaxPlasticRotation(Gwen::Controls::Base* control);
@@ -417,7 +409,16 @@ public:
 	Gwen::Controls::Label *db21, *db22, *db23;
 	Gwen::Controls::Label *db31, *db32;
 	int fps = 0;
-	btScalar c_impulse = 0, c_percent=0;
+	btScalar c_impulse = 0, c_percent=0, b_y_location=0, b_y_velocity=0, yStart=0;
+	btScalar getMass(){
+		return btScalar(lsx*lsy*lsz*getDensity(rodSteelScale));
+	}
+	btScalar getEquilibriumPoint(){
+		btScalar f = -10 * getMass();
+		btScalar k = axisMapper->getStiffness(1);
+		btScalar val(f / k);
+		return val;
+	}
 	void updateDashboards(){
 		char buffer[UIF_SIZE];
 		sprintf_s(buffer, UIF_SIZE, "%-3d ", fps);
@@ -429,16 +430,12 @@ public:
 		sprintf_s(buffer, UIF_SIZE, "%4.0f ", c_percent);
 		str = std::string(buffer);
 		db15->SetText(str);
-		if (m_body){
-			sprintf_s(buffer, UIF_SIZE, "%9.3f ", m_body->getLinearVelocity().length());
-			str = std::string(buffer);
-			db21->SetText(str);
-		}
-		if (m_constraint){
-			sprintf_s(buffer, UIF_SIZE, "%9.0f ", m_constraint->getAppliedImpulse());
-			str = std::string(buffer);
-			db22->SetText(str);
-		}
+		sprintf_s(buffer, UIF_SIZE, "%9.6f ", b_y_location);
+		str = std::string(buffer);
+		db21->SetText(str);
+		sprintf_s(buffer, UIF_SIZE, "%9.6f ", b_y_velocity);
+		str = std::string(buffer);
+		db22->SetText(str);
 		if (m_body){
 			sprintf_s(buffer, UIF_SIZE, "%9.0f ", m_body->getGravity().y());
 			str = std::string(buffer);
@@ -498,21 +495,25 @@ public:
 		db12->SizeToContents();
 		db12->SetPos(gx + wxi / 2, gy);
 		db13->SetText("        ");
-		db13->SizeToContents(); // impulse
+		db13->SizeToContents(); // c_impulse
+		db13->SetToolTip("constraint impulse");
 		db13->SetPos(gx + wxi, gy);
 		db14->SetText("Ns");
 		db14->SizeToContents();
 		db14->SetPos(gx + 18 * wxi / 10, gy);
 		db15->SizeToContents(); // c_percent
-		db15->SetPos(gx + 22*wxi/10, gy);
+		db15->SetToolTip("constraint usage"); 
+		db15->SetPos(gx + 22 * wxi / 10, gy);
 		db16->SetText("%");
 		db16->SizeToContents();
 		db16->SetPos(gx + 28 * wxi / 10, gy);
 		gy += gyInc;
 		db21->SizeToContents();
 		db21->SetPos(gx, gy);
+		db21->SetToolTip("y location");
 		db22->SizeToContents();
 		db22->SetPos(gx + wxi, gy);
+		db22->SetToolTip("y velocity");
 		db23->SizeToContents();
 		db23->SetPos(gx + 2 * wxi, gy);
 		gy += gyInc;
@@ -743,7 +744,7 @@ public:
 			sc->setStiffness(i, axisMapper->getStiffness(i));
 			sc->setDamping(i, damping);
 		}
-		sc->setEquilibriumPoint();
+		sc->setEquilibriumPoint(1, getEquilibriumPoint());
 		return sc;
 	}
 	btTypedConstraint* addSliderConstraint(btRigidBody* rb, btVector3& cpos){
@@ -753,6 +754,7 @@ public:
 		btSliderConstraint *sc =
 			new btSliderConstraint(*rb, tr, true);
 		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
+		sc->setPoweredLinMotor(true);
 		sc->setMaxLinMotorForce(axisMapper->getMaxForce(1));
 		return sc;
 	}
@@ -768,7 +770,7 @@ public:
 			sc->setStiffness(i, axisMapper->getStiffness(i));
 			sc->setDamping(i, damping);
 		}
-		sc->setEquilibriumPoint();
+		sc->setEquilibriumPoint(1, getEquilibriumPoint());
 		return sc;
 	}
 	/**
@@ -791,7 +793,7 @@ public:
 			sc->setStiffness(i, axisMapper->getStiffness(i));
 			sc->setMaxForce(i, axisMapper->getMaxForce(i));
 		}
-		sc->setEquilibriumPoint();
+		sc->setEquilibriumPoint(1, getEquilibriumPoint());
 		m_dynamicsWorld->addAction(sc);
 		return sc;
 	}
@@ -812,7 +814,7 @@ public:
 			sc->setStiffness(i, axisMapper->getStiffness(i));
 			sc->setMaxForce(i, axisMapper->getMaxForce(i));
 		}
-		sc->setEquilibriumPoint();
+		sc->setEquilibriumPoint(1, getEquilibriumPoint());
 		m_dynamicsWorld->addAction(sc);
 		return sc;
 	}
@@ -855,7 +857,7 @@ public:
 		}
 		pData.clear();
 		char buf[B_LEN*2];
-		sprintf_s(buf, B_LEN, "stepTime=%4.1f, gravity=%4.1f, stepCount=%d",
+		sprintf_s(buf, B_LEN, "stepTime=%.3f, gravity=%4.1f, stepCount=%d",
 			stepTime, m_dynamicsWorld->getGravity().getY(),stepCount);
 		infoMsg(buf);
 		btDiscreteDynamicsWorld *dw = m_dynamicsWorld;
@@ -890,11 +892,12 @@ public:
 	void addRod(){
 		btAlignedObjectArray<btRigidBody*> ha;
 		btCollisionShape* loadShape = new btBoxShape(btVector3(lsx / 2, lsy / 2, lsz / 2));
-		btScalar mass=lsx*lsy*lsz*getDensity(rodSteelScale);
+		btScalar mass = getMass();
 		m_collisionShapes.push_back(loadShape);
 		btTransform loadTrans;
 		loadTrans.setIdentity();
-		btVector3 pos = btVector3(0, lsy, 0);
+		yStart = lsy;
+		btVector3 pos = btVector3(0, yStart, 0);
 		loadTrans.setOrigin(pos);
 		m_body=localCreateRigidBody(mass, loadTrans, loadShape);
 		btVector3 cpos(0, lsy / 2, 0);
@@ -1275,8 +1278,11 @@ void TensionDemo::stepSimulation(float deltaTime)
 		btScalar timeStep = (btScalar)deltaTime;
 		if (stepCount + (deltaTime/m_fixedTimeStep)>=maxStepCount){
 			timeStep = m_fixedTimeStep;
+		}else if (maxSimSubSteps*m_fixedTimeStep>deltaTime){
+			timeStep = maxSimSubSteps*m_fixedTimeStep;
 		}
-		stepCount += m_dynamicsWorld->stepSimulation(timeStep, maxSimSubSteps, m_fixedTimeStep);
+		stepCount += m_dynamicsWorld->stepSimulation
+			(timeStep, maxSimSubSteps, m_fixedTimeStep);
 		if (stepCount >= maxStepCount){
 			PlasticityExampleBrowser::setPauseSimulation(true);
 		}
@@ -1286,6 +1292,8 @@ void TensionDemo::stepSimulation(float deltaTime)
 	else{
 		c_impulse = 0;
 		c_percent = 0;
+		b_y_velocity = 0;
+		b_y_location = 0;
 	}
 }
 
