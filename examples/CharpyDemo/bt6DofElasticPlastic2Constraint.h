@@ -121,7 +121,6 @@ public:
 
     bt6DofElasticPlastic2Constraint(btRigidBody& rbA, btRigidBody& rbB, const btTransform& frameInA, const btTransform& frameInB, RotateOrder rotOrder = RO_XYZ);
     bt6DofElasticPlastic2Constraint(btRigidBody& rbB, const btTransform& frameInB, RotateOrder rotOrder = RO_XYZ);
-
 	virtual void buildJacobian() {}
 	virtual void getInfo1 (btConstraintInfo1* info);
 	virtual void getInfo2 (btConstraintInfo2* info);
@@ -290,7 +289,7 @@ public:
 	btScalar    m_currentPlasticRotation = 0;
 	btScalar m_maxRatio;
 	int m_maxRatioDof;
-	btJointFeedback jointFeedback;
+	btJointFeedback* myJointFeedback=0;
 	void setMaxForce(int index, btScalar value);
 	void setMaxPlasticStrain(btScalar value);
 	void setMaxPlasticRotation(btScalar value);
@@ -306,7 +305,13 @@ public:
 	///btActionInterface interface
 	virtual void updateAction(btCollisionWorld* collisionWorld, btScalar step)
 	{
-		updatePlasticity(jointFeedback);
+		btJointFeedback* jf= getJointFeedback();
+		if (0==jf){
+			myJointFeedback = new btJointFeedback();
+			jf = myJointFeedback;
+			setJointFeedback(jf);
+		}
+		updatePlasticity(*jf);
 		if (!isEnabled()){
 			btDynamicsWorld *dw = (btDynamicsWorld *)collisionWorld;
 			dw->removeConstraint(this);
@@ -314,7 +319,12 @@ public:
 	}
 	///btActionInterface interface
 	void	debugDraw(btIDebugDraw* debugDrawer);
-
+	~bt6DofElasticPlastic2Constraint(){
+		if (0 != myJointFeedback){
+			delete myJointFeedback;
+			myJointFeedback = 0;
+		}
+	}
 	// bcc
 };
 

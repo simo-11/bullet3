@@ -89,7 +89,6 @@ void bt6DofElasticPlastic2Constraint::initPlasticity()
 		m_maxPlasticRotation = btScalar(0.f);
 		m_currentPlasticRotation = btScalar(0.f);
 	}
-	setJointFeedback(&jointFeedback);
 }
 
 

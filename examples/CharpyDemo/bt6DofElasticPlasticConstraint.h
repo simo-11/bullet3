@@ -102,7 +102,7 @@ public:
 	void calculateFpsLimit(int index);
 	void setFrequencyRatio(btScalar frequencyRatio);
 	btScalar getFrequencyRatio();
-	btJointFeedback jointFeedback;
+	btJointFeedback* myJointFeedback=0;
 	// bcc
 	void setEquilibriumPoint(); // set the current constraint position/orientation as an equilibrium point for all DOF
 	void setEquilibriumPoint(int index);  // set the current constraint position/orientation as an equilibrium point for given DOF
@@ -118,7 +118,13 @@ public:
 	///btActionInterface interface
 	virtual void updateAction(btCollisionWorld* collisionWorld, btScalar step)
 	{
-		updatePlasticity(jointFeedback);
+		btJointFeedback* jf = getJointFeedback();
+		if (0 == jf){
+			myJointFeedback = new btJointFeedback();
+			jf = myJointFeedback;
+			setJointFeedback(jf);
+		}
+		updatePlasticity(*jf);
 		if (!isEnabled()){
 			btDynamicsWorld *dw = (btDynamicsWorld *)collisionWorld;
 			dw->removeConstraint(this);
@@ -126,7 +132,12 @@ public:
 	}
 	///btActionInterface interface
 	void	debugDraw(btIDebugDraw* debugDrawer);
-
+	~bt6DofElasticPlasticConstraint(){
+		if (0 != myJointFeedback){
+			delete myJointFeedback;
+			myJointFeedback = 0;
+		}
+	}
 };
 
 

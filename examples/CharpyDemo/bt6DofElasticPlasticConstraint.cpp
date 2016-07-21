@@ -56,7 +56,6 @@ void bt6DofElasticPlasticConstraint::init()
 		m_currentPlasticRotation = btScalar(0.f);
 	}
 	id = ++idCounter;
-	setJointFeedback(&jointFeedback);
 }
 
 
