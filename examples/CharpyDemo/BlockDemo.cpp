@@ -17,7 +17,7 @@ subject to the following restrictions:
 Based on DemolisherDemo by Simo Nikula 2016-
 */
 #define _CRT_SECURE_NO_WARNINGS
-#include "TensionDemo.h"
+#include "BlockDemo.h"
 #include "AxisMapper.h"
 #include "LinearMath/btQuickprof.h"
 #include <stdio.h> 
@@ -50,9 +50,9 @@ Based on DemolisherDemo by Simo Nikula 2016-
 #include "../CommonInterfaces/CommonGraphicsAppInterface.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenUserInterface.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenInternalData.h"
-const char * PROFILE_TENSION_SLEEP = "TensionDemo::Sleep";
+const char * PROFILE_TENSION_SLEEP = "BlockDemo::Sleep";
 
-class TensionDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
+class BlockDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 {
 public:
 	class btDiscreteDynamicsWorld* m_dynamicsWorld;
@@ -63,7 +63,6 @@ public:
 	btRigidBody* localCreateRigidBody(btScalar mass, const btTransform& worldTransform, btCollisionShape* colSape);
 
 	GUIHelperInterface* m_guiHelper;
-	int m_wheelInstances[4];
 
 	bool m_useDefaultCamera;
 	btAlignedObjectArray<btCollisionShape*> m_collisionShapes;
@@ -97,7 +96,7 @@ public:
 	btScalar damping2 = 0.1; // 0= no damping, 1=critically damped, >1 overdamped
 	bool hasFullGravity;
 	btScalar m_fixedTimeStep = btScalar(1) / btScalar(60);
-	btScalar rodSteelScale;
+	btScalar blockSteelScale;
 	btScalar density;
 	btScalar maxPlasticRotation;
 	btScalar maxPlasticStrain;
@@ -120,14 +119,18 @@ public:
 		Impulse = 3, Spring2 = 4, Slider=5,
 		ElasticPlastic = 6, ElasticPlastic2 = 7 };
 	Constraint constraintType;
+	enum Orientation {
+		X = 0, Y = 1
+	};
+	Orientation orientationType;
 	float		m_cameraHeight;
 
 	float	m_minCameraDistance;
 	float	m_maxCameraDistance;
 	bool useMCLPSolver = false;
-	TensionDemo(CommonExampleOptions & options);
+	BlockDemo(CommonExampleOptions & options);
 
-	virtual ~TensionDemo();
+	virtual ~BlockDemo();
 
 	virtual void stepSimulation(float deltaTime);
 
@@ -396,7 +399,7 @@ public:
 	void setLsy(Gwen::Controls::Base* control);
 	void setLsz(Gwen::Controls::Base* control);
 	void setDensity(Gwen::Controls::Base* control);
-	void setRodSteelScale(Gwen::Controls::Base* control);
+	void setBlockSteelScale(Gwen::Controls::Base* control);
 	void setMaxPlasticStrain(Gwen::Controls::Base* control);
 	void setMaxPlasticRotation(Gwen::Controls::Base* control);
 	void handlePauseSimulation(Gwen::Controls::Base* control);
@@ -412,7 +415,7 @@ public:
 	int fps = 0;
 	btScalar c_impulse = 0, c_percent=0, b_y_location=0, b_y_velocity=0, yStart=0;
 	btScalar getMass(){
-		return btScalar(lsx*lsy*lsz*getDensity(rodSteelScale));
+		return btScalar(lsx*lsy*lsz*getDensity(blockSteelScale));
 	}
 	btScalar getEquilibriumPoint(){
 		bool useZero = true;
@@ -460,7 +463,7 @@ public:
 		gc->SetChecked(disableCollisionsBetweenLinkedBodies);
 		gy += gyInc;
 		gc->onCheckChanged.Add(pPage, 
-			&TensionDemo::setDisableCollisionsBetweenLinkedBodies);
+			&BlockDemo::setDisableCollisionsBetweenLinkedBodies);
 	}
 
 	Gwen::Controls::CheckBox* dumpPngGc;
@@ -471,7 +474,7 @@ public:
 		gc->SetChecked(dumpPng);
 		dumpPngGc = gc;
 		gy += gyInc;
-		gc->onCheckChanged.Add(pPage, &TensionDemo::setDumpPng);
+		gc->onCheckChanged.Add(pPage, &BlockDemo::setDumpPng);
 	}
 	void addLogDir(){
 		Gwen::Controls::Label* label = addLabel("logDir");
@@ -479,7 +482,7 @@ public:
 		gc->SetPos(gxi, gy);
 		gc->SetText(logDir);
 		gy += gyInc;
-		gc->onReturnPressed.Add(pPage, &TensionDemo::setLogDir);
+		gc->onReturnPressed.Add(pPage, &BlockDemo::setLogDir);
 	}
 	void addDashboard(){
 		db11 = new Gwen::Controls::Label(pPage);
@@ -543,7 +546,7 @@ public:
 		gc->SetText(L"Pause");
 		gc->SetPos(gx, gy);
 		gc->SetSize(wxi - 4, gyInc - 4);
-		gc->onPress.Add(pPage, &TensionDemo::handlePauseSimulation);
+		gc->onPress.Add(pPage, &BlockDemo::handlePauseSimulation);
 	}
 	void addSingleStepButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
@@ -551,14 +554,14 @@ public:
 		gc->SetToolTip(L"Single Step");
 		gc->SetPos(gx + wxi, gy);
 		gc->SetSize(swxi - 4, gyInc - 4);
-		gc->onPress.Add(pPage, &TensionDemo::handleSingleStep);
+		gc->onPress.Add(pPage, &BlockDemo::handleSingleStep);
 	}
 	void addRestartButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
 		gc->SetText(L"Restart");
 		gc->SetPos(gx + wxi+swxi, gy);
 		gc->SetSize(wxi - 4, gyInc - 4);
-		gc->onPress.Add(pPage, &TensionDemo::restartHandler);
+		gc->onPress.Add(pPage, &BlockDemo::restartHandler);
 	}
 	void addResetButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
@@ -566,7 +569,7 @@ public:
 		gc->SetPos(gx + 2 * wxi+swxi, gy);
 		gc->SetSize(wxi - 4, gyInc - 4);
 		gy += gyInc;
-		gc->onPress.Add(pPage, &TensionDemo::resetHandler);
+		gc->onPress.Add(pPage, &BlockDemo::resetHandler);
 	}
 	void place(Gwen::Controls::Base* gc){
 		gc->SetPos(gxi, gy);
@@ -580,7 +583,7 @@ public:
 		std::string text = uif(gravityRampUpTime, "%.2f");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &TensionDemo::setGravityRampUpTime);
+		gc->onReturnPressed.Add(pPage, &BlockDemo::setGravityRampUpTime);
 	}
 	void addLsx(){
 		addLabel("lsx");
@@ -589,7 +592,7 @@ public:
 		gc->SetToolTip("Load size in x-direction");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &TensionDemo::setLsx);
+		gc->onReturnPressed.Add(pPage, &BlockDemo::setLsx);
 	}
 	void addLsy(){
 		addLabel("lsy");
@@ -598,7 +601,7 @@ public:
 		gc->SetToolTip("Load size in y-direction");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &TensionDemo::setLsy);
+		gc->onReturnPressed.Add(pPage, &BlockDemo::setLsy);
 	}
 	void addLsz(){
 		addLabel("lsz");
@@ -607,7 +610,7 @@ public:
 		gc->SetToolTip("Load size in z-direction");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &TensionDemo::setLsz);
+		gc->onReturnPressed.Add(pPage, &BlockDemo::setLsz);
 	}
 	void addDensity(){
 		addLabel("density");
@@ -616,7 +619,7 @@ public:
 		gc->SetToolTip("Load density [kg/m3]");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &TensionDemo::setDensity);
+		gc->onReturnPressed.Add(pPage, &BlockDemo::setDensity);
 	}
 	btScalar steelDensity=7800;
 	btScalar getDensity(btScalar steelScale){
@@ -629,7 +632,7 @@ public:
 		gc->SetToolTip("maxPlasticStrain");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &TensionDemo::setMaxPlasticStrain);
+		gc->onReturnPressed.Add(pPage, &BlockDemo::setMaxPlasticStrain);
 	}
 	void addMaxPlasticRotation(){
 		addLabel("maxPlasticRotation");
@@ -638,18 +641,18 @@ public:
 		gc->SetToolTip("maxPlasticRotation");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &TensionDemo::setMaxPlasticRotation);
+		gc->onReturnPressed.Add(pPage, &BlockDemo::setMaxPlasticRotation);
 	}
-	void addRodSteelScale(){
-		addLabel("rod steel%");
+	void addBlockSteelScale(){
+		addLabel("block steel%");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		std::string text = uif(rodSteelScale * 100, "%.6f");
+		std::string text = uif(blockSteelScale * 100, "%.6f");
 		gc->SetToolTip("Area of enforcement steel [%] [0-100]");
 		gc->SetText(text);
 		place(gc);
-		gc->onReturnPressed.Add(pPage, &TensionDemo::setRodSteelScale);
+		gc->onReturnPressed.Add(pPage, &BlockDemo::setBlockSteelScale);
 	}
-	void TensionDemo::updatePauseButtonText(){
+	void BlockDemo::updatePauseButtonText(){
 		bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
 		if (pauseSimulation){
 			pauseButton->SetText(L"Continue");
@@ -661,9 +664,11 @@ public:
 	void initOptions(){
 		resetCamera();
 		int option = m_option;
+		constraintType = (Constraint)(option % 10);
+		option /= 10;
+		orientationType = (Orientation)(option % 10);
+		option /= 10;
 		reinit();
-		constraintType = (Constraint)(option % 100);
-		option /= 100;
 		while ((option /= 100) > 0){
 			switch (option % 100){
 			case 1:
@@ -691,13 +696,13 @@ public:
 		case Impulse:
 		case Spring2:
 		case Slider:
-			addRodSteelScale();
+			addBlockSteelScale();
 			break;
 		case ElasticPlastic:
 		case ElasticPlastic2:
 			addMaxPlasticRotation();
 			addMaxPlasticStrain();
-			addRodSteelScale();
+			addBlockSteelScale();
 			break;
 		}
 		addGravityRampUpTime();
@@ -894,21 +899,32 @@ public:
 		}
 		PlasticityData::setData(&pData);
 	}
-	void addRod(){
+	void addBlock(){
 		btAlignedObjectArray<btRigidBody*> ha;
 		btCollisionShape* loadShape = new btBoxShape(btVector3(lsx / 2, lsy / 2, lsz / 2));
 		btScalar mass = getMass();
 		m_collisionShapes.push_back(loadShape);
 		btTransform loadTrans;
+		btVector3 cpos(0,0,0);
 		loadTrans.setIdentity();
-		yStart = lsy;
+		switch (orientationType){
+		case X:
+			yStart = lsx+lsy;
+			cpos.setX(-lsx / 2);
+			break;
+		case Y:
+			yStart = lsy;
+			cpos.setY(lsy / 2);
+			break;
+		default:
+			assert(0); // Fix if new orientation is added
+		}
 		btVector3 pos = btVector3(0, yStart, 0);
 		loadTrans.setOrigin(pos);
 		m_body=localCreateRigidBody(mass, loadTrans, loadShape);
-		btVector3 cpos(0, lsy / 2, 0);
 		axisMapper=new AxisMapper(lsx, lsy, lsz, cpos);
-		axisMapper->setE(E*rodSteelScale);
-		axisMapper->setFy(fy*rodSteelScale);
+		axisMapper->setE(E*blockSteelScale);
+		axisMapper->setFy(fy*blockSteelScale);
 		switch (constraintType){
 		case Rigid:
 			m_constraint=addFixedConstraint(m_body, cpos);
@@ -969,17 +985,17 @@ public:
 		m_dynamicsWorld->setConstraintSolver(m_constraintSolver);
 	}
 };
-TensionDemo *demo = 0;
+BlockDemo *demo = 0;
 
 
 
 #include <stdio.h> //printf debugging
 
 
-#include "TensionDemo.h"
+#include "BlockDemo.h"
 
 
-void TensionDemo::handlePauseSimulation(Gwen::Controls::Base* control){
+void BlockDemo::handlePauseSimulation(Gwen::Controls::Base* control){
 	Gwen::Controls::Button* gc =
 		static_cast<Gwen::Controls::Button*>(control);
 	bool pauseSimulation = PlasticityExampleBrowser::getPauseSimulation();
@@ -990,20 +1006,20 @@ void TensionDemo::handlePauseSimulation(Gwen::Controls::Base* control){
 	PlasticityExampleBrowser::setPauseSimulation(pauseSimulation);
 }
 
-void TensionDemo::handleSingleStep(Gwen::Controls::Base* control){
+void BlockDemo::handleSingleStep(Gwen::Controls::Base* control){
 	Gwen::Controls::Button* gc =
 		static_cast<Gwen::Controls::Button*>(control);
 	demo->maxStepCount = demo->stepCount + 1;
 	PlasticityExampleBrowser::setPauseSimulation(false);
 }
 
-void TensionDemo::setDisableCollisionsBetweenLinkedBodies
+void BlockDemo::setDisableCollisionsBetweenLinkedBodies
 (Gwen::Controls::Base* control){
 	Gwen::Controls::CheckBox* cb =
 		static_cast<Gwen::Controls::CheckBox*>(control);
 	demo->disableCollisionsBetweenLinkedBodies = cb->IsChecked();
 }
-void TensionDemo::setLogDir(Gwen::Controls::Base* control){
+void BlockDemo::setLogDir(Gwen::Controls::Base* control){
 	Gwen::Controls::TextBox* cb =
 		static_cast<Gwen::Controls::TextBox*>(control);
 	char *cp=getChar(cb->GetText());
@@ -1014,70 +1030,78 @@ void TensionDemo::setLogDir(Gwen::Controls::Base* control){
 		demo->logDir = cp;
 	}
 }
-void TensionDemo::setDumpPng(Gwen::Controls::Base* control){
+void BlockDemo::setDumpPng(Gwen::Controls::Base* control){
 	Gwen::Controls::CheckBox* cb =
 		static_cast<Gwen::Controls::CheckBox*>(control);
 	demo->dumpPng = cb->IsChecked();
 }
-void TensionDemo::setGravityRampUpTime(Gwen::Controls::Base* control){
+void BlockDemo::setGravityRampUpTime(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->gravityRampUpTime));
 	restartHandler(control);
 }
-void TensionDemo::setLsx(Gwen::Controls::Base* control){
+void BlockDemo::setLsx(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->lsx));
 	restartHandler(control);
 }
-void TensionDemo::setLsy(Gwen::Controls::Base* control){
+void BlockDemo::setLsy(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->lsy));
 	restartHandler(control);
 }
-void TensionDemo::setLsz(Gwen::Controls::Base* control){
+void BlockDemo::setLsz(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->lsz));
 	restartHandler(control);
 }
-void TensionDemo::setDensity(Gwen::Controls::Base* control){
+void BlockDemo::setDensity(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->density));
 	restartHandler(control);
 }
-void TensionDemo::setRodSteelScale(Gwen::Controls::Base* control){
-	btScalar tv(demo->rodSteelScale * 100);
+void BlockDemo::setBlockSteelScale(Gwen::Controls::Base* control){
+	btScalar tv(demo->blockSteelScale * 100);
 	setScalar(control, &tv);
-	demo->rodSteelScale = tv / 100;
+	demo->blockSteelScale = tv / 100;
 	restartHandler(control);
 }
-void TensionDemo::setMaxPlasticStrain(Gwen::Controls::Base* control){
+void BlockDemo::setMaxPlasticStrain(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->maxPlasticStrain));
 	restartHandler(control);
 }
-void TensionDemo::setMaxPlasticRotation(Gwen::Controls::Base* control){
+void BlockDemo::setMaxPlasticRotation(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->maxPlasticRotation));
 	restartHandler(control);
 }
 
-void TensionDemo::restartHandler(Gwen::Controls::Base* control){
+void BlockDemo::restartHandler(Gwen::Controls::Base* control){
 	demo->restartRequested = true;
 }
-void TensionDemo::reinit(){
+void BlockDemo::reinit(){
 	m_gravity = btVector3(0, -10, 0);
 	gravityRampUpTime = 0;
-	lsx = 1;
-	lsy = 3;
+	switch (orientationType){
+	case X:
+		lsx = 5;
+		lsy = 1;
+		break;
+	case Y:
+		lsx = 1;
+		lsy = 3;
+		break;
+	}
 	lsz = 1;
 	density = 2000;
-	rodSteelScale = 0.0001;
+	blockSteelScale = 0.0001;
 	maxPlasticStrain = 0.2;
 	maxPlasticRotation = 3;
 	maxStepCount = LONG_MAX;
 	resetClocks();
 }
 
-void TensionDemo::resetHandler(Gwen::Controls::Base* control){
+void BlockDemo::resetHandler(Gwen::Controls::Base* control){
 	demo->reinit();
 	restartHandler(control);
 }
 
 
-TensionDemo::TensionDemo(CommonExampleOptions & options)
+BlockDemo::BlockDemo(CommonExampleOptions & options)
 	:CommonRigidBodyBase(options.m_guiHelper),
 	Gwen::Event::Handler(),
 	m_guiHelper(options.m_guiHelper),
@@ -1096,7 +1120,7 @@ m_maxCameraDistance(10.f)
 }
 
 
-void TensionDemo::exitPhysics()
+void BlockDemo::exitPhysics()
 {
 	//cleanup in the reverse order of creation/initialization
 	//remove the rigidbodies from the dynamics world and delete them
@@ -1166,12 +1190,12 @@ void TensionDemo::exitPhysics()
 	PlasticityData::setData(0);
 }
 
-TensionDemo::~TensionDemo()
+BlockDemo::~BlockDemo()
 {
 	clearParameterUi();
 }
 
-void TensionDemo::initPhysics()
+void BlockDemo::initPhysics()
 {	
 	breakingImpulseThreshold = fy*lsx*lsx;
 	hasFullGravity = false;
@@ -1220,14 +1244,14 @@ void TensionDemo::initPhysics()
 	tr.setOrigin(btVector3(0,-3,0));
 	//create ground object
 	btRigidBody* ground=localCreateRigidBody(0, tr, groundShape);
-	if (rodSteelScale >= 0){
-		addRod();
+	if (blockSteelScale >= 0){
+		addBlock();
 	}
 	resetDemo();
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
 }
 
-void TensionDemo::physicsDebugDraw(int debugFlags)
+void BlockDemo::physicsDebugDraw(int debugFlags)
 {
 	if (m_dynamicsWorld && m_dynamicsWorld->getDebugDrawer())
 	{
@@ -1236,7 +1260,7 @@ void TensionDemo::physicsDebugDraw(int debugFlags)
 	}
 }
 
-void TensionDemo::renderScene()
+void BlockDemo::renderScene()
 {
 	if (demo->restartRequested || stepCount<1){
 		return;
@@ -1246,7 +1270,7 @@ void TensionDemo::renderScene()
 	updatePauseButtonText();
 	setDumpFilename();
 	{
-		BT_PROFILE("TensionDemo::showMessage");
+		BT_PROFILE("BlockDemo::showMessage");
 		showMessage();
 	}
 	updateDashboards();
@@ -1270,7 +1294,7 @@ void TensionDemo::renderScene()
 	}
 }
 
-void TensionDemo::stepSimulation(float deltaTime)
+void BlockDemo::stepSimulation(float deltaTime)
 {
 	if (restartRequested){
 		restart();
@@ -1304,27 +1328,27 @@ void TensionDemo::stepSimulation(float deltaTime)
 
 
 
-void TensionDemo::displayCallback(void) 
+void BlockDemo::displayCallback(void) 
 {
 	if (m_dynamicsWorld)
 		m_dynamicsWorld->debugDrawWorld();
 }
 
 
-void TensionDemo::clientResetScene()
+void BlockDemo::clientResetScene()
 {
 	exitPhysics();
 	initPhysics();
 }
 
-void TensionDemo::resetDemo()
+void BlockDemo::resetDemo()
 {
 	clas = 0;
 	clai = 0;
 }
 
 
-bool	TensionDemo::keyboardCallback(int key, int state)
+bool	BlockDemo::keyboardCallback(int key, int state)
 {
 	bool handled = false;
 	CommonWindowInterface * win=m_guiHelper->getAppInterface()->m_window;
@@ -1449,7 +1473,7 @@ bool	TensionDemo::keyboardCallback(int key, int state)
 	return handled;
 }
 
-void TensionDemo::specialKeyboardUp(int key, int x, int y)
+void BlockDemo::specialKeyboardUp(int key, int x, int y)
 {
 #if 0
    
@@ -1457,13 +1481,13 @@ void TensionDemo::specialKeyboardUp(int key, int x, int y)
 }
 
 
-void TensionDemo::specialKeyboard(int key, int x, int y)
+void BlockDemo::specialKeyboard(int key, int x, int y)
 {
 }
 
 
 
-btRigidBody* TensionDemo::localCreateRigidBody(btScalar mass, 
+btRigidBody* BlockDemo::localCreateRigidBody(btScalar mass, 
 	const btTransform& startTransform, btCollisionShape* shape)
 {
 	btAssert((!shape || shape->getShapeType() != INVALID_SHAPE_PROXYTYPE));
@@ -1495,9 +1519,9 @@ btRigidBody* TensionDemo::localCreateRigidBody(btScalar mass,
 	m_dynamicsWorld->addRigidBody(body);
 	return body;
 }
-CommonExampleInterface*    TensionDemoCreateFunc(struct CommonExampleOptions& options)
+CommonExampleInterface*    BlockDemoCreateFunc(struct CommonExampleOptions& options)
 {
-	demo = new TensionDemo(options);
+	demo = new BlockDemo(options);
 	return demo;
 
 }

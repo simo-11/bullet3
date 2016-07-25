@@ -1,9 +1,9 @@
 #include "AxisMapper.h"
 void AxisMapper::init(){
-	if (m_cpos.getX() > 0){
+	if (m_cpos.getX()!=BT_ZERO){
 		initX();
 	}
-	else if (m_cpos.getY()){
+	else if (m_cpos.getY() != BT_ZERO){
 		initY();
 	}
 	else{

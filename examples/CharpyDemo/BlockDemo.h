@@ -31,7 +31,7 @@ class btConstraintSolver;
 struct btCollisionAlgorithmCreateFunc;
 class btDefaultCollisionConfiguration;
 
-class CommonExampleInterface*    TensionDemoCreateFunc(struct CommonExampleOptions& options);
+class CommonExampleInterface*    BlockDemoCreateFunc(struct CommonExampleOptions& options);
 
 #endif // TENSION_DEMO_H
 
