@@ -406,7 +406,7 @@ void mode6callback(btDynamicsWorld *world, btScalar timeStep) {
 void mode7callback(btDynamicsWorld *world, btScalar timeStep) {
 	for (int i = 0; i < mode7c.size(); i++){
 		if (mode7c[i]->isEnabled()){
-			mode7c[i]->updatePlasticity(*specimenJointFeedback[i]);
+			mode7c[i]->updatePlasticity(*specimenJointFeedback[i], world, timeStep);
 		}
 	}
 }

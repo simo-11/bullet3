@@ -93,7 +93,8 @@ public:
 	btScalar E=200E9;
 	btScalar G=80E9;
 	btScalar fy=200E6;
-	btScalar damping=0.1;
+	btScalar damping=0.9; // 1= no damping, 0=full damping
+	btScalar damping2 = 0.1; // 0= no damping, 1=critically damped, >1 overdamped
 	bool hasFullGravity;
 	btScalar m_fixedTimeStep = btScalar(1) / btScalar(60);
 	btScalar rodSteelScale;
@@ -772,7 +773,7 @@ public:
 		for (int i = 0; i < 6; i++){
 			sc->enableSpring(i, true);
 			sc->setStiffness(i, axisMapper->getStiffness(i));
-			sc->setDamping(i, damping);
+			sc->setDamping(i, damping2);
 		}
 		sc->setEquilibriumPoint(1, getEquilibriumPoint());
 		return sc;
@@ -814,7 +815,7 @@ public:
 		for (int i = 0; i<6; i++)
 		{
 			sc->enableSpring(i, true);
-			sc->setDamping(i, damping);
+			sc->setDamping(i, damping2);
 			sc->setStiffness(i, axisMapper->getStiffness(i));
 			sc->setMaxForce(i, axisMapper->getMaxForce(i));
 		}
@@ -1063,7 +1064,7 @@ void TensionDemo::reinit(){
 	lsy = 3;
 	lsz = 1;
 	density = 2000;
-	rodSteelScale = 0.001;
+	rodSteelScale = 0.0001;
 	maxPlasticStrain = 0.2;
 	maxPlasticRotation = 3;
 	maxStepCount = LONG_MAX;

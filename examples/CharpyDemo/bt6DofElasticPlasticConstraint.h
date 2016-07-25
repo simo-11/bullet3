@@ -98,7 +98,7 @@ public:
 	virtual btScalar getCurrentPlasticRotation();
 	virtual btScalar getMaxRatio(){ return m_maxRatio; }
 	virtual int getMaxRatioDof(){ return m_maxRatioDof; }
-	void updatePlasticity(btJointFeedback& forces);
+	void updatePlasticity(btJointFeedback& forces, btCollisionWorld* collisionWorld, btScalar step);
 	void calculateFpsLimit(int index);
 	void setFrequencyRatio(btScalar frequencyRatio);
 	btScalar getFrequencyRatio();
@@ -124,7 +124,7 @@ public:
 			jf = myJointFeedback;
 			setJointFeedback(jf);
 		}
-		updatePlasticity(*jf);
+		updatePlasticity(*jf, collisionWorld, step);
 		if (!isEnabled()){
 			btDynamicsWorld *dw = (btDynamicsWorld *)collisionWorld;
 			dw->removeConstraint(this);

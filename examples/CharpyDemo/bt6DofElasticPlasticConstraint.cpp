@@ -165,19 +165,27 @@ void bt6DofElasticPlasticConstraint::internalUpdateSprings(btConstraintInfo2* in
 			btScalar delta = currPos - m_equilibriumPoint[i];
 			// spring force is (delta * m_stiffness) according to Hooke's Law
 			btScalar force = delta * m_springStiffness[i];
+			bool overMaxForce=false;
 			// bcc
 			if (btFabs(force)>m_maxForce[i]){
 				force = (delta > 0 ? m_maxForce[i] : -m_maxForce[i]);
+				overMaxForce = true;
 			}
 			btScalar ratio(info->fps/m_fpsLimit[i]);
+			btScalar velFactor;
 			if (ratio>m_frequencyRatio){
-				btScalar velFactor = info->fps * m_springDamping[i] /
+				velFactor = m_springDamping[i] /
 					btScalar(info->m_numIterations);
-				m_linearLimits.m_targetVelocity[i] = velFactor * force;
 			}
 			else{
-				m_linearLimits.m_targetVelocity[i] = 0;
+				if (overMaxForce) {
+					velFactor = 1;
+				}
+				else {
+					velFactor = 0;
+				}
 			}
+			m_linearLimits.m_targetVelocity[i] = info->fps*velFactor * force;
 			m_linearLimits.m_maxMotorForce[i] = btFabs(force) / info->fps;
 		}
 	}
@@ -196,15 +204,16 @@ void bt6DofElasticPlasticConstraint::internalUpdateSprings(btConstraintInfo2* in
 				force = (delta > 0 ? -m_maxForce[i+3] : m_maxForce[i+3]);
 			}
 			btScalar ratio(info->fps/m_fpsLimit[i + 3]);
+			btScalar velFactor;
 			if (ratio>m_frequencyRatio){
-				btScalar velFactor = info->fps * m_springDamping[i + 3] / 
+				velFactor = m_springDamping[i + 3] / 
 					btScalar(info->m_numIterations);
-				m_angularLimits[i].m_targetVelocity = velFactor * force;
 			}
 			else{
-				m_angularLimits[i].m_targetVelocity = 0;
+				velFactor=0;
 			}
-            m_angularLimits[i].m_maxMotorForce = btFabs(force) / info->fps;
+			m_angularLimits[i].m_targetVelocity = info->fps*velFactor * force;
+			m_angularLimits[i].m_maxMotorForce = btFabs(force) / info->fps;
 		}
 	}
 }
@@ -272,7 +281,9 @@ void bt6DofElasticPlasticConstraint::scalePlasticity(btScalar scale){
 	m_maxPlasticStrain *= scale;
 	m_maxPlasticRotation *= scale;
 }
-void bt6DofElasticPlasticConstraint::updatePlasticity(btJointFeedback& forces){
+void bt6DofElasticPlasticConstraint::updatePlasticity(btJointFeedback& forces, 
+	btCollisionWorld* collisionWorld,
+	btScalar step){
 	BT_PROFILE("updatePlasticity");
 	if (!isEnabled()){
 		return;
