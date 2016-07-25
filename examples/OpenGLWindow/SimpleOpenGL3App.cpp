@@ -650,14 +650,19 @@ void SimpleOpenGL3App::setBackgroundColor(float red, float green, float blue)
 
 SimpleOpenGL3App::~SimpleOpenGL3App()
 {
+	
+	delete m_instancingRenderer;
 	delete m_primRenderer ;
-
+	sth_delete(m_data->m_fontStash);
+	delete m_data->m_renderCallbacks;
+	TwDeleteDefaultFonts();
 	m_window->closeWindow();
+	
 	delete m_window;
 	delete m_data ;
 }
 
-void SimpleOpenGL3App::getScreenPixels(unsigned char* rgbaBuffer, int bufferSizeInBytes)
+void SimpleOpenGL3App::getScreenPixels(unsigned char* rgbaBuffer, int bufferSizeInBytes, float* depthBuffer, int depthBufferSizeInBytes)
 {
     
     int width = (int)m_window->getRetinaScale()*m_instancingRenderer->getScreenWidth();
@@ -665,6 +670,12 @@ void SimpleOpenGL3App::getScreenPixels(unsigned char* rgbaBuffer, int bufferSize
     if ((width*height*4) == bufferSizeInBytes)
     {
         glReadPixels(0,0,width, height, GL_RGBA, GL_UNSIGNED_BYTE, rgbaBuffer);
+		int glstat = glGetError();
+		b3Assert(glstat==GL_NO_ERROR);
+    }
+    if ((width*height*sizeof(float)) == depthBufferSizeInBytes)
+    {
+        glReadPixels(0,0,width, height, GL_DEPTH_COMPONENT, GL_FLOAT, depthBuffer);
 		int glstat = glGetError();
 		b3Assert(glstat==GL_NO_ERROR);
     }
