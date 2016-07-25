@@ -645,8 +645,6 @@ bool PlasticityExampleBrowser::init(int argc, char* argv[])
 
 	gui->init(width,height,gwenRenderer,s_window->getRetinaScale());
 	Gwen::Controls::TreeControl* tree = gui->getInternalData()->m_explorerTreeCtrl;
-	s_profWindow= setupProfileWindow(gui->getInternalData());
-	profileWindowSetVisible(s_profWindow,false);
 	s_pStatWindow = setupPlasticityWindow(gui->getInternalData());
 	plasticityStatisticsWindowSetVisible(s_pStatWindow, true);
 	gui->setFocus();
@@ -825,10 +823,6 @@ p=% .1f, % .1f, % .1f",
 			
 		}
 
-		if (isProfileWindowVisible(s_profWindow)){
-			BT_PROFILE("processProfileData");
-			processProfileData(s_profWindow, false);
-		}
 		{
 			BT_PROFILE("processPlasticityData");
 			processPlasticityData(s_pStatWindow, pauseSimulation);
