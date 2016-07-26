@@ -116,7 +116,7 @@ public:
 	CommonWindowInterface* window;
 	int m_option;
 	enum Constraint { None = 0, Rigid = 1, Spring = 2, 
-		Impulse = 3, Spring2 = 4, Slider=5,
+		Impulse = 3, Spring2 = 4, SingleDof=5,
 		ElasticPlastic = 6, ElasticPlastic2 = 7 };
 	Constraint constraintType;
 	enum Orientation {
@@ -695,7 +695,7 @@ public:
 		case Spring:
 		case Impulse:
 		case Spring2:
-		case Slider:
+		case SingleDof:
 			addBlockSteelScale();
 			break;
 		case ElasticPlastic:
@@ -760,12 +760,22 @@ public:
 	btTypedConstraint* addSliderConstraint(btRigidBody* rb, btVector3& cpos){
 		btTransform tr;
 		tr.setIdentity();
-		tr.setOrigin(cpos);
+		tr.setRotation(btQuaternion(0, 0,SIMD_HALF_PI));
+		tr.setOrigin(cpos); //debug drawing is easily seen
 		btSliderConstraint *sc =
 			new btSliderConstraint(*rb, tr, true);
 		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
 		sc->setPoweredLinMotor(true);
 		sc->setMaxLinMotorForce(axisMapper->getMaxForce(1));
+		sc->setTargetLinMotorVelocity(0);
+		return sc;
+	}
+	btTypedConstraint* addHingeConstraint(btRigidBody* rb, btVector3& pivot, btVector3 & axis){
+		btHingeConstraint *sc =
+			new btHingeConstraint(*rb, pivot, axis);
+		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
+		sc->enableAngularMotor(true,0,axisMapper->getMaxForce(5)*m_fixedTimeStep);
+		sc->setLimit(-SIMD_PI, SIMD_PI);
 		return sc;
 	}
 	btTypedConstraint* addSpring2Constraint(btRigidBody* rb, btVector3& cpos){
@@ -938,8 +948,15 @@ public:
 		case Spring2:
 			m_constraint = addSpring2Constraint(m_body, cpos);
 			break;
-		case Slider:
-			m_constraint = addSliderConstraint(m_body, cpos);
+		case SingleDof:
+			switch (orientationType){
+			case X:
+				m_constraint = addHingeConstraint(m_body, cpos, btVector3(0,0,1));
+				break;
+			case Y:
+				m_constraint = addSliderConstraint(m_body, cpos);
+				break;
+			}
 			break;
 		case ElasticPlastic:
 			m_constraint = addElasticPlasticConstraint(m_body, cpos);
