@@ -1,0 +1,104 @@
+\section{Processing plasticity}
+
+In this section, changes to constraint formulation are clarified by simple numerical examples.
+
+System has only one dynamic rigid body which is three meters high bocks. Cross section is one square meter.
+Density is $2000 kg \over m^3$. Gravity is $10 m\over s^2$. Simulation step is $1\over 60 s$ and 10 
+iterations are done for single step.
+
+Single simulation step is done using following substeps. 
+In this work, changes are made only to constraing solving and update actions.
+\begin{enumerate}
+\item Apply gravity
+\item Predict unconstrained motion
+\item Predict contacts
+\item Perform collision detection
+\item Calculate simulation islands(groups). Objetcs that are near each other or connected with constraints are grouped in same group.
+\item Solve constraints. Both contact and other constraints are processed in this step.
+\item Integrate transforms
+\item Update actions (callbacks) are called
+\item Activation state of bodies is updated. Bodies that are not active
+ are typically marked as sleeping and they are not processed.
+\end{enumerate} 
+
+Equation \ref{eq:constraintEquation} is simplified
+to \ref{eq:fixedConstraint} in this case.
+\begin{itemize}
+\item No rotation takes place. $\omega_1$ and $\omega_2$ are zeros.
+\item Constraint force mixing can be ignored.
+\item Only vertical velocity is handled.
+\item Other involved body is rigid and it does not move.
+\end{itemize} 
+
+\begin{equation} \label{eq:fixedConstraint}
+m v_y = c 
+\end{equation}
+
+Method btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup
+in \bullet\ was used to pick up values.
+
+\begin{description}
+\item[velError] is calculated using velocities and external impulses of connected objects. 
+ In this case, it is dominant contributor for constraint's impulse after initial phase.
+\item[posError] is calculated by constraint. It is significant factor in designing stable constraints. 
+ In fixed case, value is about 12 times actual position error. Factor 12 is based on time step (60) 
+ and default value of error reduction parameter (0.2).
+\end{description}
+
+\begin {table}[htb!]
+\begin{center}
+\begin{tabular}{|c| l| l|}
+\hline
+{\bf Time} & 
+{\bf velError} & {\bf posError} & {\bf rhs} &
+{\bf vertical velocity} & 
+{\bf constraint impulse [Ns]} \\  \hline
+0.017 &  & & & -0.167 & 0 \\  \\hline
+0.033 &  0.33 & -0.033 & -2200 & 0.0333 & 2200 \\  \\hline
+0.050 &  -0.13 & -0.0266 & -960 & 0.0266 & 960 \\  \\hline
+0.067 &  -0.14 & -0.021 & -970 & 0.021 & 970 \\  \\hline
+0.35 &  -0.17 & \~0 & -1000 &0.0 & 1000 \\  \\hline
+\end {tabular}
+\end{center}
+\caption {Constraint parameter values for fixed constraint} \label{tab:fixedBlockValues} 
+\end {table}
+
+
+
+Equations \ref{eq:constraintEquation}, \ref{eq:lambdaLow} and
+\ref{eq:lambdaHigh} 
+are created for each constraint.
+
+\begin{equation} \label{eq:constraintEquation}
+J_1 v_1 + \Omega_1 \omega_1 + J_2 v_2 + \Omega_2 \omega_2 = c + C \lambda
+\end{equation}
+
+\begin{equation} \label{eq:lambdaLow}
+\lambda \geq l
+\end{equation}
+
+\begin{equation} \label{eq:lambdaHigh}
+\lambda \leq h
+\end{equation}
+
+Main parameters  and corresponding fields in \bullet\  
+ are described in table \ref{tab:constraintParameters}.
+
+\begin {table}[htb!]
+\begin{center}
+\begin{tabular}{|c| l| l|}
+\hline
+{\bf Parameter} & {\bf Description} & {\bf btConstraintInfo2 pointer}\\  \hline
+$J_1, \Omega_1$ & Jacobian & m\_J1linearAxis, m\_J1angularAxis \\ 
+$J_2, \Omega_2$ & & m\_J2linearAxis, m\_J2angularAxis \\ \hline
+$v$ & linear velocity & \\ \hline
+$\omega$ & angular velocity & \\ \hline
+$c$        &  right side vector   & m\_constraintError \\ \hline
+$C$  & constraint force mixing & cfm \\  \hline
+$\lambda$ & constraint force &  \\ \hline
+$l$ & low limit for constraint force & m\_lowerLimit \\ \hline
+$h$ & high limit for constraint force & m\_upperLimit \\ \hline
+\end {tabular}
+\end{center}
+\caption {Constraint parameters} \label{tab:constraintParameters} 
+\end {table}
