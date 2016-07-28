@@ -89,9 +89,7 @@ public:
 	btScalar stepTime,gravityRampUpTime;
 	btVector3 m_gravity;
 	btScalar breakingImpulseThreshold;
-	btScalar E=200E9;
-	btScalar G=80E9;
-	btScalar fy=200E6;
+	btScalar E,fy,G;
 	btScalar damping=0.9; // 1= no damping, 0=full damping
 	btScalar damping2 = 0.1; // 0= no damping, 1=critically damped, >1 overdamped
 	bool hasFullGravity;
@@ -399,6 +397,8 @@ public:
 	void setLsy(Gwen::Controls::Base* control);
 	void setLsz(Gwen::Controls::Base* control);
 	void setDensity(Gwen::Controls::Base* control);
+	void setE(Gwen::Controls::Base* control);
+	void setFy(Gwen::Controls::Base* control);
 	void setBlockSteelScale(Gwen::Controls::Base* control);
 	void setMaxPlasticStrain(Gwen::Controls::Base* control);
 	void setMaxPlasticRotation(Gwen::Controls::Base* control);
@@ -621,7 +621,25 @@ public:
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &BlockDemo::setDensity);
 	}
-	btScalar steelDensity=7800;
+	void addE(){
+		addLabel("E [MPa]");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(E/1e6, "%.0f");
+		gc->SetToolTip("Young's modulus");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &BlockDemo::setE);
+	}
+	void addFy(){
+		addLabel("fy [MPa]");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(fy / 1e6, "%.0f");
+		gc->SetToolTip("yield stress");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &BlockDemo::setFy);
+	}
+	btScalar steelDensity = 7800;
 	btScalar getDensity(btScalar steelScale){
 		return btScalar(steelScale*steelDensity+(1-steelScale)*density);
 	}
@@ -691,6 +709,8 @@ public:
 		addLsy();
 		addLsz();
 		addDensity();
+		addE();
+		addFy();
 		switch (constraintType){
 		case Spring:
 		case Impulse:
@@ -740,6 +760,7 @@ public:
 		for (int i = 0; i < 6; i++){
 			sc->setLimit(i, 0, 0); // make fixed
 		}
+		// sc->getTranslationalLimitMotor()->m_enableMotor[1] = true;
 		return sc;
 	}
 	btTypedConstraint* addSpringConstraint(btRigidBody* rb, btVector3& cpos){
@@ -813,6 +834,7 @@ public:
 			sc->setStiffness(i, axisMapper->getStiffness(i));
 			sc->setMaxForce(i, axisMapper->getMaxForce(i));
 		}
+		sc->getTranslationalLimitMotor()->m_enableMotor[1]=true;
 		sc->setEquilibriumPoint(1, getEquilibriumPoint());
 		m_dynamicsWorld->addAction(sc);
 		return sc;
@@ -905,6 +927,13 @@ public:
 			int	maxrd = epc->getMaxRatioDof();
 				sprintf_s(buf, B_LEN*2, "%2d %8.1f %5d %5.3f %5.3f %5.3f %5.3f",
 					i, maxr * 100, maxrd, mpr, cpr, mps, cps);
+			infoMsg(buf);
+		}
+		if (m_constraint != 0 && m_constraint->isEnabled()){
+			sprintf_s(buf, B_LEN * 2, "FX=%8.3g FY=%8.3g MZ=%8.3g",
+				jf.m_appliedForceBodyB.getX(),
+				jf.m_appliedForceBodyB.getY(),
+				jf.m_appliedTorqueBodyB.getZ());
 			infoMsg(buf);
 		}
 		PlasticityData::setData(&pData);
@@ -1072,6 +1101,19 @@ void BlockDemo::setDensity(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->density));
 	restartHandler(control);
 }
+void BlockDemo::setE(Gwen::Controls::Base* control){
+	btScalar tv(demo->E/1e6);
+	setScalar(control, &tv);
+	demo->E = tv*1e6;
+	demo->G = demo->E / 2.6;
+	restartHandler(control);
+}
+void BlockDemo::setFy(Gwen::Controls::Base* control){
+	btScalar tv(demo->fy / 1e6);
+	setScalar(control, &tv);
+	demo->fy = tv*1e6;
+	restartHandler(control);
+}
 void BlockDemo::setBlockSteelScale(Gwen::Controls::Base* control){
 	btScalar tv(demo->blockSteelScale * 100);
 	setScalar(control, &tv);
@@ -1105,9 +1147,12 @@ void BlockDemo::reinit(){
 	}
 	lsz = 1;
 	density = 2000;
-	blockSteelScale = 0.0001;
+	blockSteelScale = 0.0004;
 	maxPlasticStrain = 0.2;
 	maxPlasticRotation = 3;
+	E = 200E9;
+	fy = 200E6;
+	G = E / 2.6; /* isotropic nu=0.3 */
 	maxStepCount = LONG_MAX;
 	resetClocks();
 }

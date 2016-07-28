@@ -1274,13 +1274,13 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 				if (btFabs(elasticPart)<btFabs(currPos)){
 					newVal += (currPos > 0 ? -elasticPart : elasticPart);
 				}
-				btScalar plasticDelta = btFabs(delta);
+				btScalar plasticDelta = btFabs(delta)-elasticPart;
 				/* direction changes */
 				if ((m_linearLimits.m_equilibriumPoint[i] * currPos)<0){
-					plasticDelta -= elasticPart * 2;
-					if (plasticDelta < 0){
-						plasticDelta = 0;
-					}
+					plasticDelta -= elasticPart;
+				}
+				if (plasticDelta < 0){
+					plasticDelta = 0;
 				}
 				setEquilibriumPoint(i, newVal);
 				m_currentPlasticStrain += plasticDelta;
@@ -1310,13 +1310,13 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 				if (btFabs(elasticPart)<btFabs(currPos)){
 					newVal += (currPos > 0 ? -elasticPart : elasticPart);
 				}
-				btScalar plasticDelta = btFabs(delta);
+				btScalar plasticDelta = btFabs(delta)-elasticPart;
 				/* direction changes */
 				if ((m_angularLimits[i].m_equilibriumPoint*currPos)<0){
-					plasticDelta -= elasticPart * 2;
-					if (plasticDelta < 0){
-						plasticDelta = 0;
-					}
+					plasticDelta -= elasticPart;
+				}
+				if (plasticDelta < 0){
+					plasticDelta = 0;
 				}
 				setEquilibriumPoint(i + 3, newVal);
 				m_currentPlasticRotation += plasticDelta;
