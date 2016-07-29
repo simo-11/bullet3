@@ -97,6 +97,7 @@ public:
 	virtual btScalar getCurrentPlasticStrain();
 	virtual btScalar getCurrentPlasticRotation();
 	virtual btScalar getMaxRatio(){ return m_maxRatio; }
+	btScalar getFpsLimit(int index){ return m_fpsLimit[i]; }
 	virtual int getMaxRatioDof(){ return m_maxRatioDof; }
 	void updatePlasticity(btJointFeedback& forces, btCollisionWorld* collisionWorld, btScalar step);
 	void calculateFpsLimit(int index);

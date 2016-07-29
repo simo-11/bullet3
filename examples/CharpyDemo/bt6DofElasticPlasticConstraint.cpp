@@ -166,32 +166,21 @@ void bt6DofElasticPlasticConstraint::internalUpdateSprings(btConstraintInfo2* in
 			// spring force is (delta * m_stiffness) according to Hooke's Law
 			btScalar force = delta * m_springStiffness[i];
 			bool overMaxForce=false;
-			bool slow = false;
 			// bcc
 			if (btFabs(force)>=m_maxForce[i]){
 				force = (delta > 0 ? m_maxForce[i] : -m_maxForce[i]);
-				// overMaxForce = true;
+				overMaxForce = true;
 			}
 			btScalar ratio(info->fps/m_fpsLimit[i]);
 			btScalar velFactor;
-			if (ratio>m_frequencyRatio){
+			if (!overMaxForce && ratio>m_frequencyRatio){
 				velFactor = m_springDamping[i] /
 					btScalar(info->m_numIterations);
 			}
 			else{
-				if (overMaxForce) {
-					slow = true;
-				}
-				else {
-					velFactor = 0;
-				}
+				velFactor = 0;
 			}
-			if (slow){
-				m_linearLimits.m_targetVelocity[i] = (delta > 0 ? SIMD_EPSILON : -SIMD_EPSILON);
-			}
-			else{
-				m_linearLimits.m_targetVelocity[i] = info->fps*velFactor * force;
-			}
+			m_linearLimits.m_targetVelocity[i] = info->fps*velFactor * force;
 			m_linearLimits.m_maxMotorForce[i] = btFabs(force) / info->fps;
 		}
 	}
@@ -208,31 +197,20 @@ void bt6DofElasticPlasticConstraint::internalUpdateSprings(btConstraintInfo2* in
 			btScalar force = -delta * m_springStiffness[i+3];
 			// bcc
 			bool overMaxForce = false;
-			bool slow = false;
 			if (btFabs(force) >= m_maxForce[i + 3]){
 				force = (delta > 0 ? -m_maxForce[i+3] : m_maxForce[i+3]);
-				//overMaxForce = true;
+				overMaxForce = true;
 			}
 			btScalar ratio(info->fps/m_fpsLimit[i + 3]);
 			btScalar velFactor;
-			if (ratio>m_frequencyRatio){
+			if (!overMaxForce && ratio>m_frequencyRatio){
 				velFactor = m_springDamping[i + 3] / 
 					btScalar(info->m_numIterations);
 			}
 			else{
-				if (overMaxForce) {
-					slow = true;
-				}
-				else {
-					velFactor = 0;
-				}
+				velFactor = 0;
 			}
-			if (slow){
-				m_linearLimits.m_targetVelocity[i] = (delta > 0 ? -SIMD_EPSILON : SIMD_EPSILON);
-			}
-			else{
-				m_angularLimits[i].m_targetVelocity = info->fps*velFactor * force;
-			}
+			m_angularLimits[i].m_targetVelocity = info->fps*velFactor * force;
 			m_angularLimits[i].m_maxMotorForce = btFabs(force) / info->fps;
 		}
 	}
