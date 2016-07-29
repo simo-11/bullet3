@@ -1,11 +1,37 @@
-
+% !TeX root = article.tex
 \section{Processing plasticity}
 
 In this section, changes to constraint formulation are clarified by doing few simulation steps of rigid and
 elastic-plastic examples.
 
+\begin{figure}[htb!]
+\centering
+\begin{tikzpicture}
+\coordinate (O) at (0,0,0);
+
+% axes
+\draw[->] (O) -- (1,0,0) node[anchor=north east]{$x$};
+\draw[->] (O) -- (0,1,0) node[anchor=north west]{$y$};
+\draw[->] (O) -- (0,0,1) node[anchor=south]{$z$};
+
+% 1,3,1 block, base at y=1.5
+\draw (1,1.5,0) -- ++(0,3,0) -- ++(-1,0,0);
+\draw (0,1.5,1) -- ++(1,0,0) -- ++(0,3,0) -- ++(-1,0,0) -- ++(0,-3,0);
+\draw (1,1.5,0) -- ++(0,0,1);
+\draw (0,4.5,0) -- ++(0,0,1);
+\draw (1,4.5,0) -- ++(0,0,1);
+
+\draw[->] (0.5,3,0.5) -- ++(0,1.5,0);
+\end{tikzpicture}
+\caption{Single body model for plasticy processing demonstration.}
+\label{fig:tensionModel}
+\end{figure}
+
 System has only one dynamic rigid body which is three meters high block of 0.04 \% steel enforced concrete. 
 Cross section is one square meter.
+Constraint is set so that connecting frame is at top of block. 
+In this case frame could be anywhere but if multiple bodies are involved, connecting frame must be defined
+so that it reflects wanted scenario.
 Concrete density is $2000 \frac{kg}{m^3}$ and steel density id $7800 \frac{kg}{m^3}$. 
 Steel is assumed to handle load in elastic-plastic case. Yield stress of steel is 200 MPa.
 Gravity is $10 \frac{m}{s^2}$. Simulation step is $\frac{1}{60} s$ and 10 
@@ -49,8 +75,9 @@ in \bullet\ was used to pick up values. Actual values for fixed constraint are s
  \ref{tab:ep2BlockValues}. There are currently two alternative six-dof-spring constraint implementations in \bullet\ and 
 in this work elastic-plastic versions of both of them were developed. 
 Constraint activation of older spring and fixed constraints is implemented so that 
-it can be activated explicitly at start of simulation or it can be automatically activated when constraint is violated.
-In this case constraint is not activated explicitly and thus block drops freely during first simulation step.
+they are activated after constraint is violated.
+Thus body drops freely during first simulation step and 
+gains enough kinetic energy so that higher impulses are needed in few following steps.
 
 \begin{description}
 \item[velError] is calculated using velocities and external impulses of connected bodies. 
@@ -63,7 +90,8 @@ In this case constraint is not activated explicitly and thus block drops freely 
 spring simulation cannot be done in stable way.
  \end{description}
 \item[rhs] is calculated by velError jInv + posError jInv
-\item[jInv] is calculated using masses and constraint geometry. In this case, it is mass of body (6000).
+\item[jInv] is calculated using masses and inertias of connected bodies and constraint geometry. 
+In this case, it is mass of body (6000).
 \end{description}
 
 \begin {table}[htb!]
