@@ -88,7 +88,7 @@ public:
 	long stepCount,maxStepCount,syncedStep;
 	btScalar stepTime,gravityRampUpTime;
 	btVector3 m_gravity;
-	btScalar breakingImpulseThreshold;
+	btScalar frequencyRatio;
 	btScalar E,fy,G;
 	btScalar damping=0.9; // 1= no damping, 0=full damping
 	btScalar damping2 = 0.1; // 0= no damping, 1=critically damped, >1 overdamped
@@ -258,6 +258,12 @@ public:
 			b_y_velocity = m_body->getLinearVelocity().y();
 		}
 	}
+	void resetView(){
+		c_impulse = 0;
+		c_percent = 0;
+		b_y_location = 0;
+		b_y_velocity = 0;
+	}
 	float pitchDelta = 0;
 	void setPitchDelta(float delta){
 		pitchDelta = delta;
@@ -398,6 +404,7 @@ public:
 	void setLsz(Gwen::Controls::Base* control);
 	void setDensity(Gwen::Controls::Base* control);
 	void setE(Gwen::Controls::Base* control);
+	void setFrequencyRatio(Gwen::Controls::Base* control);
 	void setFy(Gwen::Controls::Base* control);
 	void setBlockSteelScale(Gwen::Controls::Base* control);
 	void setMaxPlasticStrain(Gwen::Controls::Base* control);
@@ -418,13 +425,14 @@ public:
 		return btScalar(lsx*lsy*lsz*getDensity(blockSteelScale));
 	}
 	btScalar getEquilibriumPoint(){
-		bool useZero = true;
+		bool useZero = false;
 		if (useZero){
 			return 0;
 		}
 		btScalar f = -10 * getMass();
 		btScalar k = axisMapper->getStiffness(1);
 		btScalar val(f / k);
+		b3Printf("getEquilibriumPoint: %.4f",val);
 		return val;
 	}
 	void updateDashboards(){
@@ -475,6 +483,17 @@ public:
 		dumpPngGc = gc;
 		gy += gyInc;
 		gc->onCheckChanged.Add(pPage, &BlockDemo::setDumpPng);
+	}
+	void addFrequencyRatio(){
+		addLabel("frequencyRatio");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = uif(frequencyRatio);
+		gc->SetToolTip("How many simulation steps are required for spring period");
+		gc->SetText(text);
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &BlockDemo::setFrequencyRatio);
 	}
 	void addLogDir(){
 		Gwen::Controls::Label* label = addLabel("logDir");
@@ -719,6 +738,8 @@ public:
 			addBlockSteelScale();
 			break;
 		case ElasticPlastic:
+			addFrequencyRatio();
+			// nobreak
 		case ElasticPlastic2:
 			addMaxPlasticRotation();
 			addMaxPlasticStrain();
@@ -735,6 +756,7 @@ public:
 		addDashboard();
 	}
 	void clearParameterUi(){
+
 		if (pPage){
 			pPage->RemoveAllChildren();
 			pPage = 0;
@@ -760,7 +782,6 @@ public:
 		for (int i = 0; i < 6; i++){
 			sc->setLimit(i, 0, 0); // make fixed
 		}
-		// sc->getTranslationalLimitMotor()->m_enableMotor[1] = true;
 		return sc;
 	}
 	btTypedConstraint* addSpringConstraint(btRigidBody* rb, btVector3& cpos){
@@ -834,8 +855,9 @@ public:
 			sc->setStiffness(i, axisMapper->getStiffness(i));
 			sc->setMaxForce(i, axisMapper->getMaxForce(i));
 		}
-		sc->getTranslationalLimitMotor()->m_enableMotor[1]=true;
 		sc->setEquilibriumPoint(1, getEquilibriumPoint());
+		b3Printf("fpLimit[1]=",sc->getFpsLimit(1));
+		sc->setFrequencyRatio(frequencyRatio);
 		m_dynamicsWorld->addAction(sc);
 		return sc;
 	}
@@ -1108,6 +1130,10 @@ void BlockDemo::setE(Gwen::Controls::Base* control){
 	demo->G = demo->E / 2.6;
 	restartHandler(control);
 }
+void BlockDemo::setFrequencyRatio(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->frequencyRatio));
+	restartHandler(control);
+}
 void BlockDemo::setFy(Gwen::Controls::Base* control){
 	btScalar tv(demo->fy / 1e6);
 	setScalar(control, &tv);
@@ -1154,6 +1180,7 @@ void BlockDemo::reinit(){
 	fy = 200E6;
 	G = E / 2.6; /* isotropic nu=0.3 */
 	maxStepCount = LONG_MAX;
+	frequencyRatio = 10;
 	resetClocks();
 }
 
@@ -1249,6 +1276,7 @@ void BlockDemo::exitPhysics()
 		delete axisMapper;
 		axisMapper = 0;
 	}
+	resetView();
 	PlasticityData::setData(0);
 }
 
@@ -1259,7 +1287,6 @@ BlockDemo::~BlockDemo()
 
 void BlockDemo::initPhysics()
 {	
-	breakingImpulseThreshold = fy*lsx*lsx;
 	hasFullGravity = false;
 	if (maxStepCount != LONG_MAX){
 		// Single step is active
@@ -1381,10 +1408,7 @@ void BlockDemo::stepSimulation(float deltaTime)
 		updateView();
 	}
 	else{
-		c_impulse = 0;
-		c_percent = 0;
-		b_y_velocity = 0;
-		b_y_location = 0;
+		resetView();
 	}
 }
 
