@@ -1,6 +1,7 @@
 #include "../ExampleBrowser/OpenGLGuiHelper.h"
 #include "btBulletDynamicsCommon.h"
 #include "PlasticityDebugDrawer.h"
+#include "PlasticityData.h"
 
 PlasticityDebugDrawer::PlasticityDebugDrawer(CommonGraphicsApp* app)
 		: m_glApp(app)
@@ -73,5 +74,69 @@ void PlasticityDebugDrawer::flushLines()
 			1);
 		m_linePoints.clear();
 		m_lineIndices.clear();
+	}
+}
+
+#define BLEN 6 
+void PlasticityDebugDrawer::drawPlasticConstraint(btElasticPlasticConstraint* epc,
+	btTypedConstraint* c, btIDebugDraw* debugDrawer){
+	if (!c->isEnabled()){
+		return;
+	}
+	char buffer[BLEN];
+	sprintf_s(buffer, BLEN, "%d", epc->getId());
+	btVector3 color(1, 0, 0);
+	btRigidBody & rbA = c->getRigidBodyA(), &rbB = c->getRigidBodyB();
+	btScalar dbgDrawSize = btScalar(0.3);
+	bool drawTransforms = true;
+	if (!rbA.isStaticObject()){
+		btVector3 from = rbA.getCenterOfMassPosition();
+		btTransform mtra = rbA.getCenterOfMassTransform();
+		btVector3 to = mtra*epc->getFrameA().getOrigin();
+		debugDrawer->draw3dText(to, buffer);
+		debugDrawer->drawLine(from, to, color);
+		if (drawTransforms){
+			dbgDrawSize *= from.distance(to);
+		}
+	}
+	if (!rbB.isStaticObject()){
+		btVector3 from = rbB.getCenterOfMassPosition();
+		btTransform mtrb = rbB.getCenterOfMassTransform();
+		btVector3 to = mtrb*epc->getFrameB().getOrigin();
+		debugDrawer->draw3dText(to, buffer);
+		debugDrawer->drawLine(from, to, color);
+		if (drawTransforms){
+			dbgDrawSize *= from.distance(to);
+		}
+	}
+	if (drawTransforms){
+		btTransform cta = epc->getTransformA();
+		debugDrawer->drawTransform(cta, dbgDrawSize);
+		btTransform ctb = epc->getTransformB();
+		debugDrawer->drawTransform(ctb, dbgDrawSize);
+	}
+}
+void PlasticityDebugDrawer::drawPlasticConstraints(btDiscreteDynamicsWorld* dw){
+	btIDebugDraw* debugDrawer = dw->getDebugDrawer();
+	if (!debugDrawer)
+	{
+		return;
+	}
+	int mode = debugDrawer->getDebugMode();
+	if (!(mode  & (btIDebugDraw::DBG_DrawConstraints | btIDebugDraw::DBG_DrawConstraintLimits)))
+	{
+		return;
+	}
+	for (int i = dw->getNumConstraints() - 1; i >= 0; i--)
+	{
+		btTypedConstraint* constraint = dw->getConstraint(i);
+		btTypedConstraint* sc = dw->getConstraint(i);
+		int type = sc->getUserConstraintType();
+		if (type != BPT_EP2 && type != BPT_EP){
+			continue;
+		}
+		btElasticPlasticConstraint *epc =
+			dynamic_cast<btElasticPlasticConstraint*>(sc);
+		drawPlasticConstraint(epc,constraint,debugDrawer);
 	}
 }

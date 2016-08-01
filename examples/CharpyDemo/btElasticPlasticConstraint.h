@@ -17,6 +17,11 @@ public:
 	virtual btScalar getCurrentPlasticStrain() = 0;
 	virtual btScalar getMaxRatio() = 0;
 	virtual int getMaxRatioDof() = 0;
+	virtual int getId() = 0;
+	virtual btTransform & getFrameA() = 0;
+	virtual btTransform & getFrameB() = 0;
+	virtual btTransform & getTransformA() = 0;
+	virtual btTransform & getTransformB() = 0;
 };
 
 #endif //_BT_ELASTIC_PLASTIC_CONSTRAINT_INTERFACE_H

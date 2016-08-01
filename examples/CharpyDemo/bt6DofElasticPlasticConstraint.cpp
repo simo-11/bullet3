@@ -18,6 +18,8 @@ subject to the following restrictions:
 #include "LinearMath/btTransformUtil.h"
 #include "LinearMath/btIDebugDraw.h"
 #include "LinearMath/btQuickprof.h"
+#include "../plasticity/PlasticityDebugDrawer.h"
+#include "../plasticity/PlasticityData.h"
 
 
 bt6DofElasticPlasticConstraint::bt6DofElasticPlasticConstraint(btRigidBody& rbA, btRigidBody& rbB, const btTransform& frameInA, const btTransform& frameInB ,bool useLinearReferenceFrameA)
@@ -41,7 +43,7 @@ void bt6DofElasticPlasticConstraint::resetIdCounter(){
 
 void bt6DofElasticPlasticConstraint::init()
 {
-	m_objectType = D6_SPRING_CONSTRAINT_TYPE;
+	m_objectType = btPlasticConstraintType::BPT_EP;
 
 	for(int i = 0; i < 6; i++)
 	{
@@ -288,6 +290,19 @@ btScalar bt6DofElasticPlasticConstraint::getMaxPlasticRotation(){
 btScalar bt6DofElasticPlasticConstraint::getCurrentPlasticRotation(){
 	return m_currentPlasticRotation;
 }
+btTransform & bt6DofElasticPlasticConstraint::getFrameA(){
+	return m_frameInA;
+}
+btTransform & bt6DofElasticPlasticConstraint::getFrameB(){
+	return m_frameInB;
+}
+btTransform & bt6DofElasticPlasticConstraint::getTransformA(){
+	return m_calculatedTransformA;
+}
+btTransform & bt6DofElasticPlasticConstraint::getTransformB(){
+	return m_calculatedTransformB;
+}
+
 void bt6DofElasticPlasticConstraint::scalePlasticity(btScalar scale){
 	m_maxPlasticStrain *= scale;
 	m_maxPlasticRotation *= scale;
@@ -375,24 +390,10 @@ void bt6DofElasticPlasticConstraint::updatePlasticity(btJointFeedback& forces,
 	}
 }
 
-#define BLEN 6 
 void bt6DofElasticPlasticConstraint::debugDraw(btIDebugDraw* debugDrawer)
 {
-	if (!isEnabled()){
-		return;
-	}
-	char buffer[BLEN];
-	sprintf_s(buffer, BLEN, "%d", id);
-	btVector3 color(1, 0, 0);
-	btVector3 from = m_rbA.getCenterOfMassPosition();
-	btTransform tr = m_rbA.getCenterOfMassTransform();
-	btVector3 to = tr*m_frameInA.getOrigin();
-	debugDrawer->draw3dText(to, buffer);
-	debugDrawer->drawLine(from, to, color);
-	from = m_rbB.getCenterOfMassPosition();
-	tr = m_rbB.getCenterOfMassTransform();
-	to = tr*m_frameInB.getOrigin();
-	debugDrawer->draw3dText(to, buffer);
-	debugDrawer->drawLine(from, to, color);
+	PlasticityDebugDrawer::drawPlasticConstraint((btElasticPlasticConstraint*)(this),
+		(btTypedConstraint*)(this),
+		debugDrawer);
 }
 

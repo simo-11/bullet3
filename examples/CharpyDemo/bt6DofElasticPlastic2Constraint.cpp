@@ -46,6 +46,7 @@ http://gimpact.sf.net
 #include "LinearMath/btQuickprof.h"
 #include <new>
 #include "../plasticity/PlasticityData.h"
+#include "../plasticity/PlasticityDebugDrawer.h"
 
 
 
@@ -81,6 +82,7 @@ void bt6DofElasticPlastic2Constraint::resetIdCounter(){
 void bt6DofElasticPlastic2Constraint::initPlasticity()
 {
 	id = ++idCounter;
+	m_objectType = btPlasticConstraintType::BPT_EP2;
 	for (int i = 0; i < 6; i++)
 	{
 		m_maxForce[i] = btScalar(SIMD_INFINITY);
@@ -1245,6 +1247,18 @@ btScalar bt6DofElasticPlastic2Constraint::getMaxPlasticRotation(){
 btScalar bt6DofElasticPlastic2Constraint::getCurrentPlasticRotation(){
 	return m_currentPlasticRotation;
 }
+btTransform & bt6DofElasticPlastic2Constraint::getFrameA(){
+	return m_frameInA;
+}
+btTransform & bt6DofElasticPlastic2Constraint::getFrameB(){
+	return m_frameInB;
+}
+btTransform & bt6DofElasticPlastic2Constraint::getTransformA(){
+	return m_calculatedTransformA;
+}
+btTransform & bt6DofElasticPlastic2Constraint::getTransformB(){
+	return m_calculatedTransformB;
+}
 void bt6DofElasticPlastic2Constraint::scalePlasticity(btScalar scale){
 	m_maxPlasticStrain *= scale;
 	m_maxPlasticRotation *= scale;
@@ -1335,25 +1349,11 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 		setEnabled(false);
 	}
 }
-#define BLEN 6 
 void bt6DofElasticPlastic2Constraint::debugDraw(btIDebugDraw* debugDrawer)
 {
-	if (!isEnabled()){
-		return;
-	}
-	char buffer[BLEN];
-	sprintf_s(buffer, BLEN, "%d", id);
-	btVector3 color(1, 0, 0);
-	btVector3 from = m_rbA.getCenterOfMassPosition();
-	btTransform tr = m_rbA.getCenterOfMassTransform();
-	btVector3 to = tr*m_frameInA.getOrigin();
-	debugDrawer->draw3dText(to, buffer);
-	debugDrawer->drawLine(from, to, color);
-	from = m_rbB.getCenterOfMassPosition();
-	tr = m_rbB.getCenterOfMassTransform();
-	to = tr*m_frameInB.getOrigin();
-	debugDrawer->draw3dText(to, buffer);
-	debugDrawer->drawLine(from, to, color);
+	PlasticityDebugDrawer::drawPlasticConstraint((btElasticPlasticConstraint*)(this), 
+		(btTypedConstraint*)(this),
+		debugDrawer);
 }
 
 

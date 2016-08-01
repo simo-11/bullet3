@@ -36,6 +36,7 @@ Based on DemolisherDemo by Simo Nikula 2016-
 #include "../plasticity/PlasticityExampleBrowser.h"
 #include "../plasticity/PlasticityData.h"
 #include "../plasticity/PlasticityStatistics.h"
+#include "../plasticity/PlasticityDebugDrawer.h"
 
 #include "BulletDynamics/ConstraintSolver/btSliderConstraint.h"
 #include "BulletDynamics/ConstraintSolver/btGeneric6DofSpringConstraint.h"
@@ -1346,6 +1347,7 @@ void BlockDemo::physicsDebugDraw(int debugFlags)
 	{
 		m_dynamicsWorld->getDebugDrawer()->setDebugMode(debugFlags);
 		m_dynamicsWorld->debugDrawWorld();
+		PlasticityDebugDrawer::drawPlasticConstraints(m_dynamicsWorld);
 	}
 }
 

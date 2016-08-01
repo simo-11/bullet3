@@ -3,6 +3,7 @@
 
 #include "../ExampleBrowser/OpenGLGuiHelper.h"
 #include "../CommonInterfaces/CommonGraphicsAppInterface.h"
+#include "../CharpyDemo/btElasticPlasticConstraint.h"
 #include "btBulletDynamicsCommon.h"
 
 #define BT_LINE_BATCH_SIZE 512
@@ -47,5 +48,8 @@ public:
 	virtual void	setDebugMode(int debugMode);
 	virtual void flushLines();
 	virtual int		getDebugMode() const;
+	static void drawPlasticConstraint(btElasticPlasticConstraint* epc, 
+		btTypedConstraint* c, btIDebugDraw* debugDrawer);
+	static void drawPlasticConstraints(btDiscreteDynamicsWorld* dw);
 };
 #endif // PLASTICITY_DEBUG_DRAWER

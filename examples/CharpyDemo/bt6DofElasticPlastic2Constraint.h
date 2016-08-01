@@ -300,6 +300,10 @@ public:
 	virtual btScalar getCurrentPlasticRotation();
 	virtual btScalar getMaxRatio();
 	virtual int getMaxRatioDof();
+	virtual btTransform & getFrameA();
+	virtual btTransform & getFrameB();
+	virtual btTransform & getTransformA();
+	virtual btTransform & getTransformB();
 	void initPlasticity();
 	void updatePlasticity(btJointFeedback& forces);
 	///btActionInterface interface
