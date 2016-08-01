@@ -261,9 +261,12 @@ void bt6DofElasticPlasticConstraint::setMaxPlasticStrain(btScalar value){
 	m_maxPlasticStrain = value;
 	/*
 	upper/lower limits cannot be used at same time as plasticity
+	They are set to +/- maxPlasticStrain to avoid conflict in most cases
 	*/
-	setLinearUpperLimit(btVector3(2 * value, 2 * value, 2 * value));
-	setLinearLowerLimit(btVector3(-2 * value, -2 * value, -2 * value));
+	btScalar ul(value);
+	btScalar ll(-value);
+	setLinearUpperLimit(btVector3(ul,ul,ul));
+	setLinearLowerLimit(btVector3(ll,ll,ll));
 }
 btScalar bt6DofElasticPlasticConstraint::getMaxPlasticStrain(){
 	return m_maxPlasticStrain;

@@ -425,7 +425,7 @@ public:
 		return btScalar(lsx*lsy*lsz*getDensity(blockSteelScale));
 	}
 	btScalar getEquilibriumPoint(){
-		bool useZero = false;
+		bool useZero = true;
 		if (useZero){
 			return 0;
 		}
@@ -856,7 +856,7 @@ public:
 			sc->setMaxForce(i, axisMapper->getMaxForce(i));
 		}
 		sc->setEquilibriumPoint(1, getEquilibriumPoint());
-		b3Printf("fpLimit[1]=",sc->getFpsLimit(1));
+		b3Printf("fpsLimit[1]=%.1f",sc->getFpsLimit(1));
 		sc->setFrequencyRatio(frequencyRatio);
 		m_dynamicsWorld->addAction(sc);
 		return sc;
