@@ -491,7 +491,7 @@ struct QuickCanvas : public Common2dCanvasInterface
 		:m_myTexLoader(myTexLoader),
 		m_curNumGraphWindows(0)
 	{
-		for (int i=0;i<MAX_GRAPH_WINDOWS;i++)
+		for (int i = 0; i<MAX_GRAPH_WINDOWS; i++)
 		{
 			m_gw[i] = 0;
 			m_gt[i] = 0;
@@ -503,45 +503,53 @@ struct QuickCanvas : public Common2dCanvasInterface
 		if (m_curNumGraphWindows<MAX_GRAPH_WINDOWS)
 		{
 			//find a slot
-			int slot = 0;//hardcoded for now
+			int slot = m_curNumGraphWindows;
+			btAssert(slot<MAX_GRAPH_WINDOWS);
+			if (slot >= MAX_GRAPH_WINDOWS)
+				return 0;//don't crash
+
 			m_curNumGraphWindows++;
 
 			MyGraphInput input(gui->getInternalData());
-			input.m_width=width;
-			input.m_height=height;
-			input.m_xPos = 300;
-			input.m_yPos = height-input.m_height;
-			input.m_name=canvasName;
+			input.m_width = width;
+			input.m_height = height;
+			input.m_xPos = 10000;//GUI will clamp it to the right//300;
+			input.m_yPos = 10000;//GUI will clamp it to bottom
+			input.m_name = canvasName;
 			input.m_texName = canvasName;
 			m_gt[slot] = new GraphingTexture;
-			m_gt[slot]->create(width,height);
+			m_gt[slot]->create(width, height);
 			int texId = m_gt[slot]->getTextureId();
 			m_myTexLoader->m_hashMap.insert(canvasName, texId);
 			m_gw[slot] = setupTextureWindow(input);
-			
+
 			return slot;
 		}
 		return -1;
 	}
 	virtual void destroyCanvas(int canvasId)
 	{
-		btAssert(canvasId==0);//hardcoded to zero for now, only a single canvas
-		btAssert(m_curNumGraphWindows==1);
+		btAssert(canvasId >= 0);
+		delete m_gt[canvasId];
+		m_gt[canvasId] = 0;
 		destroyTextureWindow(m_gw[canvasId]);
+		m_gw[canvasId] = 0;
 		m_curNumGraphWindows--;
 	}
-	virtual void setPixel(int canvasId, int x, int y, unsigned char red, unsigned char green,unsigned char blue, unsigned char alpha)
+	virtual void setPixel(int canvasId, int x, int y, unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha)
 	{
-		btAssert(canvasId==0);//hardcoded
-		btAssert(m_curNumGraphWindows==1);
-		m_gt[canvasId]->setPixel(x,y,red,green,blue,alpha);
+		btAssert(canvasId >= 0);
+		btAssert(canvasId<m_curNumGraphWindows);
+		m_gt[canvasId]->setPixel(x, y, red, green, blue, alpha);
 	}
+
 	virtual void getPixel(int canvasId, int x, int y, unsigned char& red, unsigned char& green, unsigned char& blue, unsigned char& alpha)
 	{
-		btAssert(canvasId == 0);//hardcoded
-		btAssert(m_curNumGraphWindows == 1);
+		btAssert(canvasId >= 0);
+		btAssert(canvasId<m_curNumGraphWindows);
 		m_gt[canvasId]->getPixel(x, y, red, green, blue, alpha);
 	}
+
 	virtual void refreshImageData(int canvasId)
 	{
 		m_gt[canvasId]->uploadImageData();

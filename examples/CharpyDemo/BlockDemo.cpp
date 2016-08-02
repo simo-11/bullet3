@@ -37,7 +37,6 @@ Based on DemolisherDemo by Simo Nikula 2016-
 #include "../plasticity/PlasticityData.h"
 #include "../plasticity/PlasticityStatistics.h"
 #include "../plasticity/PlasticityDebugDrawer.h"
-
 #include "BulletDynamics/ConstraintSolver/btSliderConstraint.h"
 #include "BulletDynamics/ConstraintSolver/btGeneric6DofSpringConstraint.h"
 #include "BulletDynamics/ConstraintSolver/btGeneric6DofSpring2Constraint.h"
@@ -51,6 +50,7 @@ Based on DemolisherDemo by Simo Nikula 2016-
 #include "../CommonInterfaces/CommonGraphicsAppInterface.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenUserInterface.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenInternalData.h"
+#include "../RenderingExamples/TimeSeriesCanvas.h"
 const char * PROFILE_TENSION_SLEEP = "BlockDemo::Sleep";
 
 class BlockDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
@@ -94,7 +94,8 @@ public:
 	btScalar damping=0.9; // 1= no damping, 0=full damping
 	btScalar damping2 = 0.1; // 0= no damping, 1=critically damped, >1 overdamped
 	bool hasFullGravity;
-	btScalar m_fixedTimeStep = btScalar(1) / btScalar(60);
+	int intFreq = 60;
+	btScalar m_fixedTimeStep = btScalar(1) / btScalar(intFreq);
 	btScalar blockSteelScale;
 	btScalar density;
 	btScalar maxPlasticRotation;
@@ -229,35 +230,20 @@ public:
 			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
 		camera->setCameraTargetPosition(scl.x(), scl.y(), scl.z());
 	}
-	/** update fps and kmph after interval seconds have passed */
-	float speedometerUpdated;
-	float updateInterval = 0.3;
-	int updateViewCount = 0;
 	void resetClocks(){
 		driveClock.reset();
-		speedometerUpdated = 0;
 	}
 	void updateView(){
-		updateViewCount++;
-		float now = driveClock.getTimeSeconds();
-		lastClock = currentClock;
-		currentClock = now;
-		lastLocation = currentLocation;
-		float timeDelta = now - speedometerUpdated;
-		if (timeDelta < updateInterval){
-			return;
-		}
-		fps = updateViewCount / timeDelta;
-		speedometerUpdated = now;
-		updateViewCount = 0;
 		if (m_constraint){
-			c_impulse = btFabs(jf.m_appliedForceBodyB[1]*m_fixedTimeStep);
+			c_y_force = jf.m_appliedForceBodyB[1];
+			c_impulse = btFabs(c_y_force*m_fixedTimeStep);
 			c_percent = 100.*c_impulse/maxImpulse;
 		}
 		if (m_body){
 			b_y_location = m_body->getWorldTransform().getOrigin().y() - yStart;
 			b_y_velocity = m_body->getLinearVelocity().y();
 		}
+		updateTimeSeries();
 	}
 	void resetView(){
 		c_impulse = 0;
@@ -421,7 +407,10 @@ public:
 	Gwen::Controls::Label *db21, *db22, *db23;
 	Gwen::Controls::Label *db31, *db32;
 	int fps = 0;
-	btScalar c_impulse = 0, c_percent=0, b_y_location=0, b_y_velocity=0, yStart=0;
+	btScalar c_impulse = 0, c_y_force=0,
+		c_percent=0, 
+		b_y_location=0, b_y_velocity=0, yStart=0;
+	TimeSeriesCanvas *tsYLocation=0, *tsYVelocity=0, *tsYForce=0;
 	btScalar getMass(){
 		return btScalar(lsx*lsy*lsz*getDensity(blockSteelScale));
 	}
@@ -1053,6 +1042,51 @@ public:
 		}
 		m_dynamicsWorld->setConstraintSolver(m_constraintSolver);
 	}
+	void addTimeSeries(){
+		int tsWidth = 300, tsHeight = 200;
+		CommonGraphicsApp * app = PlasticityExampleBrowser::getApp();
+		if (0 == tsYLocation){
+			tsYLocation = new TimeSeriesCanvas
+				(app->m_2dCanvasInterface, tsWidth, tsHeight, "Y location [m]");
+		}
+		tsYLocation->setupTimeSeries(2, intFreq, 0);
+		tsYLocation->addDataSource("",255,0,0);
+		if (0 == tsYVelocity){
+			tsYVelocity = new TimeSeriesCanvas
+				(app->m_2dCanvasInterface, tsWidth, tsHeight, "Y velocity [m/s]");
+		}
+		tsYVelocity->setupTimeSeries(5, intFreq, 0);
+		tsYVelocity->addDataSource("",0 , 255, 0);
+		btScalar maxForce = axisMapper->getMaxForce(1);
+		if (0 == tsYForce){
+			tsYForce = new TimeSeriesCanvas
+				(app->m_2dCanvasInterface, tsWidth, tsHeight, "Y force [kN]");
+		}
+		tsYForce->setupTimeSeries(maxForce/1000., intFreq, 0);
+		tsYForce->addDataSource("", 0, 0, 255);
+	}
+	void updateTimeSeries(){
+		tsYLocation->insertDataAtCurrentTime(b_y_location, 0, true);
+		tsYLocation->nextTick();
+		tsYVelocity->insertDataAtCurrentTime(b_y_velocity, 0, true);
+		tsYVelocity->nextTick();
+		tsYForce->insertDataAtCurrentTime(c_y_force/1000., 0, true);
+		tsYForce->nextTick();
+	}
+	void deleteTimeSeries(){
+		if (tsYLocation){
+			delete tsYLocation;
+			tsYLocation = 0;
+		}
+		if (tsYVelocity){
+			delete tsYVelocity;
+			tsYVelocity = 0;
+		}
+		if (tsYForce){
+			delete tsYForce;
+			tsYForce = 0;
+		}
+	}
 };
 BlockDemo *demo = 0;
 
@@ -1279,6 +1313,7 @@ void BlockDemo::exitPhysics()
 	}
 	resetView();
 	PlasticityData::setData(0);
+	deleteTimeSeries();
 }
 
 BlockDemo::~BlockDemo()
@@ -1339,6 +1374,7 @@ void BlockDemo::initPhysics()
 	}
 	resetDemo();
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
+	addTimeSeries();
 }
 
 void BlockDemo::physicsDebugDraw(int debugFlags)

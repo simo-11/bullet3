@@ -29,6 +29,7 @@
 		"../ExampleBrowser/**.cpp",
 		"../ExampleBrowser/**.h",
 		"../CommonInterfaces/*",
+		"../RenderingExamples/*",
 		"../CharpyDemo/*",
 		"../Utils/b3Clock.*",
 		}
@@ -37,6 +38,7 @@
 		"../ExampleBrowser/ExampleEntries.*",
 		"../ExampleBrowser/InProcessExampleBrowser.*",
 		"../ExampleBrowser/main.*",
+		"../RenderingExamples/TinyRenderer*",
 		}
 		
 if os.is("Linux") then 
