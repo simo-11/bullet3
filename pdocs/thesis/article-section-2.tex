@@ -1,3 +1,4 @@
+% !TeX root = article.tex
 \section{Adding plasticity to physics engine}
 
 In this section, key concepts related to the introduced model are explained. Main differences between 
@@ -9,6 +10,98 @@ however, it is popular within physics based game developers and film production 
 velocity-based formulation is  popular in constraint-based rigid body simulation. 
 Main reason is that collision handling can be done without additional procedures.
 Acceleration-based formulations need to stop at collision and switch to an impulse based method.
+
+Background
+for velocity based formulation shown here is based on  \citet[p.~45-50]{erleben.thesis}.
+% pdf page 64
+In following section, these formulations will be clarified by simple example using \bullet\ implementation.
+Assuming that force $\vec{f}_{true}(t)$, is known the impulse $\vec{J}$
+in the time interval $\Delta t $ can we written as
+\begin{equation} \label{eq:impulseIntegral}
+\vec{J} = \int_{0}^{\Delta t} \vec{f}_{true}(t) dt
+\end{equation}
+Using Newton's second law of motion $F=ma$ one can solve for the velocity, $\vec{v}^{\Delta t}$
+\begin{equation} \label{eq:impulseIntegraWithNewton}
+\int_{0}^{\Delta t} m \frac{d\vec{v}}{dt}dt= \int_{0}^{\Delta t} \vec{f}_{true}(t)
+\end{equation}
+\begin{equation} \label{eq:impulse}
+m(\vec{v}^{\, \Delta t} - \vec{v}^{\, 0})=\vec{J}
+\end{equation}
+where superscripts denote time, i.e. ${v}^{\Delta t}=v(\Delta t)$. Next position can be found
+by integrating the velocity.
+Derivation of equations of motion is not shown here in detail but results 
+for simple contact can be summarized as
+equation \ref{eq:eomL} for locations and \ref{eq:eomV} for velocities.
+Symbols are summarized in table \ref{tab:eom} and figure \ref{fig:eom}.
+\begin{equation} \label{eq:eomL} % pdf page 69
+\vec{s}^{\, t+\Delta t} = s^{t}+\Delta t S \vec{u}^{\, t+\Delta t}
+\end{equation}
+
+\begin{equation} \label{eq:eomV}
+\vec{u}^{\, t+\Delta t} = u^{t}+\Delta t M^{-1}(C N \vec{f}^{\ t+\Delta t} + \vec{f}_{ext}) 
+\end{equation}
+
+Friction in contacts and joint constraints can be handled in unified way by refactoring
+equation \ref{eq:eomV} to get \ref{eq:eomV2},  \citet[p.~66-67]{erleben.thesis}.
+Jacobian terms are derived by taking time derivates of kinematic constraints.
+
+\begin{equation} \label{eq:eomV2}
+\vec{u}^{t+\Delta t} = u^{t}+\Delta t M^{-1}(
+ J_{contact}^T \vec{\lambda}_{contact}
++ J_{joint}^T \vec{\lambda}_{joint}
++ \vec{f}_{ext})
+\end{equation}
+
+
+\begin{figure}[htb!]
+\centering
+\begin{tikzpicture}
+\coordinate (O1) at(2,1);
+\coordinate (O2) at(2,4);
+\coordinate (C) at(2,2);
+\draw (0,0) -- (4,0) -- (4,2) -- (0,2) --(0,0);
+\draw (2,2) -- (3.5,5) -- (0.5,5) -- (2,2) ;
+\node at (3.5,0.4) {$B_1$};
+\filldraw (O1) circle (0.5mm) node[anchor=north] {$\vec{r}_1$};
+\node at (2.8,4.5) {$B_2$};
+\filldraw (O2) circle (0.5mm) node[anchor=south] {$\vec{r}_2$};
+\filldraw (C) circle (0.5mm) node[anchor=north west] {$\vec{p}_1$};
+\draw[-{Stealth[length=3mm]}] (O1) -- (C) node[anchor=north east] {$\vec{r}_{11}$};
+\draw[-{Stealth[length=3mm]}] (O2) -- (C) node[anchor=south east] {$\vec{r}_{21}$};
+\draw[-latex,thick] (C) -- ++(0,1.4) node[anchor=west] {$\vec{n}_{1}$};
+\end{tikzpicture}
+\caption{Illustration of nomenclature for equations of motion.}
+\label{fig:eom}
+\end{figure}
+
+% pdf page 33, notation in typical ODEs
+\begin {table}[htb!]
+\begin{center}
+\begin{tabular}{|l| l|}
+\hline
+{\bf Symbol} & {\bf Description} \\  \hline
+$\vec{r}_i$ & position of center of mass for body i  \\ \hline
+$\vec{q}_i$ & orientation as a quaternion for body i  \\ \hline
+$\vec{p}_i$ & contact or joint point i  \\ \hline
+$\vec{r}_{ki}$ & $\vec{p}_k - \vec{r}_i$  \\ \hline
+$\vec{s}$ & $\lbrack \vec{r}_1, \vec{q}_1,...,\vec{r}_n, \vec{q}_n \rbrack ^T $\\ \hline
+$S$ & generalized transformation matrix  \\ \hline
+$\vec{v}_i$ & linear velocity of  center of mass for body i  \\ \hline
+$\vec{\omega}_i$ & angular velocity of center of mass for body i  \\ \hline
+$\vec{u}$ & $\lbrack \vec{v}_1, \vec{\omega}_1,...,\vec{v}_n, \vec{\omega}_n \rbrack ^T $\\ \hline
+$M$ & generalized mass matrix  \\ \hline
+$C$ & contact condition matrix  \\ \hline
+$N$ & contact normal matrix  \\ \hline
+$J_{contact}$ & Jacobian matrix for contacts  \\ \hline
+$\lambda_{contact}$ & vector of lagrange multipliers for contacts  \\ \hline
+$J_{joint}$ & Jacobian matrix for joints  \\ \hline
+$\lambda_{joint}$ & vector of lagrange multipliers for joints  \\ \hline
+\end {tabular}
+\end{center}
+\caption {Nomenclature for equations of motion} \label{tab:eom}
+\end {table}
+
+
 In structural analysis, a formulation and associated numerical solution procedure are selected 
 based on needed features.
 For most complex scenarios finite element method is used.
@@ -38,7 +131,8 @@ It should be noted that geometry
 of objects is not updated during analysis and thus engineering stress-strain properties should
 be used even with strain hardening.
 
-Strain hardening is taken into account in this work mainly by assuming that plasticity in bending expands, \citet[p.~672]{dowling}.
+Strain hardening is taken into account in this work mainly by assuming that plasticity in bending
+expands, \citet[p.~672]{dowling}.
 Material that starts to yield first is hardened and yielding moves slightly.
 This can be seen e.g. by bending paperclip. It does not break at low angles but can take few full bends. 
 
@@ -117,7 +211,7 @@ Main parameters  and corresponding fields in \bullet\
 \begin{tabular}{|c| l| l|}
 \hline
 {\bf Parameter} & {\bf Description} & {\bf btConstraintInfo2 pointer}\\  \hline
-$J_1, \Omega_1$ & Jacobian & m\_J1linearAxis, m\_J1angularAxis \\ 
+$J_1, \Omega_1$ & jacobian & m\_J1linearAxis, m\_J1angularAxis \\
 $J_2, \Omega_2$ & & m\_J2linearAxis, m\_J2angularAxis \\ \hline
 $v$ & linear velocity & \\ \hline
 $\omega$ & angular velocity & \\ \hline
