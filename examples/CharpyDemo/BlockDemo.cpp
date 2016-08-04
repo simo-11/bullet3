@@ -233,11 +233,31 @@ public:
 	void resetClocks(){
 		driveClock.reset();
 	}
+	btScalar sumContactImpulses(){
+		btScalar totalImpact = btScalar(0);
+		btDispatcher *dispatcher = m_dynamicsWorld->getDispatcher();
+		int numManifolds = dispatcher->getNumManifolds();
+		for (int i = 0; i < numManifolds; i++)
+		{
+			btPersistentManifold* contactManifold = dispatcher->getManifoldByIndexInternal(i);
+			int numContacts = contactManifold->getNumContacts();
+			for (int j = 0; j < numContacts; j++)
+			{
+				btManifoldPoint& pt = contactManifold->getContactPoint(j);
+				totalImpact += pt.m_appliedImpulse;
+			}
+		}
+		return totalImpact;
+	}
 	void updateView(){
 		if (m_constraint){
 			c_y_force = jf.m_appliedForceBodyB[1];
 			c_impulse = btFabs(c_y_force*m_fixedTimeStep);
 			c_percent = 100.*c_impulse/maxImpulse;
+		}
+		else{
+			c_impulse = sumContactImpulses();
+			c_y_force = c_impulse / m_fixedTimeStep;
 		}
 		if (m_body){
 			b_y_location = m_body->getWorldTransform().getOrigin().y() - yStart;
@@ -1055,7 +1075,7 @@ public:
 			tsYVelocity = new TimeSeriesCanvas
 				(app->m_2dCanvasInterface, tsWidth, tsHeight, "Y velocity [m/s]");
 		}
-		tsYVelocity->setupTimeSeries(5, intFreq, 0);
+		tsYVelocity->setupTimeSeries(6, intFreq, 0);
 		tsYVelocity->addDataSource("",0 , 255, 0);
 		btScalar maxForce = axisMapper->getMaxForce(1);
 		if (0 == tsYForce){

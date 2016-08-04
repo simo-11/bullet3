@@ -1,7 +1,7 @@
 % !TeX root = article.tex
 \section{Processing plasticity}
 
-In this section, changes to constraint formulation are clarified by doing few simulation steps of rigid and
+In this section, changes to constraint formulation are clarified by doing few simulation steps of non constrained, rigid and
 elastic-plastic examples.
 
 \begin{figure}[htb!]
@@ -21,7 +21,7 @@ elastic-plastic examples.
 \draw (0,4.5,0) -- ++(0,0,1);
 \draw (1,4.5,0) -- ++(0,0,1);
 
-\draw[->] (0.5,3,0.5) -- ++(0,1.5,0);
+\draw[-Stealth] (0.5,3,0.5) -- ++(0,1.5,0);
 \end{tikzpicture}
 \caption{Single body model for plasticy processing demonstration.}
 \label{fig:tensionModel}
@@ -36,17 +36,22 @@ Concrete density is $2000 \frac{kg}{m^3}$ and steel density is $7800 \frac{kg}{m
 Steel is assumed to handle load in elastic-plastic case. Yield stress of steel is 200 MPa.
 Gravity is $10 \frac{m}{s^2}$. Simulation step is $\frac{1}{60} s$ and 10 
 iterations are done for single step.
+Body is 1.5 meters above rigid ground. In unconstrained case body will hit hit ground at t=0.548 s 
+($\sqrt{\frac{2 \cdot 1.5}{10}}$).
 
 Single simulation step is done using following substeps. 
 In this work, changes are made only to constraing solving and update actions.
 \begin{enumerate}
-\item Apply gravity
-\item Predict unconstrained motion
-\item Predict contacts
-\item Perform collision detection
+\item Apply gravity to each non static body. 
+This step just makes programming easier as otherwise each program should add forces due to gravity in each step. 
+In this case, $\vec{f}_{ext}$ gets added by $\lbrace{0,-60000,0}\rbrace$.
+\item Predict unconstrained motion for each non static body. Prediction is done based on bodys current linear and angular velocity.
+\item Predict contacts.
+\item Perform collision detection. All body pairs created in previous step are processed and manifoldPoints are created for
+each detected contact. In unconstrained case, contact is detected after t=0.55 s and manifolds distance gets negative value (-0.058 m).
 \item Calculate simulation islands(groups). Bodies that are near each other or connected with constraints are grouped in same group.
 \item Solve constraints. Both contact and other constraints are processed in this step.
-\item Integrate transforms
+\item Integrate transforms using velocities modified in previous step.
 \item Update actions (callbacks) are called. 
 In elastic-plastic case, plasticity is summed and equilibrium point of elastic part is updated if maximum force or moment is exceeded.
 \item Activation state of bodies is updated. Bodies that are not active
@@ -54,7 +59,7 @@ In elastic-plastic case, plasticity is summed and equilibrium point of elastic p
 \end{enumerate} 
 
 Equation \ref{eq:constraintEquation} is simplified
-to \ref{eq:fixedConstraint} in these cases.
+to \ref{eq:fixedConstraint} in constrained cases.
 \begin{itemize}
 \item No rotation takes place. $\omega_1$ and $\omega_2$ are zeros.
 \item Constraint force mixing can be ignored.
@@ -70,38 +75,76 @@ Equations \ref{eq:lambdaLow} and \ref{eq:lambdaHigh} are not active for fixed ca
 For elastic-plastic case maximum impulse is set to product of yield stress, area of steel enforcement and time step (1330).
 
 Method btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup
-in \bullet\ was used to pick up values. Actual values for fixed constraint are shown in table
-\ref{tab:fixedBlockValues} and values for elastic-plastic case are shown in tables \ref{tab:epBlockValues} and 
- \ref{tab:ep2BlockValues}. There are currently two alternative six-dof-spring constraint implementations in \bullet\ and 
-in this work elastic-plastic versions of both of them were developed. 
-Constraint activation of older spring and fixed constraints is implemented so that 
-they are activated after constraint is violated.
-Thus body drops freely during first simulation step and 
-gains enough kinetic energy so that higher impulses are needed in few following steps.
+in \bullet\ was used to pick up values for internal variables. 
 
 \begin{description}
 \item[velError] is calculated using velocities and external impulses of connected bodies. 
- In this case, it is dominant contributor for constraint's impulse.
+ \begin{description}
+\item[In constraint cases,] it is dominant contributor for constraint's impulse.
+\item[In penetrating contact case,] main contributor is bodies relative speed at point of contact. 
+\end{description}
 \item[posError] is calculated by constraint. It is significant factor in designing stable constraints.
  \begin{description}
  \item[In fixed case,] value is about 12 times actual position error. Factor 12 is based on time step (60) 
  and default value of error reduction parameter (0.2).
  \item[In elastic plastic case,]  value is set to zero if impulse would be larger than maximum impulse or
 spring simulation cannot be done in stable way.
+ \item[In contact case,] value is zero if there is no penetration. For penetration cases it is 
+$\frac{-penetration\, erp}{timeStep}$
  \end{description}
 \item[rhs] is calculated by velError jInv + posError jInv
 \item[jInv] is calculated using masses and inertias of connected bodies and constraint geometry. 
-In this case, it is mass of body (6000).
+ \begin{description}
+\item[In constraint cases,] it is mass of body (6000).
+\item[In contact case,] it varies below mass of body.
 \end{description}
+\item[Impulse]
+ \begin{description}
+\item[In constraint cases,] it is obtained from btJointFeedback structure.
+\item[In contact case,] it is obtained by summing applied impulses from active manifolds.
+\end{description}
+\end{description}
+
+Actual values for unconstrained case 
+are shown in \ref{tab:freeBlockValues}.
+
+\begin {table}[htb!]
+\begin{center}
+\begin{tabular}{|l| l|l| l|l|l|l|l|}
+\hline
+{\bf Time} & 
+{\bf Location} &
+{\it velError} & {\it penetration} & {\it posError} & {\it rhs} &
+{\bf Velocity} & 
+{\bf Impulse} \\  \hline
+0.017 &  0 & & & &  &-0.17 & 0 \\  \hline
+0.550 &  -1.558 & & & & & -5.5 & 0 \\  \hline
+0.567 &  -1.511 & 5.66 &-0.058 &2.8 &  21270 & 0.01 & 34000 \\  \hline
+0.583 &  -1.502 & 0.14 &-0.011 & 0.54& 2570  & 0.55 & 420 \\  \hline
+0.600 &  -1.496 & -0.38&-0.002 & 0.1  & -1000& 0.38 & 0 \\  \hline
+0.617 &  -1.492 &-0.44 & 0.004 & 0     & -1600& 0.22 & 0 \\  \hline
+0.717 &  -1.497 &0.004-0.08  &-0.0003-0.001 &0-0.01 & 10-400 & -0.01 & 400 \\  \hline
+0.817 &  -1.499 & & & & & -0.08 & 700 \\  \hline
+0.917 &  -1.500 & & & & & -0.001 & 1000 \\  \hline
+\end {tabular}
+\end{center}
+\caption {Simulation values for unconstrained case. 
+For internal contact values typical values are shown
+as number of contacts and detailed values differ.} 
+\label{tab:freeBlockValues} 
+\end {table}
+
+Values for fixed constraint are shown in table
+\ref{tab:fixedBlockValues}. 
 
 \begin {table}[htb!]
 \begin{center}
 \begin{tabular}{|l| l| l|l|l|l|}
 \hline
 {\bf Time} & 
-{\bf velError} & {\bf posError} & {\bf rhs} &
-{\bf velocity} & 
-{\bf impulse} \\  \hline
+{\it velError} & {\it posError} & {\it rhs} &
+{\bf Velocity} & 
+{\bf Impulse} \\  \hline
 0.017 &  & & & -0.17 & 0 \\  \hline
 0.033 &  0.33 & -0.033 & -2200 & 0.033 & 2200 \\  \hline
 0.050 &  -0.13 & -0.027 & -960 & 0.027 & 960 \\  \hline
@@ -112,16 +155,24 @@ In this case, it is mass of body (6000).
 \caption {Constraint parameter values for fixed constraint} \label{tab:fixedBlockValues} 
 \end {table}
 
+Values for elastic-plastic case are shown in tables \ref{tab:epBlockValues} and 
+ \ref{tab:ep2BlockValues}. 
+There are currently two alternative six-dof-spring constraint implementations in \bullet\ and 
+in this work elastic-plastic versions of both of them were developed. 
+Constraint activation of older spring and fixed constraints is implemented so that 
+they are activated after constraint is violated.
+Thus body drops freely during first simulation step and 
+gains enough kinetic energy so that higher impulses are needed in few following steps.
 
 \begin {table}[htb!]
 \begin{center}
 \begin{tabular}{|l| l| l|l|l|l|l|}
 \hline
 {\bf Time} & 
-{\bf velError} & {\bf posError} & {\bf rhs} &
-{\bf velocity} & 
-{\bf impulse} & 
-{\bf plastic strain} \\  \hline
+{\it velError} & {\it posError} & {\it rhs} &
+{\it velocity} & 
+{\bf Impulse} & 
+{\bf Plastic strain} \\  \hline
 0.017 &          &    &          & -0.17 & 0 & 0 \\  \hline
 0.033 &  -0.33 & 0 & -2000 & -0.11 &  1330 & 0.001 \\  \hline
 0.050 &  -0.28 & 0 & -1670 & -0.056 &  1330 & 0.003 \\  \hline
@@ -137,10 +188,10 @@ In this case, it is mass of body (6000).
 \begin{tabular}{|l| l| l|l|l|l|l|}
 \hline
 {\bf Time} & 
-{\bf velError} & {\bf posError} & {\bf rhs} &
-{\bf velocity} & 
-{\bf impulse} & 
-{\bf plastic strain} \\  \hline
+{\it velError} & {\it posError} & {\it rhs} &
+{\bf Velocity} & 
+{\bf Impulse} & 
+{\bf Plastic strain} \\  \hline
 0.017... & -0.17  & 0 & -1000 & 0       & 1000 & 0 \\  \hline
 \end {tabular}
 \end{center}
