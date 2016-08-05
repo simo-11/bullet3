@@ -993,6 +993,11 @@ public:
 		btVector3 pos = btVector3(0, yStart, 0);
 		loadTrans.setOrigin(pos);
 		m_body=localCreateRigidBody(mass, loadTrans, loadShape);
+		bool useCcd = true;
+		if (useCcd){
+			m_body->setCcdMotionThreshold(lsy / 10000);
+			m_body->setCcdSweptSphereRadius(lsy / 10);
+		}
 		axisMapper=new AxisMapper(lsx, lsy, lsz, cpos);
 		axisMapper->setE(E*blockSteelScale);
 		axisMapper->setFy(fy*blockSteelScale);
@@ -1356,14 +1361,14 @@ void BlockDemo::initPhysics()
 	stepTime = 0;
 	int upAxis = 1;
 	m_guiHelper->setUpAxis(upAxis);
-	btVector3 groundExtents(200,200,200);
+	btVector3 groundExtents(2*lsx,2*lsy,2*lsz);
 	groundExtents[upAxis]=3;
 	btCollisionShape* groundShape = new btBoxShape(groundExtents);
 	m_collisionShapes.push_back(groundShape);
 	m_collisionConfiguration = new btDefaultCollisionConfiguration();
 	m_dispatcher = new btCollisionDispatcher(m_collisionConfiguration);
-	btVector3 worldMin(-1000,-1000,-1000);
-	btVector3 worldMax(1000,1000,1000);
+	btVector3 worldMin(-3*lsx,-3*lsy,-3*lsz);
+	btVector3 worldMax(3 * lsx, 3 * lsy, 3 * lsz);
 	m_overlappingPairCache = new btAxisSweep3(worldMin,worldMax);
 	if (useMCLPSolver)
 	{
