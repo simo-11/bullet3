@@ -102,6 +102,12 @@ public:
 	btScalar maxPlasticStrain;
 	bool disableCollisionsBetweenLinkedBodies = true;
 	bool dumpPng = false;
+	bool useCcd;
+	int shootCount = 0;
+	btScalar shootVelocity;
+	void shoot();
+	btCollisionShape* ammoShape = 0;
+	btVector4 ammoColor = btVector4(0.5, 0.5, 0.5, 0.5);
 	char *logDir = _strdup("d:/wrk");
 	int gx = 10; // for labels
 	int gxi = 120; // for inputs elements
@@ -416,11 +422,14 @@ public:
 	void setBlockSteelScale(Gwen::Controls::Base* control);
 	void setMaxPlasticStrain(Gwen::Controls::Base* control);
 	void setMaxPlasticRotation(Gwen::Controls::Base* control);
+	void handleShoot(Gwen::Controls::Base* control);
+	void handleShootVelocity(Gwen::Controls::Base* control);
 	void handlePauseSimulation(Gwen::Controls::Base* control);
 	void handleSingleStep(Gwen::Controls::Base* control);
 	void setDisableCollisionsBetweenLinkedBodies(Gwen::Controls::Base* control);
 	void setLogDir(Gwen::Controls::Base* control);
 	void setDumpPng(Gwen::Controls::Base* control);
+	void setUseCcd(Gwen::Controls::Base* control);
 	Gwen::Controls::Base* pPage;
 	Gwen::Controls::Button* pauseButton, *singleStepButton;
 	Gwen::Controls::Label *db11, *db12, *db13, *db14, *db15, *db16;
@@ -493,6 +502,16 @@ public:
 		dumpPngGc = gc;
 		gy += gyInc;
 		gc->onCheckChanged.Add(pPage, &BlockDemo::setDumpPng);
+	}
+	Gwen::Controls::CheckBox* useCcdGc;
+	void addUseCcd(){
+		Gwen::Controls::Label* label = addLabel("useCcd");
+		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
+		gc->SetPos(gxi, gy);
+		gc->SetChecked(useCcd);
+		useCcdGc = gc;
+		gy += gyInc;
+		gc->onCheckChanged.Add(pPage, &BlockDemo::setUseCcd);
 	}
 	void addFrequencyRatio(){
 		addLabel("frequencyRatio");
@@ -568,6 +587,21 @@ public:
 		gc->SizeToContents();
 		gc->SetPos(gx, gy);
 		return gc;
+	}
+	void addShootButtons(){
+		ammoShape = new btBoxShape(btVector3(lsx / 10, lsx / 10, lsx / 10));
+		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
+		gc->SetText(L"Shoot");
+		gc->SetPos(gx, gy);
+		gc->SetSize(wxi - 4, gyInc - 4);
+		gc->onPress.Add(pPage, &BlockDemo::handleShoot);
+		gc = new Gwen::Controls::Button(pPage);
+		gc->SetText(L"Vel");
+		gc->SetToolTip(L"Click for more speed");
+		gc->SetPos(gx + wxi, gy);
+		gc->SetSize(swxi - 4, gyInc - 4);
+		gc->onPress.Add(pPage, &BlockDemo::handleShootVelocity);
+		gy += gyInc;
 	}
 	void addPauseSimulationButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
@@ -758,11 +792,15 @@ public:
 		}
 		addGravityRampUpTime();
 		addDumpPng();
+		addUseCcd();
 		addLogDir();
 		addPauseSimulationButton();
 		addSingleStepButton();
 		addRestartButton();
 		addResetButton();
+		if (useCcd){
+			addShootButtons();
+		}
 		addDashboard();
 	}
 	void clearParameterUi(){
@@ -993,7 +1031,6 @@ public:
 		btVector3 pos = btVector3(0, yStart, 0);
 		loadTrans.setOrigin(pos);
 		m_body=localCreateRigidBody(mass, loadTrans, loadShape);
-		bool useCcd = true;
 		if (useCcd){
 			m_body->setCcdMotionThreshold(lsy / 10000);
 			m_body->setCcdSweptSphereRadius(lsy / 10);
@@ -1123,6 +1160,18 @@ BlockDemo *demo = 0;
 #include "BlockDemo.h"
 
 
+void BlockDemo::handleShoot(Gwen::Controls::Base* control){
+	Gwen::Controls::Button* gc =
+		static_cast<Gwen::Controls::Button*>(control);
+	demo->shootCount++;
+}
+
+void BlockDemo::handleShootVelocity(Gwen::Controls::Base* control){
+	Gwen::Controls::Button* gc =
+		static_cast<Gwen::Controls::Button*>(control);
+	demo->shootVelocity *= 1.2;
+}
+
 void BlockDemo::handlePauseSimulation(Gwen::Controls::Base* control){
 	Gwen::Controls::Button* gc =
 		static_cast<Gwen::Controls::Button*>(control);
@@ -1162,6 +1211,12 @@ void BlockDemo::setDumpPng(Gwen::Controls::Base* control){
 	Gwen::Controls::CheckBox* cb =
 		static_cast<Gwen::Controls::CheckBox*>(control);
 	demo->dumpPng = cb->IsChecked();
+}
+void BlockDemo::setUseCcd(Gwen::Controls::Base* control){
+	Gwen::Controls::CheckBox* cb =
+		static_cast<Gwen::Controls::CheckBox*>(control);
+	demo->useCcd = cb->IsChecked();
+	restartHandler(control);
 }
 void BlockDemo::setGravityRampUpTime(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->gravityRampUpTime));
@@ -1242,6 +1297,8 @@ void BlockDemo::reinit(){
 	maxStepCount = LONG_MAX;
 	frequencyRatio = 10;
 	resetClocks();
+	useCcd = false;
+	shootVelocity = 30;
 }
 
 void BlockDemo::resetHandler(Gwen::Controls::Base* control){
@@ -1300,6 +1357,10 @@ void BlockDemo::exitPhysics()
 	{
 		btCollisionShape* shape = m_collisionShapes[j];
 		delete shape;
+	}
+	if (ammoShape){
+		delete ammoShape;
+		ammoShape = 0;
 	}
 	m_collisionShapes.clear();
 	if (m_indexVertexArrays){
@@ -1361,7 +1422,7 @@ void BlockDemo::initPhysics()
 	stepTime = 0;
 	int upAxis = 1;
 	m_guiHelper->setUpAxis(upAxis);
-	btVector3 groundExtents(2*lsx,2*lsy,2*lsz);
+	btVector3 groundExtents(10,2,10);
 	groundExtents[upAxis]=3;
 	btCollisionShape* groundShape = new btBoxShape(groundExtents);
 	m_collisionShapes.push_back(groundShape);
@@ -1456,6 +1517,9 @@ void BlockDemo::stepSimulation(float deltaTime)
 	{
 		int maxSimSubSteps =  10;
 		updateGravity();
+		if (useCcd){
+			shoot();
+		}
 		btScalar timeStep = (btScalar)deltaTime;
 		if (stepCount + (deltaTime/m_fixedTimeStep)>=maxStepCount){
 			timeStep = m_fixedTimeStep;
@@ -1475,7 +1539,37 @@ void BlockDemo::stepSimulation(float deltaTime)
 	}
 }
 
-
+/**
+*/
+void BlockDemo::shoot(){
+	if (shootCount < 1){
+		return;
+	}
+	btScalar mass = getMass()/100;
+	btScalar xStart = -3 * lsx;
+	btTransform trans;
+	trans.setIdentity();
+	switch (orientationType){
+	case X:
+		yStart = lsx + lsy;
+		break;
+	case Y:
+		yStart = lsy/2;
+		break;
+	default:
+		assert(0); // Fix if new orientation is added
+	}
+	btVector3 pos = btVector3(xStart, yStart, 0);
+	trans.setOrigin(pos);
+	btRigidBody* body = localCreateRigidBody(mass, trans, ammoShape);
+	btVector3 linVel(shootVelocity, 0, 0);
+	body->setLinearVelocity(linVel);
+	if (ammoShape->getUserIndex() < 0){
+		m_guiHelper->createCollisionShapeGraphicsObject(ammoShape);
+	}
+	m_guiHelper->createCollisionObjectGraphicsObject(body, ammoColor);
+	shootCount--;
+}
 
 void BlockDemo::displayCallback(void) 
 {
