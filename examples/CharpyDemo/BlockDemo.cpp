@@ -51,6 +51,7 @@ Based on DemolisherDemo by Simo Nikula 2016-
 #include "../ExampleBrowser/GwenGUISupport/gwenUserInterface.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenInternalData.h"
 #include "../RenderingExamples/TimeSeriesCanvas.h"
+#include "Gwen/Utility.h"
 const char * PROFILE_TENSION_SLEEP = "BlockDemo::Sleep";
 
 class BlockDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
@@ -104,7 +105,7 @@ public:
 	bool dumpPng = false;
 	bool useCcd;
 	int shootCount = 0;
-	btScalar shootVelocity;
+	btScalar ammoVelocity;
 	void shoot();
 	btCollisionShape* ammoShape = 0;
 	btVector4 ammoColor = btVector4(0.5, 0.5, 0.5, 0.5);
@@ -423,7 +424,9 @@ public:
 	void setMaxPlasticStrain(Gwen::Controls::Base* control);
 	void setMaxPlasticRotation(Gwen::Controls::Base* control);
 	void handleShoot(Gwen::Controls::Base* control);
-	void handleShootVelocity(Gwen::Controls::Base* control);
+	void handleAmmoVelocity(Gwen::Controls::Base* control);
+	string avt;
+	const string getAmmoVelocityTooltip();
 	void handlePauseSimulation(Gwen::Controls::Base* control);
 	void handleSingleStep(Gwen::Controls::Base* control);
 	void setDisableCollisionsBetweenLinkedBodies(Gwen::Controls::Base* control);
@@ -597,10 +600,10 @@ public:
 		gc->onPress.Add(pPage, &BlockDemo::handleShoot);
 		gc = new Gwen::Controls::Button(pPage);
 		gc->SetText(L"Vel");
-		gc->SetToolTip(L"Click for more speed");
+		gc->SetToolTip(getAmmoVelocityTooltip());
 		gc->SetPos(gx + wxi, gy);
 		gc->SetSize(swxi - 4, gyInc - 4);
-		gc->onPress.Add(pPage, &BlockDemo::handleShootVelocity);
+		gc->onPress.Add(pPage, &BlockDemo::handleAmmoVelocity);
 		gy += gyInc;
 	}
 	void addPauseSimulationButton(){
@@ -1166,10 +1169,17 @@ void BlockDemo::handleShoot(Gwen::Controls::Base* control){
 	demo->shootCount++;
 }
 
-void BlockDemo::handleShootVelocity(Gwen::Controls::Base* control){
+const string BlockDemo::getAmmoVelocityTooltip(){
+	avt = "Click for more speed, now ";
+	avt.append(uif(demo->ammoVelocity,"%.0f"));
+	avt.append(" m/s");
+	return avt;
+}
+void BlockDemo::handleAmmoVelocity(Gwen::Controls::Base* control){
 	Gwen::Controls::Button* gc =
 		static_cast<Gwen::Controls::Button*>(control);
-	demo->shootVelocity *= 1.2;
+	demo->ammoVelocity *= 1.2;
+	gc->SetToolTip(getAmmoVelocityTooltip());
 }
 
 void BlockDemo::handlePauseSimulation(Gwen::Controls::Base* control){
@@ -1298,7 +1308,7 @@ void BlockDemo::reinit(){
 	frequencyRatio = 10;
 	resetClocks();
 	useCcd = false;
-	shootVelocity = 30;
+	ammoVelocity = 30;
 }
 
 void BlockDemo::resetHandler(Gwen::Controls::Base* control){
@@ -1562,7 +1572,7 @@ void BlockDemo::shoot(){
 	btVector3 pos = btVector3(xStart, yStart, 0);
 	trans.setOrigin(pos);
 	btRigidBody* body = localCreateRigidBody(mass, trans, ammoShape);
-	btVector3 linVel(shootVelocity, 0, 0);
+	btVector3 linVel(ammoVelocity, 0, 0);
 	body->setLinearVelocity(linVel);
 	if (ammoShape->getUserIndex() < 0){
 		m_guiHelper->createCollisionShapeGraphicsObject(ammoShape);
