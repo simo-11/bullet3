@@ -107,7 +107,7 @@ public:
 	int shootCount = 0;
 	btScalar ammoVelocity;
 	void shoot();
-	btCollisionShape* ammoShape = 0;
+	btBoxShape* ammoShape = 0;
 	btVector4 ammoColor = btVector4(0.5, 0.5, 0.5, 0.5);
 	char *logDir = _strdup("d:/wrk");
 	int gx = 10; // for labels
@@ -1035,8 +1035,7 @@ public:
 		loadTrans.setOrigin(pos);
 		m_body=localCreateRigidBody(mass, loadTrans, loadShape);
 		if (useCcd){
-			m_body->setCcdMotionThreshold(lsy / 10000);
-			m_body->setCcdSweptSphereRadius(lsy / 10);
+			m_body->setCcdSweptSphereRadius(0.2*lsx);
 		}
 		axisMapper=new AxisMapper(lsx, lsy, lsz, cpos);
 		axisMapper->setE(E*blockSteelScale);
@@ -1440,7 +1439,7 @@ void BlockDemo::initPhysics()
 	m_dispatcher = new btCollisionDispatcher(m_collisionConfiguration);
 	btVector3 worldMin(-3*lsx,-3*lsy,-3*lsz);
 	btVector3 worldMax(3 * lsx, 3 * lsy, 3 * lsz);
-	m_overlappingPairCache = new btAxisSweep3(worldMin,worldMax);
+	m_overlappingPairCache = new btDbvtBroadphase();
 	if (useMCLPSolver)
 	{
 		mlcp = new btDantzigSolver();
@@ -1572,6 +1571,7 @@ void BlockDemo::shoot(){
 	btVector3 pos = btVector3(xStart, yStart, 0);
 	trans.setOrigin(pos);
 	btRigidBody* body = localCreateRigidBody(mass, trans, ammoShape);
+	body->setCcdSweptSphereRadius(0.05*lsx);
 	btVector3 linVel(ammoVelocity, 0, 0);
 	body->setLinearVelocity(linVel);
 	if (ammoShape->getUserIndex() < 0){
