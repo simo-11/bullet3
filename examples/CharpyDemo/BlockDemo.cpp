@@ -1571,7 +1571,8 @@ void BlockDemo::shoot(){
 	btVector3 pos = btVector3(xStart, yStart, 0);
 	trans.setOrigin(pos);
 	btRigidBody* body = localCreateRigidBody(mass, trans, ammoShape);
-	body->setCcdSweptSphereRadius(0.05*lsx);
+	body->setCcdSweptSphereRadius(ammoShape->getHalfExtentsWithMargin().x());
+	body->setCcdMotionThreshold(1e-5);
 	btVector3 linVel(ammoVelocity, 0, 0);
 	body->setLinearVelocity(linVel);
 	if (ammoShape->getUserIndex() < 0){
