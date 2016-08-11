@@ -46,10 +46,13 @@ In this work, changes are made only to constraing solving and update actions.
 This step just makes programming easier as otherwise each program should add forces due to gravity in each step. 
 In this case, $\vec{f}_{ext}$ gets added by $\lbrace{0,-60000,0}\rbrace$.
 \item Predict unconstrained motion for each non static body. Prediction is done based on bodys current linear and angular velocity.
-\item Predict contacts.
-\item Perform collision detection. All body pairs created in previous step are processed and manifoldPoints are created for
-each detected contact. In unconstrained case, contact is detected after t=0.55 s and manifolds distance gets negative value (-0.058 m).
-\item Calculate simulation islands(groups). Bodies that are near each other or connected with constraints are grouped in same group.
+\item Predict contacts. In this phase, continuous collision detection is done based on simplified objects. 
+Each rigid body is represented by sphere and contact prediction is done if body moves more than given threshold value during simulation step.
+\item Perform discrete collision detection. All overlapping body pairs are processed and manifoldPoints are created for
+each detected contact at end of simulation step. 
+In unconstrained case, contact is detected after t=0.55 s if continuous collision detection is not used and manifolds distance gets negative value (-0.058 m).
+\item Calculate simulation islands(groups). Bodies that are near each other based on contact prediction or discrete collision detection
+ or connected with constraints are grouped in same group.
 \item Solve constraints. Both contact and other constraints are processed in this step.
 \item Integrate transforms using velocities modified in previous step.
 \item Update actions (callbacks) are called. 
@@ -105,7 +108,7 @@ $\frac{-penetration\, erp}{timeStep}$
 \end{description}
 \end{description}
 
-Actual values for unconstrained case 
+Actual values for unconstrained case without continuous collision detection
 are shown in \ref{tab:freeBlockValues}.
 
 \begin {table}[htb!]

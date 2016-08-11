@@ -109,6 +109,8 @@ public:
 	void shoot();
 	btBoxShape* ammoShape = 0;
 	btVector4 ammoColor = btVector4(0.5, 0.5, 0.5, 0.5);
+	btScalar loadCcdSweptSphereRadius,loadCcdMotionThreshold;
+	btScalar ammoCcdSweptSphereRadius, ammoCcdMotionThreshold;
 	char *logDir = _strdup("d:/wrk");
 	int gx = 10; // for labels
 	int gxi = 120; // for inputs elements
@@ -419,6 +421,10 @@ public:
 	void setDensity(Gwen::Controls::Base* control);
 	void setE(Gwen::Controls::Base* control);
 	void setFrequencyRatio(Gwen::Controls::Base* control);
+	void setLoadCcdSweptSphereRadius(Gwen::Controls::Base* control);
+	void setLoadCcdMotionThreshold(Gwen::Controls::Base* control);
+	void setAmmoCcdSweptSphereRadius(Gwen::Controls::Base* control);
+	void setAmmoCcdMotionThreshold(Gwen::Controls::Base* control);
 	void setFy(Gwen::Controls::Base* control);
 	void setBlockSteelScale(Gwen::Controls::Base* control);
 	void setMaxPlasticStrain(Gwen::Controls::Base* control);
@@ -515,6 +521,35 @@ public:
 		useCcdGc = gc;
 		gy += gyInc;
 		gc->onCheckChanged.Add(pPage, &BlockDemo::setUseCcd);
+	}
+	template <typename T>
+	void addScalar(string label, const string & tooltip, btScalar value, T f){
+		addLabel(label);
+		Gwen::Controls::TextBoxNumeric* gc = 
+			new Gwen::Controls::TextBoxNumeric(pPage);
+		string text;
+		if (value < 10e-3){
+			text = uif(value, "%.6f");
+		}
+		else{
+			text = uif(value);
+		}
+		gc->SetToolTip(tooltip);
+		gc->SetText(text);
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, f);
+	}
+	void addCcdValues(){
+		addScalar("loadCcdSphere","Size of ccd sphere for load",
+			loadCcdSweptSphereRadius,&BlockDemo::setLoadCcdSweptSphereRadius);
+		addScalar("loadCcdMotion", "Ccd motion threshold for load",
+			loadCcdMotionThreshold, &BlockDemo::setLoadCcdMotionThreshold);
+		addScalar("ammoCcdSphere", "Size of ccd sphere for ammo",
+			ammoCcdSweptSphereRadius, &BlockDemo::setAmmoCcdSweptSphereRadius);
+		addScalar("ammoCcdMotion", "Ccd motion threshold for ammo",
+			ammoCcdMotionThreshold, &BlockDemo::setAmmoCcdMotionThreshold);
 	}
 	void addFrequencyRatio(){
 		addLabel("frequencyRatio");
@@ -796,6 +831,9 @@ public:
 		addGravityRampUpTime();
 		addDumpPng();
 		addUseCcd();
+		if (useCcd){
+			addCcdValues();
+		}
 		addLogDir();
 		addPauseSimulationButton();
 		addSingleStepButton();
@@ -1035,7 +1073,8 @@ public:
 		loadTrans.setOrigin(pos);
 		m_body=localCreateRigidBody(mass, loadTrans, loadShape);
 		if (useCcd){
-			m_body->setCcdSweptSphereRadius(0.2*lsx);
+			m_body->setCcdSweptSphereRadius(loadCcdSweptSphereRadius);
+			m_body->setCcdMotionThreshold(loadCcdMotionThreshold);
 		}
 		axisMapper=new AxisMapper(lsx, lsy, lsz, cpos);
 		axisMapper->setE(E*blockSteelScale);
@@ -1169,10 +1208,10 @@ void BlockDemo::handleShoot(Gwen::Controls::Base* control){
 }
 
 const string BlockDemo::getAmmoVelocityTooltip(){
-	avt = "Click for more speed, now ";
-	avt.append(uif(demo->ammoVelocity,"%.0f"));
-	avt.append(" m/s");
-	return avt;
+	demo->avt = "Click for more speed, now ";
+	demo->avt.append(uif(demo->ammoVelocity,"%.0f"));
+	demo->avt.append(" m/s");
+	return demo->avt;
 }
 void BlockDemo::handleAmmoVelocity(Gwen::Controls::Base* control){
 	Gwen::Controls::Button* gc =
@@ -1254,6 +1293,22 @@ void BlockDemo::setE(Gwen::Controls::Base* control){
 	demo->G = demo->E / 2.6;
 	restartHandler(control);
 }
+void BlockDemo::setLoadCcdSweptSphereRadius(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->loadCcdSweptSphereRadius));
+	restartHandler(control);
+}
+void BlockDemo::setLoadCcdMotionThreshold(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->loadCcdMotionThreshold));
+	restartHandler(control);
+}
+void BlockDemo::setAmmoCcdSweptSphereRadius(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->ammoCcdSweptSphereRadius));
+	restartHandler(control);
+}
+void BlockDemo::setAmmoCcdMotionThreshold(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->ammoCcdMotionThreshold));
+	restartHandler(control);
+}
 void BlockDemo::setFrequencyRatio(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->frequencyRatio));
 	restartHandler(control);
@@ -1308,6 +1363,10 @@ void BlockDemo::reinit(){
 	resetClocks();
 	useCcd = false;
 	ammoVelocity = 30;
+	ammoCcdMotionThreshold=lsx/2;
+	ammoCcdSweptSphereRadius = lsx / 10;
+	loadCcdMotionThreshold = 1e-3;
+	loadCcdSweptSphereRadius = lsy/2;
 }
 
 void BlockDemo::resetHandler(Gwen::Controls::Base* control){
@@ -1563,7 +1622,7 @@ void BlockDemo::shoot(){
 		yStart = lsx + lsy;
 		break;
 	case Y:
-		yStart = lsy/2;
+		yStart = 2*lsy/3;
 		break;
 	default:
 		assert(0); // Fix if new orientation is added
@@ -1571,8 +1630,8 @@ void BlockDemo::shoot(){
 	btVector3 pos = btVector3(xStart, yStart, 0);
 	trans.setOrigin(pos);
 	btRigidBody* body = localCreateRigidBody(mass, trans, ammoShape);
-	body->setCcdSweptSphereRadius(ammoShape->getHalfExtentsWithMargin().x());
-	body->setCcdMotionThreshold(1e-5);
+	body->setCcdSweptSphereRadius(ammoCcdSweptSphereRadius);
+	body->setCcdMotionThreshold(ammoCcdMotionThreshold);
 	btVector3 linVel(ammoVelocity, 0, 0);
 	body->setLinearVelocity(linVel);
 	if (ammoShape->getUserIndex() < 0){
