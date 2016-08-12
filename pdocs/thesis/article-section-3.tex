@@ -37,7 +37,7 @@ Steel is assumed to handle load in elastic-plastic case. Yield stress of steel i
 Gravity is $10 \frac{m}{s^2}$. Simulation step is $\frac{1}{60} s$ and 10 
 iterations are done for single step.
 Body is 1.5 meters above rigid ground. In unconstrained case body will hit hit ground at t=0.548 s 
-($\sqrt{\frac{2 \cdot 1.5}{10}}$).
+($\sqrt{2 \cdot 1.5 / 10}$).
 
 Single simulation step is done using following substeps. 
 In this work, changes are made only to constraing solving and update actions.
@@ -45,9 +45,10 @@ In this work, changes are made only to constraing solving and update actions.
 \item Apply gravity to each non static body. 
 This step just makes programming easier as otherwise each program should add forces due to gravity in each step. 
 In this case, $\vec{f}_{ext}$ gets added by $\lbrace{0,-60000,0}\rbrace$.
-\item Predict unconstrained motion for each non static body. Prediction is done based on bodys current linear and angular velocity.
+\item Predict unconstrained motion for each non static body. Prediction is done based on current linear and angular velocities of the body.
 \item Predict contacts. In this phase, continuous collision detection is done based on simplified objects. 
-Each rigid body is represented by sphere and contact prediction is done if body moves more than given threshold value during simulation step.
+Each rigid body is represented by sphere and contact prediction is done if body moves more than given threshold value during simulation step. Continuous collision detection is configured for each body and as default it is not active. 
+Typical scenario that requires continuous collision detection is fast moving bodies that would otherwise go through walls.
 \item Perform discrete collision detection. All overlapping body pairs are processed and manifoldPoints are created for
 each detected contact at end of simulation step. 
 In unconstrained case, contact is detected after t=0.55 s if continuous collision detection is not used and manifolds distance gets negative value (-0.058 m).
@@ -95,13 +96,13 @@ spring simulation cannot be done in stable way.
  \item[In contact case,] value is zero if there is no penetration. For penetration cases it is 
 $\frac{-penetration\, erp}{timeStep}$
  \end{description}
-\item[rhs] is calculated by velError jInv + posError jInv
+\item[rhs (c)] is calculated by velError jInv + posError jInv
 \item[jInv] is calculated using masses and inertias of connected bodies and constraint geometry. 
  \begin{description}
 \item[In constraint cases,] it is mass of body (6000).
 \item[In contact case,] it varies below mass of body.
 \end{description}
-\item[Impulse]
+\item[Impulse] is impulse applied to body during timestep.
  \begin{description}
 \item[In constraint cases,] it is obtained from btJointFeedback structure.
 \item[In contact case,] it is obtained by summing applied impulses from active manifolds.
@@ -109,7 +110,8 @@ $\frac{-penetration\, erp}{timeStep}$
 \end{description}
 
 Actual values for unconstrained case without continuous collision detection
-are shown in \ref{tab:freeBlockValues}.
+are shown in \ref{tab:freeBlockValues}. Penetration is detected at time 0.567 s
+{\it velError}
 
 \begin {table}[htb!]
 \begin{center}
