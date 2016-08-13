@@ -58,8 +58,9 @@ In unconstrained case, contact is detected after t=0.55 s if continuous collisio
 \item Integrate transforms using velocities modified in previous step.
 \item Update actions (callbacks) are called. 
 In elastic-plastic case, plasticity is summed and equilibrium point of elastic part is updated if maximum force or moment is exceeded.
-\item Activation state of bodies is updated. Bodies that are not active
- are typically marked as sleeping and they are not processed.
+\item Activation state of bodies is updated. 
+To avoid extra calculation bodies are as default put to sleeping state if linear and angular velocities of body are less than
+given threshold values (default 0.8 and 1.0) more than set limit (2.0).
 \end{enumerate} 
 
 Equation \ref{eq:constraintEquation} is simplified
@@ -82,15 +83,16 @@ Method btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup
 in \bullet\ was used to pick up values for internal variables. 
 
 \begin{description}
-\item[velError] is calculated using velocities and external impulses of connected bodies. 
+\item[velError] is calculated using velocities and external impulses of connected bodies.  
  \begin{description}
 \item[In constraint cases,] it is dominant contributor for constraint's impulse.
-\item[In penetrating contact case,] main contributor is bodies relative speed at point of contact. 
+\item[In contact case,] main contributor is bodies relative speed at point of contact. 
+Bodies are not allowed to penetrate each other.
 \end{description}
 \item[posError] is calculated by constraint. It is significant factor in designing stable constraints.
  \begin{description}
  \item[In fixed case,] value is about 12 times actual position error. Factor 12 is based on time step (60) 
- and default value of error reduction parameter (0.2).
+ and default value of error reduction parameter (erp) which has value of 0.2 in this context.
  \item[In elastic plastic case,]  value is set to zero if impulse would be larger than maximum impulse or
 spring simulation cannot be done in stable way.
  \item[In contact case,] value is zero if there is no penetration. For penetration cases it is 
@@ -107,11 +109,16 @@ $\frac{-penetration\, erp}{timeStep}$
 \item[In constraint cases,] it is obtained from btJointFeedback structure.
 \item[In contact case,] it is obtained by summing applied impulses from active manifolds.
 \end{description}
+\item[erp] Error reduction parameter (0...1) is used to handle numerical issues e.q. object drifting. 
+Setting erp to 1 would in theory eliminate error but in practice value of 0.8 is used in most cases.
 \end{description}
 
 Actual values for unconstrained case without continuous collision detection
-are shown in \ref{tab:freeBlockValues}. Penetration is detected at time 0.567 s
-{\it velError}
+are shown in \ref{tab:freeBlockValues}. Penetration is detected at time 0.567 s when
+{\it velError} is 5.67 (5.5+0.167) and
+{\it posError} is 2.8 (0.058*0.8/0.0167). Impulse is 34000 and contact force is thus about 2 MN (34000/0.0167).
+After few steps location and position stabilize although internally calculation is needed for each time step
+until body is deactivated.
 
 \begin {table}[htb!]
 \begin{center}
@@ -124,7 +131,7 @@ are shown in \ref{tab:freeBlockValues}. Penetration is detected at time 0.567 s
 {\bf Impulse} \\  \hline
 0.017 &  0 & & & &  &-0.17 & 0 \\  \hline
 0.550 &  -1.558 & & & & & -5.5 & 0 \\  \hline
-0.567 &  -1.511 & 5.66 &-0.058 &2.8 &  21270 & 0.01 & 34000 \\  \hline
+0.567 &  -1.511 & 5.67 &-0.058 &2.8 &  21270 & 0.01 & 34000 \\  \hline
 0.583 &  -1.502 & 0.14 &-0.011 & 0.54& 2570  & 0.55 & 420 \\  \hline
 0.600 &  -1.496 & -0.38&-0.002 & 0.1  & -1000& 0.38 & 0 \\  \hline
 0.617 &  -1.492 &-0.44 & 0.004 & 0     & -1600& 0.22 & 0 \\  \hline
@@ -139,65 +146,101 @@ as number of contacts and detailed values differ.}
 \label{tab:freeBlockValues} 
 \end {table}
 
-Values for fixed constraint are shown in table
-\ref{tab:fixedBlockValues}. 
+Actual values for unconstrained case with continuous collision detection (ccd) using 1.5 
+as radius of ccd sphere and 0.001 as ccd motion threshold
+are shown in \ref{tab:freeBlockValuesWithCcd}. Collision is detected at time 0.550 s when
+{\it velError} is  3.5 (5.34+0.167)-0.033/0.0167 and
+{\it posError} is  0 as collision is detected before penetration. 
+It should be noted that in general ccd sphere should not extend actual body as 
+premature contacts are created if collision takes place in those regions.
 
 \begin {table}[htb!]
 \begin{center}
-\begin{tabular}{|l| l| l|l|l|l|}
+\begin{tabular}{|l| l|l| l|l|l|l|l|}
 \hline
 {\bf Time} & 
+{\bf Location} &
+{\it velError} & {\it penetration} & {\it posError} & {\it rhs} &
+{\bf Velocity} & 
+{\bf Impulse} \\  \hline
+0.017 &  0 & & & &  &-0.17 & 0 \\  \hline
+0.550 &  -1.500 & 3.5 & 0.033 & 0 & 21000& -2 & 21000 \\  \hline
+0.567 &  -1.500 & 2.17 & 0 & 0  &  8100 & 0.01 & 13000 \\  \hline
+0.583 &  -1.500 & 0.15 & 0 & 0 & 600  & 0 & 937 \\  \hline
+0.600 &  -1.500 & 0.17 & 0 & 0 & 600  & 0 & 1040 \\  \hline
+\end {tabular}
+\end{center}
+\caption {Simulation values for unconstrained case with continuous collision detection. } 
+\label{tab:freeBlockValuesWithCcd} 
+\end {table}
+
+Values for fixed constraint are shown in table
+\ref{tab:fixedBlockValues}. Constraint is activated in second step and positional error is corrected
+about 20 \% in each step as requested by using erp value 0.2.
+
+\begin {table}[htb!]
+\begin{center}
+\begin{tabular}{|l|l| l| l|l|l|l|}
+\hline
+{\bf Time} & 
+{\bf Location} &
 {\it velError} & {\it posError} & {\it rhs} &
 {\bf Velocity} & 
 {\bf Impulse} \\  \hline
-0.017 &  & & & -0.17 & 0 \\  \hline
-0.033 &  0.33 & -0.033 & -2200 & 0.033 & 2200 \\  \hline
-0.050 &  -0.13 & -0.027 & -960 & 0.027 & 960 \\  \hline
-0.067 &  -0.14 & -0.021 & -970 & 0.021 & 970 \\  \hline
-0.35... &  -0.17 & $\approx$ 0 & -1000 &0.0 & 1000 \\  \hline
+0.017 & -0.0028 &  & & & -0.17 & 0 \\  \hline
+0.033 & -0.0022 & 0.33 & -0.033 & -2200 & 0.033 & 2200 \\  \hline
+0.050 & -0.0018 & -0.13 & -0.027 & -960 & 0.027 & 960 \\  \hline
+0.067 & -0.0014 &-0.14 & -0.021 & -970 & 0.021 & 970 \\  \hline
+0.35... & 0 &-0.17 & $\approx$ 0 & -1000 &0.0 & 1000 \\  \hline
 \end {tabular}
 \end{center}
 \caption {Constraint parameter values for fixed constraint} \label{tab:fixedBlockValues} 
 \end {table}
 
-Values for elastic-plastic case are shown in tables \ref{tab:epBlockValues} and 
- \ref{tab:ep2BlockValues}. 
 There are currently two alternative six-dof-spring constraint implementations in \bullet\ and 
 in this work elastic-plastic versions of both of them were developed. 
-Constraint activation of older spring and fixed constraints is implemented so that 
-they are activated after constraint is violated.
-Thus body drops freely during first simulation step and 
+Values for elastic-plastic case are shown in tables \ref{tab:epBlockValues}.
+Body drops freely during first simulation step and 
 gains enough kinetic energy so that higher impulses are needed in few following steps.
+This causes plastic strain during next three steps.
 
 \begin {table}[htb!]
 \begin{center}
-\begin{tabular}{|l| l| l|l|l|l|l|}
+\begin{tabular}{|l|l| l| l|l|l|l|l|}
 \hline
 {\bf Time} & 
+{\bf Location} &
 {\it velError} & {\it posError} & {\it rhs} &
 {\it velocity} & 
 {\bf Impulse} & 
 {\bf Plastic strain} \\  \hline
-0.017 &          &    &          & -0.17 & 0 & 0 \\  \hline
-0.033 &  -0.33 & 0 & -2000 & -0.11 &  1330 & 0.001 \\  \hline
-0.050 &  -0.28 & 0 & -1670 & -0.056 &  1330 & 0.003 \\  \hline
-0.067 &  -0.22 & 0 & -1340 &  -0.001&  1330 & 0.004\\  \hline
-0.083... &  -0.17 & 0 & -1000 &  0.0&  1000 & 0.004\\  \hline
+0.017 & -0.0028 &        &    &          & -0.17 & 0 & 0 \\  \hline
+0.033 & -0.0046 &-0.33 & 0 & -2000 & -0.11 &  1330 & 0.001 \\  \hline
+0.050 & -0.0056 &-0.28 & 0 & -1670 & -0.056 &  1330 & 0.003 \\  \hline
+0.067 & -0.0056 &-0.22 & 0 & -1340 &  -0.001&  1330 & 0.004\\  \hline
+0.083... & -0.0056  & -0.17 & 0 & -1000 &  0.0&  1000 & 0.004\\  \hline
 \end {tabular}
 \end{center}
 \caption {Constraint parameter values for elastic-plastic constraint} \label{tab:epBlockValues} 
 \end {table}
 
+Six-dof-spring constraint 2 has feature to avoid unstability by automatically softening constraint
+spring if needed.
+If this feature is active for elastic-plastic constraint 2.
+ \ref{tab:ep2BlockValues}. 
+
+
 \begin {table}[htb!]
 \begin{center}
-\begin{tabular}{|l| l| l|l|l|l|l|}
+\begin{tabular}{|l|l| l| l|l|l|l|l|}
 \hline
 {\bf Time} & 
+{\bf Location} &
 {\it velError} & {\it posError} & {\it rhs} &
 {\bf Velocity} & 
 {\bf Impulse} & 
 {\bf Plastic strain} \\  \hline
-0.017... & -0.17  & 0 & -1000 & 0       & 1000 & 0 \\  \hline
+0.017... &  0 & -0.17  & 0 & -1000 & 0       & 1000 & 0 \\  \hline
 \end {tabular}
 \end{center}
 \caption {Constraint parameter values for elastic-plastic constraint 2} \label{tab:ep2BlockValues} 

@@ -103,7 +103,7 @@ public:
 	btScalar maxPlasticStrain;
 	bool disableCollisionsBetweenLinkedBodies = true;
 	bool dumpPng = false;
-	bool useCcd;
+	bool useCcd, limitIfNeeded;
 	int shootCount = 0;
 	btScalar ammoVelocity;
 	void shoot();
@@ -439,6 +439,7 @@ public:
 	void setLogDir(Gwen::Controls::Base* control);
 	void setDumpPng(Gwen::Controls::Base* control);
 	void setUseCcd(Gwen::Controls::Base* control);
+	void setLimitIfNeeded(Gwen::Controls::Base* control);
 	Gwen::Controls::Base* pPage;
 	Gwen::Controls::Button* pauseButton, *singleStepButton;
 	Gwen::Controls::Label *db11, *db12, *db13, *db14, *db15, *db16;
@@ -512,15 +513,26 @@ public:
 		gy += gyInc;
 		gc->onCheckChanged.Add(pPage, &BlockDemo::setDumpPng);
 	}
-	Gwen::Controls::CheckBox* useCcdGc;
-	void addUseCcd(){
-		Gwen::Controls::Label* label = addLabel("useCcd");
+	template <typename T>
+	void addCheckBox(string label, 
+			const string & tooltip, bool value, T f){
+		addLabel(label);
 		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
 		gc->SetPos(gxi, gy);
-		gc->SetChecked(useCcd);
-		useCcdGc = gc;
+		gc->SetChecked(value);
 		gy += gyInc;
-		gc->onCheckChanged.Add(pPage, &BlockDemo::setUseCcd);
+		gc->onCheckChanged.Add(pPage,f);
+		gc->SetToolTip(tooltip);
+	}
+	void addUseCcd(){
+		addCheckBox("useCcd", 
+			"Use continous collision detection",
+			useCcd, &BlockDemo::setUseCcd);
+	}
+	void addLimitIfNeeded(){
+		addCheckBox("limitIfNeeded", 
+			"limit spring stiffness if needed",
+			limitIfNeeded, &BlockDemo::setLimitIfNeeded);
 	}
 	template <typename T>
 	void addScalar(string label, const string & tooltip, btScalar value, T f){
@@ -823,6 +835,9 @@ public:
 			addFrequencyRatio();
 			// nobreak
 		case ElasticPlastic2:
+			if (constraintType == ElasticPlastic2){
+				addLimitIfNeeded();
+			}
 			addMaxPlasticRotation();
 			addMaxPlasticStrain();
 			addBlockSteelScale();
@@ -964,7 +979,7 @@ public:
 		{
 			sc->enableSpring(i, true);
 			sc->setDamping(i, damping2);
-			sc->setStiffness(i, axisMapper->getStiffness(i));
+			sc->setStiffness(i, axisMapper->getStiffness(i),limitIfNeeded);
 			sc->setMaxForce(i, axisMapper->getMaxForce(i));
 		}
 		sc->setEquilibriumPoint(1, getEquilibriumPoint());
@@ -1266,6 +1281,12 @@ void BlockDemo::setUseCcd(Gwen::Controls::Base* control){
 	demo->useCcd = cb->IsChecked();
 	restartHandler(control);
 }
+void BlockDemo::setLimitIfNeeded(Gwen::Controls::Base* control){
+	Gwen::Controls::CheckBox* cb =
+		static_cast<Gwen::Controls::CheckBox*>(control);
+	demo->limitIfNeeded = cb->IsChecked();
+	restartHandler(control);
+}
 void BlockDemo::setGravityRampUpTime(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->gravityRampUpTime));
 	restartHandler(control);
@@ -1362,6 +1383,7 @@ void BlockDemo::reinit(){
 	frequencyRatio = 10;
 	resetClocks();
 	useCcd = false;
+	limitIfNeeded = true;
 	ammoVelocity = 30;
 	ammoCcdMotionThreshold=lsx/2;
 	ammoCcdSweptSphereRadius = lsx / 10;
