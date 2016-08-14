@@ -1290,7 +1290,7 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 				m_maxRatio = ratio;
 				m_maxRatioDof = i;
 			}
-			if (absForce>m_maxForce[i]){
+			if (absForce>=m_maxForce[i]){
 				btScalar elasticPart = m_maxForce[i] / m_linearLimits.m_springStiffness[i];
 				btScalar newVal = currPos;
 				if (btFabs(elasticPart)<btFabs(currPos)){
