@@ -199,6 +199,42 @@ about 20 \% in each step as requested by using erp value 0.2.
 
 There are currently two alternative six-dof-spring constraint implementations in \bullet\ and 
 in this work elastic-plastic versions of both of them were developed. 
+
+Table  \ref{tab:ep2Parameters} summarizes most significant parameters for this study.
+There are also e.g. parameters for controlling joint motors.
+Additional equations are created if needed. Enabled springs and motors add one row and
+limits add one if upper and lower are same and two if both upper and lower limits are defined.
+
+\begin {table}[htb!]
+\begin{center}
+\begin{tabular}{|l|l| l| l|l|l|l|l|}
+\hline
+{\bf Parameter} & 
+{\bf Description} 
+lowerLimit &  
+minimum allowed translation or rotation
+ \\  \hline
+upperLimit &  
+maximum allowed translation or rotation
+ \\  \hline
+springStiffness & elastic spring stiffness
+ \\  \hline
+enableSpring & defines if spring is active
+ \\  \hline
+springStiffnessLimited & should elastic behaviour be tuned to avoid instability
+ \\  \hline
+equilibriumPoint & should elastic behaviour be tuned to avoid instability
+ \\  \hline
+currentLimit & describes state of constraint - 0: not limited,
+ 3: loLimit=hiLimit, 4: current value is between loLimit and HiLimit
+ \\ \hline
+
+\end {tabular}
+\end{center}
+\caption {Selected constraint parameters for elastic-plastic constraint 2} \label{tab:ep2Parameters} 
+\end {table}
+
+
 Values for elastic-plastic case are shown in tables \ref{tab:epBlockValues}.
 Body drops freely during first simulation step and 
 gains enough kinetic energy so that higher impulses are needed in few following steps.
