@@ -90,9 +90,10 @@ in \bullet\ was used to pick up values for internal variables.
 \begin{description}
 \item[velError] is calculated using velocities and external impulses of connected bodies.  
  \begin{description}
-\item[In constraint cases,] it is dominant contributor for constraint's impulse.
+\item[In constraint cases,] main contibutor is bodies relative speed at joint point.
 \item[In contact case,] main contributor is bodies relative speed at point of contact. 
-Bodies are not allowed to penetrate each other.
+Bodies are not allowed to penetrate each other. Restitution increases velError.
+If contact is not penetrating velError is reduced by $penetration * timeStep$.
 \end{description}
 \item[posError] is calculated by constraint. It is significant factor in designing stable constraints.
  \begin{description}
@@ -101,7 +102,7 @@ Bodies are not allowed to penetrate each other.
  \item[In elastic plastic case,]  value is set to zero if impulse would be larger than maximum impulse or
 spring simulation cannot be done in stable way.
  \item[In contact case,] value is zero if there is no penetration. For penetration cases it is 
-$\frac{-penetration\, erp}{timeStep}$
+$\frac{-penetration\, erp}{timeStep}$. In contact cases default value for erp is 0.8.
  \end{description}
 \item[rhs (c)] is calculated by velError jInv + posError jInv
 \item[jInv] is calculated using masses and inertias of connected bodies and constraint geometry. 
@@ -212,7 +213,7 @@ limits add one if upper and lower are same and two if both upper and lower limit
 
 \begin {table}[htb!]
 \begin{center}
-\begin{tabular}{|l|p{12cm}|}
+\begin{tabular}{|l|p{10cm}|}
 \hline
 {\bf Parameter} & 
 {\bf Description} 
@@ -233,7 +234,8 @@ equilibriumPoint & should elastic behaviour be tuned to avoid instability
  \\  \hline
 currentLimit & describes state of constraint \newline
  0: not limited \newline
- 3: loLimit=hiLimit \newline 4: current value is between loLimit and HiLimit
+ 3: loLimit=hiLimit \newline 
+ 4: current value is between loLimit and HiLimit
  \\ \hline
 
 \end {tabular}
@@ -294,4 +296,7 @@ In this scenario object behaves as shown in table  \ref{tab:ep2BlockValues} i.e.
 \end{center}
 \caption {Constraint parameter values for elastic-plastic constraint 2} \label{tab:ep2BlockValues} 
 \end {table}
+
+In following sections, results for few selected scenarios are presented.
+Simulation of Charpy impact test shows that plausible results can be obtained even for this quite difficult scenario.
 
