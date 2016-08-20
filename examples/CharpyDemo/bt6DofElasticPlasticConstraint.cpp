@@ -156,6 +156,13 @@ btScalar bt6DofElasticPlasticConstraint::getFrequencyRatio(){
 
 void bt6DofElasticPlasticConstraint::internalUpdateSprings(btConstraintInfo2* info)
 {
+	/**
+	setting useOld to false allows experimenting while
+	trying to find stable solution.
+	Currently visible drifting occurs in Charpy and Bending
+	*/
+	bool useOld = true;
+	btScalar maxForce;
 	int i;
 	for(i = 0; i < 3; i++)
 	{
@@ -170,20 +177,44 @@ void bt6DofElasticPlasticConstraint::internalUpdateSprings(btConstraintInfo2* in
 			bool overMaxForce=false;
 			// bcc
 			if (btFabs(force)>=m_maxForce[i]){
-				force = (delta > 0 ? m_maxForce[i] : -m_maxForce[i]);
+				maxForce = m_maxForce[i];
+				force = (delta > 0 ?  maxForce: -maxForce);
 				overMaxForce = true;
+			}
+			else{
+				maxForce = force;
 			}
 			btScalar ratio(info->fps/m_fpsLimit[i]);
 			btScalar velFactor;
-			if (!overMaxForce && ratio>m_frequencyRatio){
-				velFactor = m_springDamping[i] /
-					btScalar(info->m_numIterations);
+			if (useOld){
+				if (!overMaxForce && ratio > m_frequencyRatio){
+					velFactor = m_springDamping[i] /
+						btScalar(info->m_numIterations);
+				}
+				else{
+					velFactor = 0;
+				}
 			}
 			else{
-				velFactor = 0;
+				if (overMaxForce){
+					velFactor = 0;
+				}
+				else{
+					velFactor = m_springDamping[i] /
+						btScalar(info->m_numIterations);
+					if (ratio < m_frequencyRatio){
+						velFactor *= ratio / m_frequencyRatio;
+						maxForce = m_maxForce[i];
+					}
+				}
 			}
 			m_linearLimits.m_targetVelocity[i] = info->fps*velFactor * force;
-			m_linearLimits.m_maxMotorForce[i] = btFabs(force) / info->fps;
+			if (useOld){
+				m_linearLimits.m_maxMotorForce[i] = btFabs(force) / info->fps;
+			}
+			else{
+				m_linearLimits.m_maxMotorForce[i] = maxForce / info->fps;
+			}
 		}
 	}
 	for(i = 0; i < 3; i++)
@@ -200,20 +231,44 @@ void bt6DofElasticPlasticConstraint::internalUpdateSprings(btConstraintInfo2* in
 			// bcc
 			bool overMaxForce = false;
 			if (btFabs(force) >= m_maxForce[i + 3]){
-				force = (delta > 0 ? -m_maxForce[i+3] : m_maxForce[i+3]);
+				maxForce = m_maxForce[i+3];
+				force = (delta > 0 ? -maxForce : maxForce);
 				overMaxForce = true;
+			}
+			else{
+				maxForce = force;
 			}
 			btScalar ratio(info->fps/m_fpsLimit[i + 3]);
 			btScalar velFactor;
-			if (!overMaxForce && ratio>m_frequencyRatio){
-				velFactor = m_springDamping[i + 3] / 
-					btScalar(info->m_numIterations);
+			if (useOld){
+				if (!overMaxForce && ratio > m_frequencyRatio){
+					velFactor = m_springDamping[i + 3] /
+						btScalar(info->m_numIterations);
+				}
+				else{
+					velFactor = 0;
+				}
 			}
 			else{
-				velFactor = 0;
+				if (overMaxForce){
+					velFactor = 0;
+				}
+				else{
+					velFactor = m_springDamping[i + 3] /
+						btScalar(info->m_numIterations);
+					if (ratio < m_frequencyRatio){
+						velFactor *= ratio / m_frequencyRatio;
+						maxForce = m_maxForce[i + 3];
+					}
+				}
 			}
 			m_angularLimits[i].m_targetVelocity = info->fps*velFactor * force;
-			m_angularLimits[i].m_maxMotorForce = btFabs(force) / info->fps;
+			if (useOld){
+				m_angularLimits[i].m_maxMotorForce = btFabs(force) / info->fps;
+			}
+			else{
+				m_angularLimits[i].m_maxMotorForce = maxForce / info->fps;
+			}
 		}
 	}
 }
