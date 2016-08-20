@@ -1304,7 +1304,7 @@ public:
 			}
 			for (int i = 0; i < 6; i++)
 			{
-				sc->setDamping(i, damping);
+				sc->setDamping(i, 1-damping);
 			}
 			sc->setEquilibriumPoint();
 		}
@@ -1483,7 +1483,7 @@ public:
 			}
 			for (int i = 0; i < 6; i++)
 			{
-				sc->setDamping(i, damping);
+				sc->setDamping(i, 1-damping);
 			}
 			sc->setFrequencyRatio(frequencyRatio);
 			sc->setEquilibriumPoint();
