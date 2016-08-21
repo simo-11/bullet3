@@ -2058,6 +2058,7 @@ void DemolisherDemo::renderScene()
 		BT_PROFILE("m_guiHelper::syncPhysicsToGraphics");
 		syncWheelsToGraphics();
 		m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
+		updateView();
 		syncedStep = stepCount;
 	}
 	btScalar idleTime = idleClock.getTimeSeconds();
@@ -2128,7 +2129,6 @@ void DemolisherDemo::stepSimulation(float deltaTime)
 			PlasticityExampleBrowser::setPauseSimulation(true);
 		}
 		stepTime += timeStep;
-		updateView();
 	}
 	else{
 		kmph = 0;
