@@ -34,11 +34,11 @@ for simple contact can be summarized as
 equation \ref{eq:eomL} for locations and \ref{eq:eomV} for velocities.
 Symbols are summarized in table \ref{tab:eom} and figure \ref{fig:eom}.
 \begin{equation} \label{eq:eomL} % pdf page 69
-\vec{s}^{\, t+\Delta t} = s^{t}+\Delta t S \vec{u}^{\, t+\Delta t}
+\vec{s}^{\, t+\Delta t} = \vec{s}^{\, t}+\Delta t S \vec{u}^{\, t+\Delta t}
 \end{equation}
 
 \begin{equation} \label{eq:eomV}
-\vec{u}^{\, t+\Delta t} = u^{t}+\Delta t M^{-1}(C N \vec{f}^{\ t+\Delta t} + \vec{f}_{ext}) 
+\vec{u}^{\, t+\Delta t} = \vec{u}^{\, t}+\Delta t M^{-1}(C N \vec{f}^{\ t+\Delta t} + \vec{f}_{ext}) 
 \end{equation}
 
 Friction in contacts and joint constraints can be handled in unified way by refactoring
@@ -46,7 +46,7 @@ equation \ref{eq:eomV} to get \ref{eq:eomV2},  \citet[p.~66-67]{erleben.thesis}.
 Jacobian terms are derived by taking time derivates of kinematic constraints.
 
 \begin{equation} \label{eq:eomV2}
-\vec{u}^{t+\Delta t} = u^{t}+\Delta t M^{-1}(
+\vec{u}^{\, t+\Delta t} = \vec{u}^{\, t}+\Delta t M^{-1}(
  J_{contact}^T \vec{\lambda}_{contact}
 + J_{joint}^T \vec{\lambda}_{joint}
 + \vec{f}_{ext})
