@@ -85,13 +85,14 @@ $\vec{q}_i$ & orientation as a quaternion for body i  \\ \hline
 $\vec{p}_i$ & contact or joint point i  \\ \hline
 $\vec{r}_{ki}$ & $\vec{p}_k - \vec{r}_i$  \\ \hline
 $\vec{s}$ & $\lbrack \vec{r}_1, \vec{q}_1,...,\vec{r}_n, \vec{q}_n \rbrack ^T $\\ \hline
-$S$ & generalized transformation matrix  \\ \hline
+$Q_i$ & rotation matrix $Q_i \in  \mathbb{R}^{4 \times 3}$  \\ \hline
+$S$ & generalized transformation matrix $ S \in \mathbb{R}^{7n \times 6n}$  \\ \hline
 $\vec{v}_i$ & linear velocity of  center of mass for body i  \\ \hline
 $\vec{\omega}_i$ & angular velocity of center of mass for body i  \\ \hline
 $\vec{u}$ & $\lbrack \vec{v}_1, \vec{\omega}_1,...,\vec{v}_n, \vec{\omega}_n \rbrack ^T $\\ \hline
-$M$ & generalized mass matrix  \\ \hline
-$C$ & contact condition matrix  \\ \hline
-$N$ & contact normal matrix  \\ \hline
+$M$ & generalized mass matrix $ M \in \mathbb{R}^{6n \times 6n}$  \\ \hline
+$C$ & contact condition matrix  $ C \in \mathbb{R}^{6n \times 3K}$ \\ \hline
+$N$ & contact normal matrix  $ N \in \mathbb{R}^{3K \times K}$\\ \hline
 $J_{contact}$ & Jacobian matrix for contacts  \\ \hline
 $\lambda_{contact}$ & vector of lagrange multipliers for contacts  \\ \hline
 $J_{joint}$ & Jacobian matrix for joints  \\ \hline
@@ -100,6 +101,48 @@ $\lambda_{joint}$ & vector of lagrange multipliers for joints  \\ \hline
 \end{center}
 \caption {Nomenclature for equations of motion} \label{tab:eom}
 \end {table}
+
+\begin{equation} \label{eq:vectorqi}
+q_i = \lbrack s_i, x_i, y_i, z_i \rbrack ^T
+\end{equation}
+
+\begin{equation} \label{eq:matrixQi}
+Q_i = \frac{1}{2} \left[ \begin{array}{ccc}
+-x_i & -y_i & -z_i \\
+s_i & z_i & -y_i \\
+-z_i & s_i & x_i \\
+y_i & -x_i & s_i
+\end{array} \right]
+\end{equation}
+
+\begin{equation} \label{eq:matrixS}
+S =  \left[ \begin{array}{ccccc}
+1 &  &  & & 0 \\
+ & Q_i  \\
+ & & \ddots  \\
+ & & & 1 \\
+0 & & & & Q_n 
+\end{array} \right]
+\end{equation}
+
+\begin{equation} \label{eq:matrixM}
+M =  \left[ \begin{array}{ccccc}
+m_i 1 &  &  & & 0 \\
+ & I_1  \\
+ & & \ddots  \\
+ & & & m_n 1 \\
+0 & & & & I_n 
+\end{array} \right]
+\end{equation}
+
+\begin{equation} \label{eq:matrixN}
+N =  \left[ \begin{array}{cccc}
+\vec{n}_1 &  & & 0 \\
+ & \vec{n}_2  \\
+ & & \ddots  \\
+0  & & & \vec{n}_k 
+\end{array} \right]
+\end{equation}
 
 
 In structural analysis, a formulation and associated numerical solution procedure are selected 
