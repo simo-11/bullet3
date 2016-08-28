@@ -79,65 +79,53 @@ $\vec{r}_i$  =  orientation of body i
 \hline
 {\bf Symbol} & {\bf Description} \\  \hline
 $\vec{r}_i$ & position of center of mass for body i  \\ \hline
-$\vec{q}_i$ & orientation as a quaternion for body i  (\ref{eq:vectorqi})  \\ \hline
+$\vec{q}_i$ & orientation for body i as quaternion $\lbrack s_i, x_i, y_i, z_i \rbrack ^T $ \\
+\hline
 $\vec{p}_i$ & contact or joint point i  \\ \hline
 $\vec{r}_{ki}$ & $\vec{p}_k - \vec{r}_i$  \\ \hline
 $\vec{s}$ & $\lbrack \vec{r}_1, \vec{q}_1,...,\vec{r}_n, \vec{q}_n \rbrack ^T $\\ \hline
-$Q_i$ & rotation matrix $Q_i \in  \mathbb{R}^{4 \times 3}$ (\ref{eq:matrixQi})  \\ \hline
-$S$ & generalized transformation matrix $ S \in \mathbb{R}^{7n \times 6n}$ (\ref{eq:matrixS}) \\ \hline
-$\vec{v}_i$ & linear velocity of  center of mass for body i   \\ \hline
-$\vec{\omega}_i$ & angular velocity of center of mass for body i  \\ \hline
-$\vec{u}$ & $\lbrack \vec{v}_1, \vec{\omega}_1,...,\vec{v}_n, \vec{\omega}_n \rbrack ^T $\\ \hline
-$M$ & generalized mass matrix $ M \in \mathbb{R}^{6n \times 6n}$ (\ref{eq:matrixM})\\ \hline
-$I_i$ & inertia tensor for body i  \\ \hline
-$C$ & contact condition matrix  $ C \in \mathbb{R}^{6n \times 3K}$ \\ \hline
-$N$ & contact normal matrix  $ N \in \mathbb{R}^{3K \times K}$  (\ref{eq:matrixN}) \\ \hline
-\end {tabular}
-\end{center}
-\caption {Nomenclature for equations of motion} \label{tab:eom}
-\end {table}
-
-\begin{equation} \label{eq:vectorqi}
-q_i = \lbrack s_i, x_i, y_i, z_i \rbrack ^T
-\end{equation}
-
-\begin{equation} \label{eq:matrixQi} % 4.13 p 50
-Q_i = \frac{1}{2} \left[ \begin{array}{ccc}
+$Q_i$ & rotation matrix  $
+\frac{1}{2} \left[ \begin{array}{ccc}
 -x_i & -y_i & -z_i \\
 s_i & z_i & -y_i \\
 -z_i & s_i & x_i \\
 y_i & -x_i & s_i
 \end{array} \right]
-\end{equation}
-
-\begin{equation} \label{eq:matrixS}
-S =  \left[ \begin{array}{ccccc}
+$
+\\ \hline
+ & generalized transformation matrix $ S \in \mathbb{R}^{7n \times 6n}$ \\ 
+$S$ & $
+  \left[ \begin{array}{ccccc}
 1 &  &  & & 0 \\
  & Q_i  \\
  & & \ddots  \\
  & & & 1 \\
 0 & & & & Q_n 
 \end{array} \right]
-\end{equation}
-
-\begin{equation} \label{eq:matrixM}
-M =  \left[ \begin{array}{ccccc}
+$
+\\ \hline
+$\vec{v}_i$ & linear velocity of  center of mass for body i   \\ \hline
+$\vec{\omega}_i$ & angular velocity of center of mass for body i  \\ \hline
+$\vec{u}$ & $\lbrack \vec{v}_1, \vec{\omega}_1,...,\vec{v}_n, \vec{\omega}_n \rbrack ^T $\\ \hline
+ & generalized mass matrix $ M \in \mathbb{R}^{6n \times 6n}$ \\ 
+$M$ &
+$
+\left[ \begin{array}{ccccc}
 m_i 1 &  &  & & 0 \\
  & I_1  \\
  & & \ddots  \\
  & & & m_n 1 \\
 0 & & & & I_n 
 \end{array} \right]
-\end{equation}
-
-\begin{equation} \label{eq:matrixN}
-N =  \left[ \begin{array}{cccc}
-\vec{n}_1 &  & & 0 \\
- & \vec{n}_2  \\
- & & \ddots  \\
-0  & & & \vec{n}_k 
-\end{array} \right]
-\end{equation}
+$
+\\ \hline
+$I_i$ & inertia tensor for body i  \\ \hline
+$C$ & contact condition matrix  $ C \in \mathbb{R}^{6n \times 3K}$ \\ \hline
+$N$ & contact normal matrix  $ N \in \mathbb{R}^{3K \times K}$ \\ \hline
+\end {tabular}
+\end{center}
+\caption {Nomenclature for equations of motion} \label{tab:eom}
+\end {table}
 
 Friction in contacts and joint constraints can be handled in unified way by refactoring
 equation \ref{eq:eomV} to get \ref{eq:eomV2},  \citet[p.~66-67]{erleben.thesis}.
@@ -169,7 +157,7 @@ Added symbols are summarized in table
 \node[anchor=west] at (4.5,3.5) {
 $\vec{r}_i$  =  orientation of body i 
 };
-\node[anchor=west] at (4.5,3) {$\vec{r}_{anc}^{\,i} $ = anchor point for body i};
+\node[anchor=west] at (4.5,3) {$\vec{r}_{anc}^{\,i} $ = body frame vector i};
 \end{tikzpicture}
 \caption{Illustration of nomenclature for equations of motion for joint.}
 \label{fig:eom-joint}
@@ -307,19 +295,56 @@ so plastic section modulus is higher than elastic section modulus.
 \draw (1,0) -- (1,2.5) -- (3,2.5) -- (S); 
 \node[above] at (S) [align=center] {\large{$\sigma=f_y$}};
 \end{tikzpicture}
-\caption{Stress distribution under elastic and plastic loads.}
+\caption{Stress distribution for bending under elastic and plastic loads.}
 \label{fig:wp}
 \end{figure}
 
-For rectangular section lagrange multiplier limits
+Plasticity is handled by defining maximum forces
 in equations \ref{eq:lambdaLow} and  
-\ref{eq:lambdaHigh}
-i.e. maximum forces 
+\ref{eq:lambdaHigh} using plastic capasities as maximum forces.
+
+Maximum force acting in same direction as $\vec{r}_{anc}^{\,i} $
+is product of area and yield stress as given in equation \ref{eq:fN}.
+
+\begin{equation} \label{eq:fN}
+N_{max}= \int_A f_y
+\end{equation}
+
+Maximum forces acting perpendicular to $\vec{r}_{anc}^{\,i} $
+are product of area and shear yield stress $\tau_y$ as given in equation \ref{eq:fQ}.
+\begin{equation} \label{eq:fQ}
+Q_{max}= \int_A \tau_y
+\end{equation}
+
+Maximum moments acting around axis perpendicular to $\vec{r}_{anc}^{\,i} $
+are integrals of perpdendicular distance 
+and yield stress $f_y$ as given in equations \ref{eq:Mx} for moment around
+x-axis and \ref{eq:Mz} for moment around z-axis.
+
+\begin{equation} \label{eq:Mx}
+M_{max}^x= \int_A z f_y
+\end{equation}
+
+\begin{equation} \label{eq:Mz}
+M_{max}^z= \int_A x f_y
+\end{equation}
+
+Maximum moment around $\vec{r}_{anc}^{\,i} $
+is integral of distance $d$ from joint point
+and shear yield stress $\tau_y$ as given in equations \ref{eq:My}.
+
+\begin{equation} \label{eq:My}
+M_{max}^y= \int_A d \tau_y
+\end{equation}
+
+Maximum forces and moments for 
+rectangular section using constant yield stress
 are summarized in figure \ref{fig:maxForces}.
 Yield shear stress is assumed here to be $ 0.5\, f_y$ using Tresca yield critetion.
 If von Mises yield criterion is used 0.5 is replaced by 0.58 ($1/\sqrt{3}$).
 These are not exact values in multiaxial stress state but they
 should be quite usable in most cases.
+
 For rotation around y-axis there is closed form solution only for
 circular cross sections.
 Given approximation is 
@@ -328,25 +353,23 @@ Better approximation for any given b and h can be obtained
 by integrating distance from center of joint over cross section and
 multiplying it with yield shear stress e.g. using octave.
 
+\lstset{language=octave}
 \begin{lstlisting}
-b=0.01
-h=0.01
-fy=200e6
+b=0.01; h=0.01; fy=200e6;
 wpy=fy/2*dblquad(@(x,y) sqrt(x.*x+y.*y),-b/2,b/2,-h/2,h/2)
 38.2
 \end{lstlisting}
 
 
-\lstset{language=octave}
 \begin{figure}[htb!]
 \centering
 \begin{tikzpicture}
-\coordinate (O) at (0,0,0);
+\coordinate (O) at (2,2,0);
 
 % axes
-\draw[->] (O) -- (1,0,0) node[anchor=north east]{$x$};
-\draw[->] (O) -- (0,1,0) node[anchor=north west]{$y$};
-\draw[->] (O) -- (0,0,1) node[anchor=south]{$z$};
+\draw[->] (O) -- ++(1,0,0) node[anchor=north east]{$x$};
+\draw[->] (O) -- ++(0,1,0) node[anchor=north west]{$y$};
+\draw[->] (O) -- ++(0,0,1) node[anchor=south]{$z$};
 
 % 1,3,1 block, base at y=1.5
 \draw (1,1.5,0) -- ++(0,3,0) -- ++(-1,0,0);
@@ -374,9 +397,8 @@ wpy=fy/2*dblquad(@(x,y) sqrt(x.*x+y.*y),-b/2,b/2,-h/2,h/2)
 
 \node[anchor=west] at (4.0,3) {
 \begin{tabular}{l}
-maximum force in x direction = $0.5\, b\, h f_y$ \\
+maximum force in x and z directions = $0.5\, b\, h f_y$ \\
 maximum force in y direction = $b\, h\, f_y$  \\
-maximum force in z direction = $0.5\, b\, h\, f_y$  \\
 \\
 maximum moment around x-axis = $0.25\, b\, h^2 \, f_y$  \\
 maximum moment around y-axis $ \approx 0.19\, b\, h\, \frac{b\, + h}{2} f_y$  \\
