@@ -21,6 +21,8 @@ protected:
 
 	bool processCamera(const struct SharedMemoryCommand& orgCommand);
 
+    bool processContactPointData(const struct SharedMemoryCommand& orgCommand);
+
     void processBodyJointInfo(int bodyUniqueId, const struct SharedMemoryStatus& serverCmd);
     
 public:
@@ -29,9 +31,10 @@ public:
     
     virtual ~PhysicsDirect();
 
-	  // return true if connection succesfull, can also check 'isConnected'
+	// return true if connection succesfull, can also check 'isConnected'
+	//it is OK to pass a null pointer for the gui helper
     virtual bool connect();
-
+	
 	////todo: rename to 'disconnect'
     virtual void disconnectSharedMemory();
 
@@ -62,7 +65,14 @@ public:
     virtual const float* getDebugLinesColor() const;
 
 	virtual void getCachedCameraImage(b3CameraImageData* cameraData);
-	
+
+    virtual void getCachedContactPointInformation(struct b3ContactInformation* contactPointData);
+
+	//those 2 APIs are for internal use for visualization
+	virtual bool connect(struct GUIHelperInterface* guiHelper);
+	virtual void renderScene();
+	virtual void debugDraw(int debugDrawMode);
+
 };
 
 #endif //PHYSICS_DIRECT_H

@@ -43,6 +43,7 @@ enum MultiThreadedGUIHelperCommunicationEnums
 	eGUIHelperCreateCollisionShapeGraphicsObject,
 	eGUIHelperCreateCollisionObjectGraphicsObject,
 	eGUIHelperRemoveAllGraphicsInstances,
+	eGUIHelperCopyCameraImageData,
 };
 
 #include <stdio.h>
@@ -106,6 +107,7 @@ struct MotionThreadLocalStorage
 };
 
 int skip = 0;
+int skip1 = 0;
 
 void	MotionThreadFunc(void* userPtr,void* lsMemory)
 {
@@ -128,13 +130,22 @@ void	MotionThreadFunc(void* userPtr,void* lsMemory)
 		do
 		{
 //todo(erwincoumans): do we want some sleep to reduce CPU resources in this thread?
+			
 
 			double deltaTimeInSeconds = double(clock.getTimeMicroseconds())/1000000.;
+
 			if (deltaTimeInSeconds<(1./5000.))
 			{
+
 				skip++;
+				skip1++;
+				{
+					b3Clock::usleep(250);
+				}
 			} else
 			{
+				skip1=0;
+				
 				//process special controller commands, such as
 				//VR controller button press/release and controller motion
 
@@ -185,8 +196,9 @@ void	MotionThreadFunc(void* userPtr,void* lsMemory)
 	}
 
 
-	printf("finished, #skip = %d\n",skip);
+	printf("finished, #skip = %d, skip1 = %d\n",skip,skip1);
 	skip=0;
+	skip1=0;
 	//do nothing
 
 }
@@ -271,6 +283,7 @@ public:
 		m_cs->unlock();
 		while (m_cs->getSharedParam(1)!=eGUIHelperIdle)
 		{
+			b3Clock::usleep(1000);
 		}
 
 	}
@@ -284,6 +297,7 @@ public:
 		m_cs->unlock();
 		while (m_cs->getSharedParam(1)!=eGUIHelperIdle)
 		{
+			b3Clock::usleep(1000);
 		}
 
 	}
@@ -316,6 +330,7 @@ public:
 		m_cs->unlock();
 		while (m_cs->getSharedParam(1)!=eGUIHelperIdle)
 		{
+			b3Clock::usleep(1000);
 		}
 		return m_textureId;
 	}
@@ -333,6 +348,7 @@ public:
 		m_cs->unlock();
 		while (m_cs->getSharedParam(1)!=eGUIHelperIdle)
 		{
+			b3Clock::usleep(1000);
 		}
 		return m_shapeIndex;
 	}
@@ -349,6 +365,7 @@ public:
 		m_cs->unlock();
 		while (m_cs->getSharedParam(1)!=eGUIHelperIdle)
 		{
+			b3Clock::usleep(1000);
 		}
 		return m_instanceId;
 	}
@@ -360,6 +377,7 @@ public:
 		m_cs->unlock();
 		while (m_cs->getSharedParam(1)!=eGUIHelperIdle)
 		{
+			b3Clock::usleep(1000);
 		}
     }
 
@@ -390,13 +408,54 @@ public:
 	}
 	virtual void resetCamera(float camDist, float pitch, float yaw, float camPosX,float camPosY, float camPosZ)
 	{
+	    m_childGuiHelper->resetCamera(camDist,pitch,yaw,camPosX,camPosY,camPosZ);
 	}
 
-	virtual void copyCameraImageData(const float viewMatrix[16], const float projectionMatrix[16], unsigned char* pixelsRGBA, int rgbaBufferSizeInPixels, float* depthBuffer, int depthBufferSizeInPixels, int startPixelIndex, int width, int height, int* numPixelsCopied)
+	float m_viewMatrix[16];
+    float m_projectionMatrix[16];
+    unsigned char* m_pixelsRGBA;
+    int m_rgbaBufferSizeInPixels;
+    float* m_depthBuffer;
+    int m_depthBufferSizeInPixels;
+     int* m_segmentationMaskBuffer;
+    int m_segmentationMaskBufferSizeInPixels;
+    int m_startPixelIndex;
+    int m_destinationWidth;
+    int m_destinationHeight;
+    int* m_numPixelsCopied;
+
+	virtual void copyCameraImageData(const float viewMatrix[16], const float projectionMatrix[16], 
+                                  unsigned char* pixelsRGBA, int rgbaBufferSizeInPixels, 
+                                  float* depthBuffer, int depthBufferSizeInPixels,
+                                  int* segmentationMaskBuffer, int segmentationMaskBufferSizeInPixels,
+                                  int startPixelIndex, int destinationWidth, 
+                                  int destinationHeight, int* numPixelsCopied)
 	{
-        if (numPixelsCopied)
-            *numPixelsCopied = 0;
+	    m_cs->lock();
+	    for (int i=0;i<16;i++)
+        {
+            m_viewMatrix[i] = viewMatrix[i];
+            m_projectionMatrix[i] = projectionMatrix[i];
+        }
+	    m_pixelsRGBA = pixelsRGBA;
+        m_rgbaBufferSizeInPixels = rgbaBufferSizeInPixels;
+        m_depthBuffer = depthBuffer;
+        m_depthBufferSizeInPixels = depthBufferSizeInPixels;
+        m_segmentationMaskBuffer = segmentationMaskBuffer;
+        m_segmentationMaskBufferSizeInPixels = segmentationMaskBufferSizeInPixels;
+        m_startPixelIndex = startPixelIndex;
+        m_destinationWidth = destinationWidth;
+        m_destinationHeight = destinationHeight;
+        m_numPixelsCopied = numPixelsCopied;
+	    
+		m_cs->setSharedParam(1,eGUIHelperCopyCameraImageData);
+		m_cs->unlock();
+		while (m_cs->getSharedParam(1)!=eGUIHelperIdle)
+		{
+			b3Clock::usleep(1000);
+		}
 	}
+	
 
 	virtual void autogenerateGraphicsObjects(btDiscreteDynamicsWorld* rbWorld) 
 	{
@@ -597,8 +656,10 @@ void	PhysicsServerExample::initPhysics()
 			int index = 0;
 			
 			m_threadSupport->runTask(B3_THREAD_SCHEDULE_TASK, (void*) &this->m_args[w], w);
+			
 			while (m_args[w].m_cs->getSharedParam(0)==eMotionIsUnInitialized)
 			{
+				b3Clock::usleep(1000);
 			}
 		}
 
@@ -628,6 +689,7 @@ void    PhysicsServerExample::exitPhysics()
 
                         } else
                         {
+							b3Clock::usleep(1000);
                         }
                 };
 
@@ -727,6 +789,26 @@ void	PhysicsServerExample::stepSimulation(float deltaTime)
             m_multiThreadedHelper->getCriticalSection()->unlock();
             break;
         }
+        
+    case eGUIHelperCopyCameraImageData:
+        {
+             m_multiThreadedHelper->m_childGuiHelper->copyCameraImageData(m_multiThreadedHelper->m_viewMatrix,
+                                                                                 m_multiThreadedHelper->m_projectionMatrix,
+                                                                                 m_multiThreadedHelper->m_pixelsRGBA,
+                                                                                 m_multiThreadedHelper->m_rgbaBufferSizeInPixels,
+                                                                                 m_multiThreadedHelper->m_depthBuffer,
+                                                                                 m_multiThreadedHelper->m_depthBufferSizeInPixels,
+                                                                                 m_multiThreadedHelper->m_segmentationMaskBuffer,
+                                                                                 m_multiThreadedHelper->m_segmentationMaskBufferSizeInPixels,
+                                                                                 m_multiThreadedHelper->m_startPixelIndex, 
+                                                                                 m_multiThreadedHelper->m_destinationWidth, 
+                                                                                 m_multiThreadedHelper->m_destinationHeight, 
+                                                                                 m_multiThreadedHelper->m_numPixelsCopied);
+            m_multiThreadedHelper->getCriticalSection()->lock();
+            m_multiThreadedHelper->getCriticalSection()->setSharedParam(1,eGUIHelperIdle);
+            m_multiThreadedHelper->getCriticalSection()->unlock();
+            break;
+        }
 	case eGUIHelperIdle:
 	default:
 		{
@@ -799,7 +881,22 @@ void PhysicsServerExample::renderScene()
 		static int frameCount=0;
 		frameCount++;
 		char bla[1024];
-		sprintf(bla,"VR sub-title text test, frame %d", frameCount/2);
+
+		static btScalar prevTime = m_clock.getTimeSeconds();
+		btScalar curTime = m_clock.getTimeSeconds();
+		static btScalar deltaTime = 0.f;
+		static int count = 10;
+		if (count-- < 0)
+		{
+			count = 10;
+			deltaTime = curTime - prevTime;
+		}
+		if (deltaTime == 0)
+			deltaTime = 1000;
+
+		prevTime = curTime;
+		
+		sprintf(bla,"VR sub-title text test,fps = %f, frame %d", 1./deltaTime, frameCount/2);
 		float pos[4];
 		m_guiHelper->getAppInterface()->m_renderer->getActiveCamera()->getCameraTargetPosition(pos);
 		btTransform viewTr;

@@ -107,7 +107,7 @@ static CommonExampleInterface* sCurrentDemo = 0;
 static b3AlignedObjectArray<const char*> allNames;
 static float gFixedTimeStep = 0;
 bool gAllowRetina = true;
-
+bool gDisableDemoSelection = false;
 static class ExampleEntries* gAllExamples=0;
 bool sUseOpenGL2 = false;
 bool drawGUI=true;
@@ -123,6 +123,7 @@ static bool enable_experimental_opencl = false;
 
 int gDebugDrawFlags = 0;
 static bool pauseSimulation=false;
+static bool singleStepSimulation = false;
 int midiBaseIndex = 176;
 extern bool gDisableDeactivation;
 
@@ -157,6 +158,7 @@ void deleteDemo()
 }
 
 const char* gPngFileName = 0;
+int gPngSkipFrames = 0;
 
 
 
@@ -192,7 +194,6 @@ void MyKeyboardCallback(int key, int state)
 	}
 	if (key=='c' && state)
 	{
-		gDebugDrawFlags ^= btIDebugDraw::DBG_DrawConstraints;
 		gDebugDrawFlags ^= btIDebugDraw::DBG_DrawContactPoints;
 	}
 	if (key == 'd' && state)
@@ -200,6 +201,11 @@ void MyKeyboardCallback(int key, int state)
 		gDebugDrawFlags ^= btIDebugDraw::DBG_NoDeactivation;
 		gDisableDeactivation = ((gDebugDrawFlags & btIDebugDraw::DBG_NoDeactivation) != 0);
 	}
+	if (key == 'k' && state)
+	{
+		gDebugDrawFlags ^= btIDebugDraw::DBG_DrawConstraints;
+	}
+
 	if (key=='l' && state)
 	{
 		gDebugDrawFlags ^= btIDebugDraw::DBG_DrawConstraintLimits;
@@ -226,6 +232,12 @@ void MyKeyboardCallback(int key, int state)
 	{
 		pauseSimulation = !pauseSimulation;
 	}
+	if (key == 'o' && state)
+	{
+		singleStepSimulation = true;
+	}
+
+
 #ifndef NO_OPENGL3
 	if (key=='s' && state)
 	{
@@ -489,7 +501,7 @@ void	MyComboBoxCallback(int comboId, const char* item)
 void MyGuiPrintf(const char* msg)
 {
 	printf("b3Printf: %s\n",msg);
-	if (gui2)
+	if (!gDisableDemoSelection)
 	{
 		gui2->textOutput(msg);
 		gui2->forceUpdateScrollBars();
@@ -501,7 +513,7 @@ void MyGuiPrintf(const char* msg)
 void MyStatusBarPrintf(const char* msg)
 {
 	printf("b3Printf: %s\n", msg);
-	if (gui2)
+	if (!gDisableDemoSelection)
 	{
 		bool isLeft = true;
 		gui2->setStatusBarMessage(msg,isLeft);
@@ -512,13 +524,15 @@ void MyStatusBarPrintf(const char* msg)
 void MyStatusBarError(const char* msg)
 {
 	printf("Warning: %s\n", msg);
-	if (gui2)
+	if (!gDisableDemoSelection)
 	{
 		bool isLeft = false;
 		gui2->setStatusBarMessage(msg,isLeft);
 		gui2->textOutput(msg);
 		gui2->forceUpdateScrollBars();
 	}
+  btAssert(0);
+
 }
 
 struct MyMenuItemHander :public Gwen::Event::Handler
@@ -553,9 +567,11 @@ struct MyMenuItemHander :public Gwen::Event::Handler
 		Gwen::String laa = Gwen::Utility::UnicodeToString(la);
 		//const char* ha = laa.c_str();
 
-		
-		selectDemo(sCurrentHightlighted);
-		saveCurrentSettings(sCurrentDemoIndex, startFileName);
+		if (!gDisableDemoSelection )
+		{
+			selectDemo(sCurrentHightlighted);
+			saveCurrentSettings(sCurrentDemoIndex, startFileName);
+		}
 	}
 	void onButtonC(Gwen::Controls::Base* pControl)
 	{
@@ -577,8 +593,11 @@ struct MyMenuItemHander :public Gwen::Event::Handler
 		*/
 
 	//	printf("onKeyReturn ! \n");
-		selectDemo(sCurrentHightlighted);
-		saveCurrentSettings(sCurrentDemoIndex, startFileName);
+		if (!gDisableDemoSelection )
+		{
+			selectDemo(sCurrentHightlighted);
+			saveCurrentSettings(sCurrentDemoIndex, startFileName);
+		}
 
 	}
 
@@ -631,10 +650,12 @@ struct QuickCanvas : public Common2dCanvasInterface
 	MyGraphWindow* m_gw[MAX_GRAPH_WINDOWS];
 	GraphingTexture* m_gt[MAX_GRAPH_WINDOWS];
 	int m_curNumGraphWindows;
+	int m_curXpos;
 
 	QuickCanvas(GL3TexLoader* myTexLoader)
 		:m_myTexLoader(myTexLoader),
-		m_curNumGraphWindows(0)
+		m_curNumGraphWindows(0),
+		m_curXpos(0)
 	{
 		for (int i=0;i<MAX_GRAPH_WINDOWS;i++)
 		{
@@ -658,7 +679,8 @@ struct QuickCanvas : public Common2dCanvasInterface
 			MyGraphInput input(gui2->getInternalData());
 			input.m_width=width;
 			input.m_height=height;
-			input.m_xPos = 10000;//GUI will clamp it to the right//300;
+			input.m_xPos = m_curXpos;//GUI will clamp it to the right//300;
+			m_curXpos+=width+20;
 			input.m_yPos = 10000;//GUI will clamp it to bottom
 			input.m_name=canvasName;
 			input.m_texName = canvasName;
@@ -674,6 +696,7 @@ struct QuickCanvas : public Common2dCanvasInterface
 	}
 	virtual void destroyCanvas(int canvasId)
 	{
+	    m_curXpos = 0;
 		btAssert(canvasId>=0);
 		delete m_gt[canvasId];
 		m_gt[canvasId] = 0;
@@ -761,7 +784,7 @@ bool OpenGLExampleBrowser::init(int argc, char* argv[])
 	loadCurrentSettings(startFileName, args);
 
 	args.GetCmdLineArgument("fixed_timestep",gFixedTimeStep);
-	
+	args.GetCmdLineArgument("png_skip_frames", gPngSkipFrames);	
 	///The OpenCL rigid body pipeline is experimental and 
 	///most OpenCL drivers and OpenCL compilers have issues with our kernels.
 	///If you have a high-end desktop GPU such as AMD 7970 or better, or NVIDIA GTX 680 with up-to-date drivers
@@ -870,7 +893,6 @@ bool OpenGLExampleBrowser::init(int argc, char* argv[])
 		GL3TexLoader* myTexLoader = new GL3TexLoader;
 		m_internalData->m_myTexLoader = myTexLoader;
 
-		sth_stash* fontstash = simpleApp->getFontStash();
 		
 		if (sUseOpenGL2)
 		{
@@ -1091,33 +1113,33 @@ void OpenGLExampleBrowser::update(float deltaTime)
             s_app->drawText(bla,10,10);
 		}
 
+    if (gPngFileName)
+    {
+        
+        static int skip = 0;
+        skip--;
+        if (skip<0)
+        {
+            skip=gPngSkipFrames;
+            //printf("gPngFileName=%s\n",gPngFileName);
+            static int s_frameCount = 100;
+            
+            sprintf(staticPngFileName,"%s%d.png",gPngFileName,s_frameCount++);
+            //b3Printf("Made screenshot %s",staticPngFileName);
+            s_app->dumpNextFrameToPng(staticPngFileName);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        }
+    }
+
 		
 		if (sCurrentDemo)
 		{
-			if (!pauseSimulation)
+			if (!pauseSimulation || singleStepSimulation)
 			{
+				singleStepSimulation = false;
 				//printf("---------------------------------------------------\n");
 				//printf("Framecount = %d\n",frameCount);
-
-				if (gPngFileName)
-				{
-					
-					static int skip = 0;
-					skip++;
-					if (skip>4)
-					{
-						skip=0;
-						//printf("gPngFileName=%s\n",gPngFileName);
-						static int s_frameCount = 100;
-						
-						sprintf(staticPngFileName,"%s%d.png",gPngFileName,s_frameCount++);
-						//b3Printf("Made screenshot %s",staticPngFileName);
-						s_app->dumpNextFrameToPng(staticPngFileName);
-						 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
-					}
-				}
 				
-
 				if (gFixedTimeStep>0)
 				{
 					sCurrentDemo->stepSimulation(gFixedTimeStep);
@@ -1150,6 +1172,8 @@ void OpenGLExampleBrowser::update(float deltaTime)
                 sCurrentDemo->physicsDebugDraw(gDebugDrawFlags);
             }
 		}
+
+    
 
 		{
 			
@@ -1220,5 +1244,6 @@ void OpenGLExampleBrowser::update(float deltaTime)
 
 void OpenGLExampleBrowser::setSharedMemoryInterface(class SharedMemoryInterface* sharedMem)
 {
+	gDisableDemoSelection = true;
 	sSharedMem = sharedMem;
 }

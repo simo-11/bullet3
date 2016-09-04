@@ -27,7 +27,7 @@
 #define SHARED_MEMORY_MAX_STREAM_CHUNK_SIZE (256*1024)
 
 #define SHARED_MEMORY_SERVER_TEST_C
-#define MAX_DEGREE_OF_FREEDOM 64
+#define MAX_DEGREE_OF_FREEDOM 128
 #define MAX_NUM_SENSORS 256
 #define MAX_URDF_FILENAME_LENGTH 1024
 #define MAX_SDF_FILENAME_LENGTH 1024
@@ -64,6 +64,7 @@ enum EnumSdfArgsUpdateFlags
 struct SdfArgs
 {
 	char m_sdfFileName[MAX_URDF_FILENAME_LENGTH];
+    int m_useMultiBody;
 };
 
 enum EnumUrdfArgsUpdateFlags
@@ -143,6 +144,12 @@ enum EnumRequestPixelDataUpdateFlags
 	
 };
 
+struct RequestContactDataArgs
+{
+    int m_startingContactPointIndex;
+    int m_objectAIndexFilter;
+	int m_objectBIndexFilter;
+};
 
 
 struct SendDebugLinesArgs
@@ -348,6 +355,35 @@ enum EnumSdfRequestInfoFlags
     //SDF_REQUEST_INFO_CAMERA=2,
 };
 
+
+struct CalculateInverseDynamicsArgs
+{
+	int m_bodyUniqueId;
+
+	double m_jointPositionsQ[MAX_DEGREE_OF_FREEDOM];
+	double m_jointVelocitiesQdot[MAX_DEGREE_OF_FREEDOM];
+	double m_jointAccelerations[MAX_DEGREE_OF_FREEDOM];
+};
+
+struct CalculateInverseDynamicsResultArgs
+{
+	int m_bodyUniqueId;
+	int m_dofCount;
+	double m_jointForces[MAX_DEGREE_OF_FREEDOM];
+};
+
+struct CreateJointArgs
+{
+    int m_parentBodyIndex;
+    int m_parentJointIndex;
+    int m_childBodyIndex;
+    int m_childJointIndex;
+    double m_parentFrame[7];
+    double m_childFrame[7];
+    double m_jointAxis[3];
+    int m_jointType;
+};
+
 struct SharedMemoryCommand
 {
 	int m_type;
@@ -374,12 +410,22 @@ struct SharedMemoryCommand
 		struct RequestPixelDataArgs m_requestPixelDataArguments;
 		struct PickBodyArgs m_pickBodyArguments;
         struct ExternalForceArgs m_externalForceArguments;
+		struct CalculateInverseDynamicsArgs m_calculateInverseDynamicsArguments;
+        struct CreateJointArgs m_createJointArguments;
+        struct RequestContactDataArgs m_requestContactPointArguments;
     };
 };
 
 struct RigidBodyCreateArgs
 {
 	int m_bodyUniqueId; 
+};
+
+struct SendContactDataArgs
+{
+    int m_startingContactPointIndex;
+    int m_numContactPointsCopied;
+    int m_numRemainingContactPoints;
 };
 
 struct SharedMemoryStatus
@@ -397,6 +443,8 @@ struct SharedMemoryStatus
 		struct SendDebugLinesArgs m_sendDebugLinesArgs;
 		struct SendPixelDataArgs m_sendPixelDataArguments;
 		struct RigidBodyCreateArgs m_rigidBodyCreateArgs;
+		struct CalculateInverseDynamicsResultArgs m_inverseDynamicsResultArgs;
+		struct SendContactDataArgs m_sendContactPointArgs;
 	};
 };
 

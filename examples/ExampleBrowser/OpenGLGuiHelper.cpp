@@ -84,7 +84,10 @@ public:
 
 	virtual void	drawContactPoint(const btVector3& PointOnB,const btVector3& normalOnB,btScalar distance,int lifeTime,const btVector3& color)
 	{
-        drawLine(PointOnB,PointOnB+normalOnB,color);
+        drawLine(PointOnB,PointOnB+normalOnB*distance,color);
+		btVector3 ncolor(0, 0, 0);
+		drawLine(PointOnB, PointOnB + normalOnB*0.01, ncolor);
+		
 	}
      
 
@@ -338,7 +341,12 @@ void OpenGLGuiHelper::resetCamera(float camDist, float pitch, float yaw, float c
 }
 
 
-void OpenGLGuiHelper::copyCameraImageData(const float viewMatrix[16], const float projectionMatrix[16], unsigned char* pixelsRGBA, int rgbaBufferSizeInPixels, float* depthBuffer, int depthBufferSizeInPixels, int startPixelIndex, int destinationWidth, int destinationHeight, int* numPixelsCopied)
+void OpenGLGuiHelper::copyCameraImageData(const float viewMatrix[16], const float projectionMatrix[16], 
+                                          unsigned char* pixelsRGBA, int rgbaBufferSizeInPixels, 
+                                          float* depthBuffer, int depthBufferSizeInPixels, 
+                                          int* segmentationMaskBuffer, int segmentationMaskBufferSizeInPixels,
+                                          int startPixelIndex, int destinationWidth, 
+                                          int destinationHeight, int* numPixelsCopied)
 {
     int sourceWidth = m_data->m_glApp->m_window->getWidth()*m_data->m_glApp->m_window->getRetinaScale();
     int sourceHeight  = m_data->m_glApp->m_window->getHeight()*m_data->m_glApp->m_window->getRetinaScale();

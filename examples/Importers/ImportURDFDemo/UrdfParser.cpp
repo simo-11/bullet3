@@ -606,6 +606,28 @@ bool UrdfParser::parseLink(UrdfModel& model, UrdfLink& link, TiXmlElement *confi
 	 TiXmlElement* ci = config->FirstChildElement("contact");
 	  if (ci)
 	  {
+        
+          TiXmlElement *damping_xml = ci->FirstChildElement("inertia_scaling");
+          if (damping_xml)
+          {
+              if (m_parseSDF)
+              {
+                  link.m_contactInfo.m_inertiaScaling = urdfLexicalCast<double>(damping_xml->GetText());
+                  link.m_contactInfo.m_flags |= URDF_CONTACT_HAS_INERTIA_SCALING;
+              } else
+              {
+                  if (!damping_xml->Attribute("value"))
+                  {
+                      logger->reportError("Link/contact: damping element must have value attribute");
+                      return false;
+                  }
+                  
+                  link.m_contactInfo.m_inertiaScaling = urdfLexicalCast<double>(damping_xml->Attribute("value"));
+                  link.m_contactInfo.m_flags |= URDF_CONTACT_HAS_INERTIA_SCALING;
+
+              }
+          }
+          {
 		TiXmlElement *friction_xml = ci->FirstChildElement("lateral_friction");
 		if (friction_xml)
 		{
@@ -623,6 +645,77 @@ bool UrdfParser::parseLink(UrdfModel& model, UrdfLink& link, TiXmlElement *confi
 				link.m_contactInfo.m_lateralFriction = urdfLexicalCast<double>(friction_xml->Attribute("value"));
 			}
 		}
+          }
+          
+          {
+              TiXmlElement *rolling_xml = ci->FirstChildElement("rolling_friction");
+              if (rolling_xml)
+              {
+                  if (m_parseSDF)
+                  {
+                      link.m_contactInfo.m_rollingFriction = urdfLexicalCast<double>(rolling_xml->GetText());
+                      link.m_contactInfo.m_flags |= URDF_CONTACT_HAS_ROLLING_FRICTION;
+                  } else
+                  {
+                      if (!rolling_xml->Attribute("value"))
+                      {
+                          logger->reportError("Link/contact: rolling friction element must have value attribute");
+                          return false;
+                      }
+                      
+                      link.m_contactInfo.m_rollingFriction = urdfLexicalCast<double>(rolling_xml->Attribute("value"));
+                      link.m_contactInfo.m_flags |= URDF_CONTACT_HAS_ROLLING_FRICTION;
+                      
+                  }
+              }
+          }
+
+           {
+           
+              TiXmlElement *stiffness_xml = ci->FirstChildElement("stiffness");
+              if (stiffness_xml)
+              {
+                  if (m_parseSDF)
+                  {
+                      link.m_contactInfo.m_contactStiffness = urdfLexicalCast<double>(stiffness_xml->GetText());
+                      link.m_contactInfo.m_flags |= URDF_CONTACT_HAS_STIFFNESS_DAMPING;
+                  } else
+                  {
+                      if (!stiffness_xml->Attribute("value"))
+                      {
+                          logger->reportError("Link/contact: stiffness element must have value attribute");
+                          return false;
+                      }
+                      
+                      link.m_contactInfo.m_contactStiffness = urdfLexicalCast<double>(stiffness_xml->Attribute("value"));
+                      link.m_contactInfo.m_flags |= URDF_CONTACT_HAS_STIFFNESS_DAMPING;
+                      
+                  }
+              }
+            }
+            {
+           
+              TiXmlElement *damping_xml = ci->FirstChildElement("damping");
+              if (damping_xml)
+              {
+                  if (m_parseSDF)
+                  {
+                      link.m_contactInfo.m_contactDamping = urdfLexicalCast<double>(damping_xml->GetText());
+                      link.m_contactInfo.m_flags |= URDF_CONTACT_HAS_STIFFNESS_DAMPING;
+                  } else
+                  {
+                      if (!damping_xml->Attribute("value"))
+                      {
+                          logger->reportError("Link/contact: damping element must have value attribute");
+                          return false;
+                      }
+                      
+                      link.m_contactInfo.m_contactDamping = urdfLexicalCast<double>(damping_xml->Attribute("value"));
+                      link.m_contactInfo.m_flags |= URDF_CONTACT_HAS_STIFFNESS_DAMPING;
+                      
+                  }
+              }
+            }
 	  }
 	}
 
