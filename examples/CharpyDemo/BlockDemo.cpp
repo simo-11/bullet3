@@ -1365,15 +1365,16 @@ void BlockDemo::reinit(){
 	case X:
 		lsx = 5;
 		lsy = 1;
+		blockSteelScale = 0.004;
 		break;
 	case Y:
 		lsx = 1;
 		lsy = 3;
+		blockSteelScale = 0.0004;
 		break;
 	}
 	lsz = 1;
 	density = 2000;
-	blockSteelScale = 0.0004;
 	maxPlasticStrain = 0.2;
 	maxPlasticRotation = 3;
 	E = 200E9;
