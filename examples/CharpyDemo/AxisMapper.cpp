@@ -17,7 +17,7 @@ void AxisMapper::initX(){
 	}
 	m_h = m_ylen;
 	m_b = m_zlen;
-	m_len = m_len;
+	m_len = m_xlen;
 }
 
 void AxisMapper::initY(){
