@@ -260,25 +260,47 @@ public:
 	}
 	void updateView(){
 		if (m_constraint){
-			c_y_force = jf.m_appliedForceBodyB[1];
-			c_impulse = btFabs(c_y_force*m_fixedTimeStep);
+			switch (orientationType){
+			case X:
+				c_force = jf.m_appliedTorqueBodyB[2];
+				break;
+			case Y:
+				c_force = jf.m_appliedForceBodyB[1];
+				break;
+			}
+			c_impulse = btFabs(c_force*m_fixedTimeStep);
 			c_percent = 100.*c_impulse/maxImpulse;
 		}
 		else{
 			c_impulse = sumContactImpulses();
-			c_y_force = c_impulse / m_fixedTimeStep;
+			c_force = c_impulse / m_fixedTimeStep;
 		}
 		if (m_body){
-			b_y_location = m_body->getWorldTransform().getOrigin().y() - yStart;
-			b_y_velocity = m_body->getLinearVelocity().y();
+			switch (orientationType){
+			case X:
+				b_location = m_body->getWorldTransform().getRotation().getAngle();
+				b_velocity = m_body->getAngularVelocity().z();
+				break;
+			case Y:
+				b_location = m_body->getWorldTransform().getOrigin().y() - yStart;
+				b_velocity = m_body->getLinearVelocity().y();
+				break;
+			}
 		}
-		updateTimeSeries();
+		switch (orientationType){
+		case X:
+			updateXTimeSeries();
+			break;
+		case Y:
+			updateYTimeSeries();
+			break;
+		}
 	}
 	void resetView(){
 		c_impulse = 0;
 		c_percent = 0;
-		b_y_location = 0;
-		b_y_velocity = 0;
+		b_location = 0;
+		b_velocity = 0;
 	}
 	float pitchDelta = 0;
 	void setPitchDelta(float delta){
@@ -446,10 +468,11 @@ public:
 	Gwen::Controls::Label *db21, *db22, *db23;
 	Gwen::Controls::Label *db31, *db32;
 	int fps = 0;
-	btScalar c_impulse = 0, c_y_force=0,
+	btScalar c_impulse = 0, c_force=0,
 		c_percent=0, 
-		b_y_location=0, b_y_velocity=0, yStart=0;
+		b_location=0, b_velocity=0, yStart=0;
 	TimeSeriesCanvas *tsYLocation=0, *tsYVelocity=0, *tsYForce=0;
+	TimeSeriesCanvas *tsZRLocation = 0, *tsZRVelocity = 0, *tsZMoment = 0;
 	btScalar getMass(){
 		return btScalar(lsx*lsy*lsz*getDensity(blockSteelScale));
 	}
@@ -475,10 +498,10 @@ public:
 		sprintf_s(buffer, UIF_SIZE, "%4.0f ", c_percent);
 		str = std::string(buffer);
 		db15->SetText(str);
-		sprintf_s(buffer, UIF_SIZE, "%9.6f ", b_y_location);
+		sprintf_s(buffer, UIF_SIZE, "%9.6f ", b_location);
 		str = std::string(buffer);
 		db21->SetText(str);
-		sprintf_s(buffer, UIF_SIZE, "%9.6f ", b_y_velocity);
+		sprintf_s(buffer, UIF_SIZE, "%9.6f ", b_velocity);
 		str = std::string(buffer);
 		db22->SetText(str);
 		if (m_body){
@@ -1160,7 +1183,7 @@ public:
 		}
 		m_dynamicsWorld->setConstraintSolver(m_constraintSolver);
 	}
-	void addTimeSeries(){
+	void addYTimeSeries(){
 		int tsWidth = 300, tsHeight = 200;
 		CommonGraphicsApp * app = PlasticityExampleBrowser::getApp();
 		if (0 == tsYLocation){
@@ -1183,13 +1206,44 @@ public:
 		tsYForce->setupTimeSeries(maxForce/1000., intFreq, 0);
 		tsYForce->addDataSource("", 0, 0, 255);
 	}
-	void updateTimeSeries(){
-		tsYLocation->insertDataAtCurrentTime(b_y_location, 0, true);
+	void updateYTimeSeries(){
+		tsYLocation->insertDataAtCurrentTime(b_location, 0, true);
 		tsYLocation->nextTick();
-		tsYVelocity->insertDataAtCurrentTime(b_y_velocity, 0, true);
+		tsYVelocity->insertDataAtCurrentTime(b_velocity, 0, true);
 		tsYVelocity->nextTick();
-		tsYForce->insertDataAtCurrentTime(c_y_force/1000., 0, true);
+		tsYForce->insertDataAtCurrentTime(c_force/1000., 0, true);
 		tsYForce->nextTick();
+	}
+	void addXTimeSeries(){
+		int tsWidth = 300, tsHeight = 200;
+		CommonGraphicsApp * app = PlasticityExampleBrowser::getApp();
+		if (0 == tsZRLocation){
+			tsZRLocation = new TimeSeriesCanvas
+				(app->m_2dCanvasInterface, tsWidth, tsHeight, "Z rotation");
+		}
+		tsZRLocation->setupTimeSeries(0.5, intFreq, 0);
+		tsZRLocation->addDataSource("", 255, 0, 0);
+		if (0 == tsZRVelocity){
+			tsZRVelocity = new TimeSeriesCanvas
+				(app->m_2dCanvasInterface, tsWidth, tsHeight, "Z angular velocity [1/s]");
+		}
+		tsZRVelocity->setupTimeSeries(1, intFreq, 0);
+		tsZRVelocity->addDataSource("", 0, 255, 0);
+		btScalar maxMoment = axisMapper->getMaxForce(5);
+		if (0 == tsZMoment){
+			tsZMoment = new TimeSeriesCanvas
+				(app->m_2dCanvasInterface, tsWidth, tsHeight, "Z moment [kNm]");
+		}
+		tsZMoment->setupTimeSeries(maxMoment / 1000., intFreq, 0);
+		tsZMoment->addDataSource("", 0, 0, 255);
+	}
+	void updateXTimeSeries(){
+		tsZRLocation->insertDataAtCurrentTime(b_location, 0, true);
+		tsZRLocation->nextTick();
+		tsZRVelocity->insertDataAtCurrentTime(b_velocity, 0, true);
+		tsZRVelocity->nextTick();
+		tsZMoment->insertDataAtCurrentTime(c_force / 1000., 0, true);
+		tsZMoment->nextTick();
 	}
 	void deleteTimeSeries(){
 		if (tsYLocation){
@@ -1203,6 +1257,18 @@ public:
 		if (tsYForce){
 			delete tsYForce;
 			tsYForce = 0;
+		}
+		if (tsZRLocation){
+			delete tsZRLocation;
+			tsZRLocation = 0;
+		}
+		if (tsZRVelocity){
+			delete tsZRVelocity;
+			tsZRVelocity = 0;
+		}
+		if (tsZMoment){
+			delete tsZMoment;
+			tsZMoment = 0;
 		}
 	}
 };
@@ -1551,7 +1617,16 @@ void BlockDemo::initPhysics()
 	}
 	resetDemo();
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
-	addTimeSeries();
+	switch (orientationType){
+	case X:
+		addXTimeSeries();
+		break;
+	case Y:
+		addYTimeSeries();
+		break;
+	default:
+		assert(0); // Add if new orientation is added
+	}
 }
 
 void BlockDemo::physicsDebugDraw(int debugFlags)
