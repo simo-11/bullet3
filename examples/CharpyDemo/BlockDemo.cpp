@@ -97,6 +97,7 @@ public:
 	bool hasFullGravity;
 	int intFreq = 60;
 	btScalar m_fixedTimeStep = btScalar(1) / btScalar(intFreq);
+	int maxSimSubSteps;
 	btScalar blockSteelScale;
 	btScalar density;
 	btScalar maxPlasticRotation;
@@ -436,6 +437,7 @@ public:
 	}
 	void setWheelFriction(Gwen::Controls::Base* control);
 	void setGravityRampUpTime(Gwen::Controls::Base* control);
+	void setMaxSimSubSteps(Gwen::Controls::Base* control);
 	void setLpc(Gwen::Controls::Base* control);
 	void setLsx(Gwen::Controls::Base* control);
 	void setLsy(Gwen::Controls::Base* control);
@@ -721,6 +723,15 @@ public:
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &BlockDemo::setGravityRampUpTime);
 	}
+	void addMaxSimSubSteps(){
+		addLabel("maxSimSubSteps");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		gc->SetToolTip("Maximum number of simulations steps for one render");
+		std::string text = std::to_string(maxSimSubSteps);
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &BlockDemo::setMaxSimSubSteps);
+	}
 	void addLsx(){
 		addLabel("lsx");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
@@ -867,6 +878,7 @@ public:
 			break;
 		}
 		addGravityRampUpTime();
+		addMaxSimSubSteps();
 		addDumpPng();
 		addUseCcd();
 		if (useCcd){
@@ -1235,7 +1247,8 @@ public:
 				(app->m_2dCanvasInterface, tsWidth, tsHeight, "Z moment [kNm]");
 		}
 		tsZMoment->setupTimeSeries(maxMoment / 1000., intFreq, 0);
-		tsZMoment->addDataSource("", 0, 0, 255);
+		tsZMoment->addDataSource("   Wall", 0, 0, 255);
+		tsZMoment->addDataSource("   Body", 255, 0, 0);
 	}
 	void updateXTimeSeries(){
 		tsZRLocation->insertDataAtCurrentTime(b_location, 0, true);
@@ -1243,6 +1256,8 @@ public:
 		tsZRVelocity->insertDataAtCurrentTime(b_velocity, 0, true);
 		tsZRVelocity->nextTick();
 		tsZMoment->insertDataAtCurrentTime(c_force / 1000., 0, true);
+		tsZMoment->insertDataAtCurrentTime
+			(jf.m_appliedTorqueBodyA[2]/1000.,1,true);
 		tsZMoment->nextTick();
 	}
 	void deleteTimeSeries(){
@@ -1357,6 +1372,9 @@ void BlockDemo::setGravityRampUpTime(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->gravityRampUpTime));
 	restartHandler(control);
 }
+void BlockDemo::setMaxSimSubSteps(Gwen::Controls::Base* control){
+	setInt(control, &(demo->maxSimSubSteps));
+}
 void BlockDemo::setLsx(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->lsx));
 	restartHandler(control);
@@ -1456,6 +1474,7 @@ void BlockDemo::reinit(){
 	ammoCcdSweptSphereRadius = lsx / 10;
 	loadCcdMotionThreshold = 1e-3;
 	loadCcdSweptSphereRadius = lsy/2;
+	maxSimSubSteps = 1;
 }
 
 void BlockDemo::resetHandler(Gwen::Controls::Base* control){
@@ -1681,7 +1700,6 @@ void BlockDemo::stepSimulation(float deltaTime)
 	}
 	if (m_dynamicsWorld)
 	{
-		int maxSimSubSteps =  10;
 		updateGravity();
 		if (useCcd){
 			shoot();
