@@ -1223,8 +1223,10 @@ public:
 		tsYLocation->nextTick();
 		tsYVelocity->insertDataAtCurrentTime(b_velocity, 0, true);
 		tsYVelocity->nextTick();
-		tsYForce->insertDataAtCurrentTime(c_force/1000., 0, true);
-		tsYForce->nextTick();
+		if (m_constraint &&  m_constraint->isEnabled()){
+			tsYForce->insertDataAtCurrentTime(c_force / 1000., 0, true);
+			tsYForce->nextTick();
+		}
 	}
 	void addXTimeSeries(){
 		int tsWidth = 300, tsHeight = 200;
@@ -1255,10 +1257,12 @@ public:
 		tsZRLocation->nextTick();
 		tsZRVelocity->insertDataAtCurrentTime(b_velocity, 0, true);
 		tsZRVelocity->nextTick();
-		tsZMoment->insertDataAtCurrentTime(c_force / 1000., 0, true);
-		tsZMoment->insertDataAtCurrentTime
-			(jf.m_appliedTorqueBodyA[2]/1000.,1,true);
-		tsZMoment->nextTick();
+		if (m_constraint &&  m_constraint->isEnabled()){
+			tsZMoment->insertDataAtCurrentTime(c_force / 1000., 0, true);
+			tsZMoment->insertDataAtCurrentTime
+				(jf.m_appliedTorqueBodyA[2] / 1000., 1, true);
+			tsZMoment->nextTick();
+		}
 	}
 	void deleteTimeSeries(){
 		if (tsYLocation){
@@ -1415,19 +1419,15 @@ void BlockDemo::setE(Gwen::Controls::Base* control){
 }
 void BlockDemo::setLoadCcdSweptSphereRadius(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->loadCcdSweptSphereRadius));
-	restartHandler(control);
 }
 void BlockDemo::setLoadCcdMotionThreshold(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->loadCcdMotionThreshold));
-	restartHandler(control);
 }
 void BlockDemo::setAmmoCcdSweptSphereRadius(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->ammoCcdSweptSphereRadius));
-	restartHandler(control);
 }
 void BlockDemo::setAmmoCcdMotionThreshold(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->ammoCcdMotionThreshold));
-	restartHandler(control);
 }
 void BlockDemo::setFrequencyRatio(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->frequencyRatio));
@@ -1724,7 +1724,7 @@ void BlockDemo::stepSimulation(float deltaTime)
 		btScalar timeStep = (btScalar)deltaTime;
 		if (stepCount + (deltaTime/m_fixedTimeStep)>=maxStepCount){
 			timeStep = m_fixedTimeStep;
-		}else if (maxSimSubSteps*m_fixedTimeStep>deltaTime){
+		}else if (maxSimSubSteps*m_fixedTimeStep<deltaTime){
 			timeStep = maxSimSubSteps*m_fixedTimeStep;
 		}
 		stepCount += m_dynamicsWorld->stepSimulation
