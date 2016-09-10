@@ -664,7 +664,7 @@ public:
 		return gc;
 	}
 	void addShootButtons(){
-		ammoShape = new btBoxShape(btVector3(lsx / 10, lsx / 10, lsx / 10));
+		ammoShape = new btBoxShape(btVector3(lsz / 10, lsz / 10, lsz / 10));
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
 		gc->SetText(L"Shoot");
 		gc->SetPos(gx, gy);
@@ -1286,6 +1286,21 @@ public:
 			tsZMoment = 0;
 		}
 	}
+	/**
+
+	*/
+	btRigidBody* ammoBody=0;
+	void addAmmoBody(){
+		if (ammoBody == 0){
+			return;
+		}
+		if (ammoShape->getUserIndex() < 0){
+			m_guiHelper->createCollisionShapeGraphicsObject(ammoShape);
+		}
+		m_guiHelper->createCollisionObjectGraphicsObject(ammoBody, ammoColor);
+		ammoBody = 0;
+	}
+
 };
 BlockDemo *demo = 0;
 
@@ -1457,6 +1472,7 @@ void BlockDemo::reinit(){
 		blockSteelScale = 0.0004;
 		break;
 	}
+	btScalar minDist = 1;
 	lsz = 1;
 	density = 2000;
 	maxPlasticStrain = 0.2;
@@ -1470,10 +1486,10 @@ void BlockDemo::reinit(){
 	useCcd = false;
 	limitIfNeeded = true;
 	ammoVelocity = 30;
-	ammoCcdMotionThreshold=lsx/2;
-	ammoCcdSweptSphereRadius = lsx / 10;
+	ammoCcdMotionThreshold=minDist/2;
+	ammoCcdSweptSphereRadius = minDist / 10;
 	loadCcdMotionThreshold = 1e-3;
-	loadCcdSweptSphereRadius = lsy/2;
+	loadCcdSweptSphereRadius = minDist/2;
 	maxSimSubSteps = 1;
 }
 
@@ -1678,6 +1694,7 @@ void BlockDemo::renderScene()
 	}
 	if (stepCount > syncedStep){
 		BT_PROFILE("m_guiHelper::syncPhysicsToGraphics");
+		addAmmoBody();
 		m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
 		syncedStep = stepCount;
 	}
@@ -1735,7 +1752,12 @@ void BlockDemo::shoot(){
 	trans.setIdentity();
 	switch (orientationType){
 	case X:
-		yStart = lsx + lsy;
+	{
+		/*
+		*/
+		const btTransform tr = m_body->getCenterOfMassTransform();
+		yStart = (tr*btVector3(lsx / 10, -lsy / 2, 0)).y();
+	}
 		break;
 	case Y:
 		yStart = 2*lsy/3;
@@ -1750,12 +1772,11 @@ void BlockDemo::shoot(){
 	body->setCcdMotionThreshold(ammoCcdMotionThreshold);
 	btVector3 linVel(ammoVelocity, 0, 0);
 	body->setLinearVelocity(linVel);
-	if (ammoShape->getUserIndex() < 0){
-		m_guiHelper->createCollisionShapeGraphicsObject(ammoShape);
-	}
-	m_guiHelper->createCollisionObjectGraphicsObject(body, ammoColor);
+	ammoBody = body;
 	shootCount--;
 }
+
+
 
 void BlockDemo::displayCallback(void) 
 {
