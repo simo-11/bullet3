@@ -449,14 +449,12 @@ public:
 	void setLoadCcdMotionThreshold(Gwen::Controls::Base* control);
 	void setAmmoCcdSweptSphereRadius(Gwen::Controls::Base* control);
 	void setAmmoCcdMotionThreshold(Gwen::Controls::Base* control);
+	void setAmmoVelocity(Gwen::Controls::Base* control);
 	void setFy(Gwen::Controls::Base* control);
 	void setBlockSteelScale(Gwen::Controls::Base* control);
 	void setMaxPlasticStrain(Gwen::Controls::Base* control);
 	void setMaxPlasticRotation(Gwen::Controls::Base* control);
 	void handleShoot(Gwen::Controls::Base* control);
-	void handleAmmoVelocity(Gwen::Controls::Base* control);
-	string avt;
-	const string getAmmoVelocityTooltip();
 	void handlePauseSimulation(Gwen::Controls::Base* control);
 	void handleSingleStep(Gwen::Controls::Base* control);
 	void setDisableCollisionsBetweenLinkedBodies(Gwen::Controls::Base* control);
@@ -587,6 +585,8 @@ public:
 			ammoCcdSweptSphereRadius, &BlockDemo::setAmmoCcdSweptSphereRadius);
 		addScalar("ammoCcdMotion", "Ccd motion threshold for ammo",
 			ammoCcdMotionThreshold, &BlockDemo::setAmmoCcdMotionThreshold);
+		addScalar("ammoVelocity", "Velocity of ammo [m/s]",
+			ammoVelocity, &BlockDemo::setAmmoVelocity);
 	}
 	void addFrequencyRatio(){
 		addLabel("frequencyRatio");
@@ -670,12 +670,6 @@ public:
 		gc->SetPos(gx, gy);
 		gc->SetSize(wxi - 4, gyInc - 4);
 		gc->onPress.Add(pPage, &BlockDemo::handleShoot);
-		gc = new Gwen::Controls::Button(pPage);
-		gc->SetText(L"Vel");
-		gc->SetToolTip(getAmmoVelocityTooltip());
-		gc->SetPos(gx + wxi, gy);
-		gc->SetSize(swxi - 4, gyInc - 4);
-		gc->onPress.Add(pPage, &BlockDemo::handleAmmoVelocity);
 		gy += gyInc;
 	}
 	void addPauseSimulationButton(){
@@ -1322,19 +1316,6 @@ void BlockDemo::handleShoot(Gwen::Controls::Base* control){
 	demo->shootCount++;
 }
 
-const string BlockDemo::getAmmoVelocityTooltip(){
-	demo->avt = "Click for more speed, now ";
-	demo->avt.append(uif(demo->ammoVelocity,"%.0f"));
-	demo->avt.append(" m/s");
-	return demo->avt;
-}
-void BlockDemo::handleAmmoVelocity(Gwen::Controls::Base* control){
-	Gwen::Controls::Button* gc =
-		static_cast<Gwen::Controls::Button*>(control);
-	demo->ammoVelocity *= 1.2;
-	gc->SetToolTip(getAmmoVelocityTooltip());
-}
-
 void BlockDemo::handlePauseSimulation(Gwen::Controls::Base* control){
 	Gwen::Controls::Button* gc =
 		static_cast<Gwen::Controls::Button*>(control);
@@ -1428,6 +1409,9 @@ void BlockDemo::setAmmoCcdSweptSphereRadius(Gwen::Controls::Base* control){
 }
 void BlockDemo::setAmmoCcdMotionThreshold(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->ammoCcdMotionThreshold));
+}
+void BlockDemo::setAmmoVelocity(Gwen::Controls::Base* control){
+	setScalar(control, &(demo->ammoVelocity));
 }
 void BlockDemo::setFrequencyRatio(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->frequencyRatio));
