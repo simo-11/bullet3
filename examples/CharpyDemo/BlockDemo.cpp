@@ -472,7 +472,7 @@ public:
 		c_percent=0, 
 		b_location=0, b_velocity=0, yStart=0;
 	TimeSeriesCanvas *tsYLocation=0, *tsYVelocity=0, *tsYForce=0;
-	TimeSeriesCanvas *tsZRLocation = 0, *tsZRVelocity = 0, *tsZMoment = 0;
+	TimeSeriesCanvas *tsZRLocation = 0, *tsZRVelocity = 0, *tsZMoment = 0, *tsXForce=0;
 	btScalar getMass(){
 		return btScalar(lsx*lsy*lsz*getDensity(blockSteelScale));
 	}
@@ -1245,14 +1245,22 @@ public:
 		tsZMoment->setupTimeSeries(maxMoment / 1000., intFreq, 0);
 		tsZMoment->addDataSource("   Body", 0, 0, 255);
 		tsZMoment->addDataSource("   Wall", 255, 0, 0);
-		btScalar maxForce = axisMapper->getMaxForce(1);
+		btScalar maxYForce = axisMapper->getMaxForce(1);
 		if (0 == tsYForce){
 			tsYForce = new TimeSeriesCanvas
 				(app->m_2dCanvasInterface, tsWidth, tsHeight, "Y force [kN]");
 		}
-		tsYForce->setupTimeSeries(maxForce / 1000., intFreq, 0);
+		tsYForce->setupTimeSeries(maxYForce / 1000., intFreq, 0);
 		tsYForce->addDataSource("   Body", 0, 0, 255);
 		tsYForce->addDataSource("   Wall", 255, 0, 0);
+		btScalar maxXForce = axisMapper->getMaxForce(0)/10;
+		if (0 == tsXForce){
+			tsXForce = new TimeSeriesCanvas
+				(app->m_2dCanvasInterface, tsWidth, tsHeight, "X force [kN]");
+		}
+		tsXForce->setupTimeSeries(maxXForce / 1000., intFreq, 0);
+		tsXForce->addDataSource("   Body", 0, 0, 255);
+		tsXForce->addDataSource("   Wall", 255, 0, 0);
 	}
 	void updateXTimeSeries(){
 		tsZRLocation->insertDataAtCurrentTime(b_location, 0, true);
@@ -1270,6 +1278,11 @@ public:
 			tsYForce->insertDataAtCurrentTime
 				(jf.m_appliedForceBodyA[1] / 1000., 1, true);
 			tsYForce->nextTick();
+			tsXForce->insertDataAtCurrentTime
+				(jf.m_appliedForceBodyB[0] / 1000., 0, true);
+			tsXForce->insertDataAtCurrentTime
+				(jf.m_appliedForceBodyA[0] / 1000., 1, true);
+			tsXForce->nextTick();
 		}
 	}
 	void deleteTimeSeries(){
@@ -1280,6 +1293,10 @@ public:
 		if (tsYVelocity){
 			delete tsYVelocity;
 			tsYVelocity = 0;
+		}
+		if (tsXForce){
+			delete tsXForce;
+			tsXForce = 0;
 		}
 		if (tsYForce){
 			delete tsYForce;
