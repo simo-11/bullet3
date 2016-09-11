@@ -1229,13 +1229,13 @@ public:
 			tsZRLocation = new TimeSeriesCanvas
 				(app->m_2dCanvasInterface, tsWidth, tsHeight, "Z rotation");
 		}
-		tsZRLocation->setupTimeSeries(0.5, intFreq, 0);
+		tsZRLocation->setupTimeSeries(1, intFreq, 0);
 		tsZRLocation->addDataSource("", 255, 0, 0);
 		if (0 == tsZRVelocity){
 			tsZRVelocity = new TimeSeriesCanvas
 				(app->m_2dCanvasInterface, tsWidth, tsHeight, "Z angular velocity [1/s]");
 		}
-		tsZRVelocity->setupTimeSeries(1, intFreq, 0);
+		tsZRVelocity->setupTimeSeries(2, intFreq, 0);
 		tsZRVelocity->addDataSource("", 0, 255, 0);
 		btScalar maxMoment = axisMapper->getMaxForce(5);
 		if (0 == tsZMoment){
@@ -1243,8 +1243,16 @@ public:
 				(app->m_2dCanvasInterface, tsWidth, tsHeight, "Z moment [kNm]");
 		}
 		tsZMoment->setupTimeSeries(maxMoment / 1000., intFreq, 0);
-		tsZMoment->addDataSource("   Wall", 0, 0, 255);
-		tsZMoment->addDataSource("   Body", 255, 0, 0);
+		tsZMoment->addDataSource("   Body", 0, 0, 255);
+		tsZMoment->addDataSource("   Wall", 255, 0, 0);
+		btScalar maxForce = axisMapper->getMaxForce(1);
+		if (0 == tsYForce){
+			tsYForce = new TimeSeriesCanvas
+				(app->m_2dCanvasInterface, tsWidth, tsHeight, "Y force [kN]");
+		}
+		tsYForce->setupTimeSeries(maxForce / 1000., intFreq, 0);
+		tsYForce->addDataSource("   Body", 0, 0, 255);
+		tsYForce->addDataSource("   Wall", 255, 0, 0);
 	}
 	void updateXTimeSeries(){
 		tsZRLocation->insertDataAtCurrentTime(b_location, 0, true);
@@ -1252,10 +1260,16 @@ public:
 		tsZRVelocity->insertDataAtCurrentTime(b_velocity, 0, true);
 		tsZRVelocity->nextTick();
 		if (m_constraint &&  m_constraint->isEnabled()){
-			tsZMoment->insertDataAtCurrentTime(c_force / 1000., 0, true);
+			tsZMoment->insertDataAtCurrentTime
+				(jf.m_appliedTorqueBodyB[2] / 1000., 0, true);
 			tsZMoment->insertDataAtCurrentTime
 				(jf.m_appliedTorqueBodyA[2] / 1000., 1, true);
 			tsZMoment->nextTick();
+			tsYForce->insertDataAtCurrentTime
+				(jf.m_appliedForceBodyB[1] / 1000., 0, true);
+			tsYForce->insertDataAtCurrentTime
+				(jf.m_appliedForceBodyA[1] / 1000., 1, true);
+			tsYForce->nextTick();
 		}
 	}
 	void deleteTimeSeries(){
