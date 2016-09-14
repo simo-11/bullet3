@@ -566,6 +566,12 @@ public:
 		if (value < 10e-3){
 			text = uif(value, "%.6f");
 		}
+		else if (value>10e3){
+			text = uif(value, "%.0f");
+		}
+		else if (value>10e2){
+			text = uif(value, "%.1f");
+		}
 		else{
 			text = uif(value);
 		}
