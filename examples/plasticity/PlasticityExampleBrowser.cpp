@@ -479,12 +479,17 @@ void quitCallback()
 
 #define MAX_GRAPH_WINDOWS 5
 
+struct GraphWindowInfo {
+	const char * name;
+	int x, y;
+};
+
 struct QuickCanvas : public Common2dCanvasInterface
 {
 	GL3TexLoader* m_myTexLoader;
-
 	MyGraphWindow* m_gw[MAX_GRAPH_WINDOWS];
 	GraphingTexture* m_gt[MAX_GRAPH_WINDOWS];
+	GraphWindowInfo m_gwi[MAX_GRAPH_WINDOWS];
 	int m_curNumGraphWindows;
 
 	QuickCanvas(GL3TexLoader* myTexLoader)
@@ -495,9 +500,26 @@ struct QuickCanvas : public Common2dCanvasInterface
 		{
 			m_gw[i] = 0;
 			m_gt[i] = 0;
+			m_gwi[i].name = "";
 		}
 	}
 	virtual ~QuickCanvas() {}
+	/**
+	Use saved position if there is one with same name
+	*/
+	void findPosition(MyGraphInput* input){
+		for (int i = 0; i<MAX_GRAPH_WINDOWS; i++)
+		{
+			GraphWindowInfo& gwi = m_gwi[i];
+			if (strcmp(input->m_name, gwi.name) == 0){
+				input->m_xPos = gwi.x;
+				input->m_yPos = gwi.y;
+				return;
+			}
+		}
+		input->m_xPos = 10000;//GUI will clamp it to the right if too high (first)
+		input->m_yPos = 10000;//GUI will clamp it to bottom
+	}
 	virtual int createCanvas(const char* canvasName, int width, int height)
 	{
 		if (m_curNumGraphWindows<MAX_GRAPH_WINDOWS)
@@ -513,16 +535,15 @@ struct QuickCanvas : public Common2dCanvasInterface
 			MyGraphInput input(gui->getInternalData());
 			input.m_width = width;
 			input.m_height = height;
-			input.m_xPos = 10000;//GUI will clamp it to the right//300;
-			input.m_yPos = 10000;//GUI will clamp it to bottom
 			input.m_name = canvasName;
 			input.m_texName = canvasName;
+			findPosition(&input);
 			m_gt[slot] = new GraphingTexture;
 			m_gt[slot]->create(width, height);
 			int texId = m_gt[slot]->getTextureId();
 			m_myTexLoader->m_hashMap.insert(canvasName, texId);
 			m_gw[slot] = setupTextureWindow(input);
-
+			m_gwi[slot].name = canvasName;
 			return slot;
 		}
 		return -1;
@@ -532,6 +553,10 @@ struct QuickCanvas : public Common2dCanvasInterface
 		btAssert(canvasId >= 0);
 		delete m_gt[canvasId];
 		m_gt[canvasId] = 0;
+		Gwen::Controls::WindowControl* window = 
+			(Gwen::Controls::WindowControl*)m_gw[canvasId];
+		m_gwi[canvasId].x = window->X();
+		m_gwi[canvasId].y = window->Y();
 		destroyTextureWindow(m_gw[canvasId]);
 		m_gw[canvasId] = 0;
 		m_curNumGraphWindows--;
