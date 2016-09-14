@@ -945,12 +945,22 @@ public:
 		sc->setTargetLinMotorVelocity(0);
 		return sc;
 	}
-	btTypedConstraint* addHingeConstraint(btRigidBody* rb, btVector3& pivot, btVector3 & axis){
+	/**
+	create bodyA yourself to get proper reference later
+	*/
+	btTypedConstraint* addHingeConstraint(btRigidBody* rbB, btVector3& pivot, btVector3 & axis){
+		btTransform trA;
+		trA.setIdentity();
+		trA.setOrigin(rbB->getCenterOfMassPosition() + pivot);
+		btCollisionShape* fixedShape = new btSphereShape(lsz/10);
+		m_collisionShapes.push_back(fixedShape);
+		btRigidBody* rbA = localCreateRigidBody(0, trA, fixedShape);
+		btVector3 pivotInA(0,0,0);
 		btHingeConstraint *sc =
-			new btHingeConstraint(*rb, pivot, axis);
+			new btHingeConstraint(*rbA, *rbB, pivotInA, pivot, axis, axis);
 		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
 		sc->enableAngularMotor(true,0,axisMapper->getMaxForce(5)*m_fixedTimeStep);
-		sc->setLimit(-SIMD_PI, SIMD_PI);
+		sc->setLimit(1, -1); // free
 		return sc;
 	}
 	btTypedConstraint* addSpring2Constraint(btRigidBody* rb, btVector3& cpos){
