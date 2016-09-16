@@ -1,15 +1,14 @@
 % !TeX root = article.tex
-\section{Adding plasticity to physics engine}
+\section{Description of plasticity in the framework of physics engine}
 
 In this section, key concepts related to the introduced model are explained. Main differences between 
 traditional structural analysis and physics engines are reviewed and discussed.
 
-Velocity-based formulation is not often used in structural or mechanical engineering while, 
-however, it is popular within physics based game developers and film production teams.
+Velocity-based formulation is  popular within physics based game
+developers and film production teams.
  \citet[p.~45]{erleben.thesis} provides reasoning and theoretical details on why 
 velocity-based formulation is  popular in constraint-based rigid body simulation. 
 Main reason is that collision handling can be done without additional procedures.
-Acceleration-based formulations need to stop at collision and switch to an impulse based method.
 
 Background
 for velocity based formulation shown here is based on  \citet[p.~45-50]{erleben.thesis}.
@@ -20,22 +19,19 @@ in the time interval $\Delta t $ can we written as
 \begin{equation} \label{eq:impulseIntegral}
 \vec{J} = \int_{0}^{\Delta t} \vec{f}_{true}(t) dt
 \end{equation}
-Using Newton's second law of motion $F=ma$ one can solve for the velocity, $\vec{v}^{\Delta t}$
+Using Newton's second law of motion $\vec{F}=m\vec{a}$ one can solve for the velocity,
+$\vec{v}^{\Delta t}$
 \begin{equation} \label{eq:impulseIntegraWithNewton}
 \int_{0}^{\Delta t} m \frac{d\vec{v}}{dt}dt= \int_{0}^{\Delta t} \vec{f}_{true}(t)
 \end{equation}
 \begin{equation} \label{eq:impulse}
 m(\vec{v}^{\, \Delta t} - \vec{v}^{\, 0})=\vec{J}
 \end{equation}
-where superscripts denote time, i.e. ${v}^{\Delta t}=v(\Delta t)$. Next position can be found
+where superscripts denote time, i.e. ${\vec{v}}^{\Delta t}=\vec{v}(\Delta t)$.
+Next position can be found
 by integrating the velocity.
-Derivation of equations of motion is not shown here in detail but results 
-for simple contact can be summarized as
-equation \ref{eq:eomL} for locations and \ref{eq:eomV} for velocities.
-Symbols are summarized in table \ref{tab:eom} and figure \ref{fig:eom-contact}.
-With this formulation, simplified scenario can be simulated. 
-Bodies do not penetrate each other and simulation is guided
-by external forces like gravity, air drag and shooting.
+
+
 \begin{equation} \label{eq:eomL} % pdf page 69
 \vec{s}^{\, t+\Delta t} = \vec{s}^{\, t}+\Delta t S \vec{u}^{\, t+\Delta t}
 \end{equation}
@@ -43,6 +39,12 @@ by external forces like gravity, air drag and shooting.
 \begin{equation} \label{eq:eomV}
 \vec{u}^{\, t+\Delta t} = \vec{u}^{\, t}+\Delta t M^{-1}(C N \vec{f}^{\ t+\Delta t} + \vec{f}_{ext}) 
 \end{equation}
+
+Symbols are summarized in Table \ref{tab:eom} and Figure \ref{fig:eom-contact}.
+Figure \ref{fig:eom-contact} shows terms needed for contact processing.
+For each contact  normal of contact point and
+orientation of both bodies and contact point are needed.
+With this formulation, simplified scenario can be simulated.
 
 
 \begin{figure}[htb!]
@@ -84,7 +86,12 @@ $\vec{q}_i$ & orientation for body i as quaternion $\lbrack s_i, x_i, y_i, z_i \
 $\vec{p}_i$ & contact or joint point i  \\ \hline
 $\vec{r}_{ki}$ & $\vec{p}_k - \vec{r}_i$  \\ \hline
 $\vec{s}$ & $\lbrack \vec{r}_1, \vec{q}_1,...,\vec{r}_n, \vec{q}_n \rbrack ^T $\\ \hline
-$Q_i$ & rotation matrix  $
+$Q_i$ & \begin{tabular}{@{}c}
+rotation of quaternion $\vec{q}_i$
+as matrix where \\
+$\frac{1}{2}\vec{\omega}_i q_i=Q_i \vec{\omega}_i$
+\end{tabular}
+   $
 \frac{1}{2} \left[ \begin{array}{ccc}
 -x_i & -y_i & -z_i \\
 s_i & z_i & -y_i \\
@@ -130,8 +137,11 @@ $N$ & contact normal matrix  $ N \in \mathbb{R}^{3K \times K}$ \\ \hline
 Friction in contacts and joint constraints can be handled in unified way by refactoring
 equation \ref{eq:eomV} to get \ref{eq:eomV2},  \citet[p.~66-67]{erleben.thesis}.
 Jacobian terms are derived by taking time derivates of kinematic constraints.
-Added symbols are summarized in table 
-\ref{tab:eom-g} and figure \ref{fig:eom-contact}.
+Added symbols are summarized in Table
+\ref{tab:eom-g} and Figure \ref{fig:eom-joint}.
+Figure \ref{fig:eom-joint} shows terms needed for joint processing.
+New term $\vec{r}_{anc}^{\,i}$ is used to define at which point
+joint constraint is applied.
 
 \begin{equation} \label{eq:eomV2}
 \vec{u}^{\, t+\Delta t} = \vec{u}^{\, t}+\Delta t M^{-1}(
@@ -200,7 +210,7 @@ J_2 \vec{v}_2 + \Omega_2 \vec{\omega}_2 = \vec{c} + C \vec{\lambda}
 \end{equation}
 
 Main parameters  and corresponding fields in \bullet\  
- are described in table \ref{tab:constraintParameters}.
+ are described in Table \ref{tab:constraintParameters}.
 
 \begin {table}[htb!]
 \begin{center}
@@ -224,32 +234,33 @@ $\vec{h}$ & high limit for constraint force & m\_upperLimit \\ \hline
 
 In structural analysis, a formulation and associated numerical solution procedure are selected 
 based on needed features.
-For most complex scenarios finite element method is used.
-In most cases, static solution with assumption of linear strain-displacement relation small 
-displacement solution using displacement based boundary conditions is used.
+Often,  finite element method is used.
+In most cases, static solution with assumption of linear strain-displacement relation
+using displacement based boundary conditions is used.
 \citet{bathe-1975} provides description for handling of various nonlinearities.
 In large displacement analysis, formulation may be based on updated formulation (Eulerian) or
 Lagrangian formulation where initial configuration is used.
 Further enhancements are material nonlinearity and dynamic analysis.
-Physics engine provides dynamic analysis with large reference translations and rotations.
+Physics engine provides dynamic analysis with large reference translations and rotations
+while assuming bodies to be undeformable.
 
-Material plasticity has typically taken into account in games by using suitable coefficient of restitution.
+Material plasticity can be accounted in games by using suitable coefficient of restitution.
 This provides reasonable means to simulate loss of energy in collisions.
 Simulation of breaking of objects made of ductile material can be made more realistic by splitting rigid bodies
 to multiple bodies which are connected by energy absorbing joints.
-Typical engineering stress-strain curve of ductile steel is shown in \ref{fig:sscurve}.
-E.g. \citet{dowling} provides detailed descriptions of engineering and true stress-strain curves.
+Typical engineering stress-strain curve of ductile steel is shown in Figure \ref{fig:sscurve}.
+Engineering stress and strain mean that original dimensions are used in stress calculation,
+\citet[p.~108]{dowling}.
 Stress-strain curve is not drawn to scale as elastic strain could not be seen as it is typically 0.001 to 0.005.
 
 In this work elastic-fully plastic material model is used in most scenarios.
-It allows realistic simulations for most scenarios.
 Having elastic part allows elastic displacements for slender structures. 
-Elastic part is ignored in method suggested in this work if deformation is related
-to higher frequency than integration stability would allow.
-Strain hardening part of stress-strain curve could probably be taken into account but it has not been tried in this work.
+Elastic material behavior is ignored in approach introduced in this work provided
+that deformation is related to higher frequency
+than integration stability would allow.
 It should be noted that geometry
 of objects is not updated during analysis and thus engineering stress-strain properties should
-be used even with strain hardening.
+be used.
 
 Strain hardening is taken into account in this work mainly by assuming that plasticity in bending
 expands, \citet[p.~672]{dowling}.
@@ -270,7 +281,7 @@ This can be seen e.g. by bending paperclip. It does not break at low angles but 
 \label{fig:sscurve}
 \end{figure}
 
-Difference between elastic and plastic section modulus is shown in \ref{fig:wp}. 
+Difference between elastic and plastic section modulus is shown in Figure \ref{fig:wp}.
 If stress is below yield limit, stress and strain are linear within material.
 If cross section is fully plastic, stress is assumed to be at yield level over whole cross section and 
 so plastic section modulus is higher than elastic section modulus.
@@ -295,7 +306,7 @@ so plastic section modulus is higher than elastic section modulus.
 \draw (1,0) -- (1,2.5) -- (3,2.5) -- (S); 
 \node[above] at (S) [align=center] {\large{$\sigma=f_y$}};
 \end{tikzpicture}
-\caption{Stress distribution for bending under elastic and plastic loads.}
+\caption{Axial stress distribution for bending under elastic and plastic loads.}
 \label{fig:wp}
 \end{figure}
 
@@ -303,23 +314,23 @@ Plasticity is handled by defining maximum forces
 in equations \ref{eq:lambdaLow} and  
 \ref{eq:lambdaHigh} using plastic capasities as maximum forces.
 
-Maximum force acting in same direction as $\vec{r}_{anc}^{\,i} $
-is product of area and yield stress as given in equation \ref{eq:fN}.
+Maximum force acting in a direction of $\vec{r}_{anc}^{\,i} $
+is product of area and yield stress as follows
 
 \begin{equation} \label{eq:fN}
 N_{max}= \int_A f_y
 \end{equation}
 
 Maximum forces acting perpendicular to $\vec{r}_{anc}^{\,i} $
-are product of area and shear yield stress $\tau_y$ as given in equation \ref{eq:fQ}.
+are product of area and shear yield stress $\tau_y$ as follows
 \begin{equation} \label{eq:fQ}
 Q_{max}= \int_A \tau_y
 \end{equation}
 
 Maximum moments acting around axis perpendicular to $\vec{r}_{anc}^{\,i} $
 are integrals of perpdendicular distance 
-and yield stress $f_y$ as given in equations \ref{eq:Mx} for moment around
-x-axis and \ref{eq:Mz} for moment around z-axis.
+and yield stress $f_y$ as given for the moment around x-axis and,
+correspondingly, moment around z-axis..
 
 \begin{equation} \label{eq:Mx}
 M_{max}^x= \int_A z f_y
@@ -339,8 +350,8 @@ M_{max}^y= \int_A d \tau_y
 
 Maximum forces and moments for 
 rectangular section using constant yield stress
-are summarized in figure \ref{fig:maxForces}.
-Yield shear stress is assumed here to be $ 0.5\, f_y$ using Tresca yield critetion.
+are summarized in Figure \ref{fig:maxForces}.
+Yield shear stress is assumed to be $ 0.5\, f_y$ using Tresca yield critetion.
 If von Mises yield criterion is used 0.5 is replaced by 0.58 ($1/\sqrt{3}$).
 These are not exact values in multiaxial stress state but they
 should be quite usable in most cases.
@@ -348,7 +359,7 @@ should be quite usable in most cases.
 For rotation around y-axis there is closed form solution only for
 circular cross sections.
 Given approximation is 
-best suited for cases where b and h are quite similar.
+best suited for cases where $b$ and $h$ are quite similar.
 Better approximation for any given b and h can be obtained 
 by integrating distance from center of joint over cross section and
 multiplying it with yield shear stress e.g. using octave.
@@ -383,10 +394,10 @@ wpy=fy/2*dblquad(@(x,y) sqrt(x.*x+y.*y),-b/2,b/2,-h/2,h/2)
 %\node[] at (2.5,3) [anchor=west]{l};
 
 \draw[Stealth-Stealth] (0,5,0) -- ++(1,0,0);
-\node[] at (0.5,5) [anchor=south]{b};
+\node[] at (0.5,5) [anchor=south]{$b$};
 
 \draw[Stealth-Stealth] (0,5,0) -- ++(0,0,1);
-\node[] at (0,5,0.5) [anchor=south east]{h};
+\node[] at (0,5,0.5) [anchor=south east]{$h$};
 
 \draw[ultra thin](0,4.5,0) -- ++(0,0.6);
 \draw[ultra thin](1,4.5,0) -- ++(0,0.6);
