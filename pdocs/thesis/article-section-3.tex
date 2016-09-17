@@ -1,8 +1,9 @@
 % !TeX root = article.tex
-\section{Processing plasticity}
+\section{Numerical examples}
 
-In this section, changes to constraint formulation are clarified by doing few simulation steps of non constrained, rigid and
-elastic-plastic examples.
+In this section, changes to constraint formulation are clarified by doing few simulation steps
+of non constrained, rigid and
+elastic-plastic examples using numerical values.
 
 \begin{figure}[htb!]
 \centering
@@ -31,7 +32,7 @@ System has only one dynamic rigid body which is three meters high block of 0.04 
 Cross section is one square meter.
 Constraint is set so that connecting frame is at top of block. 
 In this case frame could be anywhere but if multiple bodies are involved, connecting frame must be defined
-so that it reflects wanted scenario.
+so that it reflects scenario under investigation.
 Concrete density is $2000 \frac{kg}{m^3}$ and steel density is $7800 \frac{kg}{m^3}$. 
 Steel is assumed to handle load in elastic-plastic case. Yield stress of steel is 200 MPa.
 Gravity is $10 \frac{m}{s^2}$. Simulation step is $\frac{1}{60} s$ and 10 
@@ -43,21 +44,23 @@ Single simulation step is done using following substeps.
 In this work, changes are made only to constraint setup and update actions.
 \begin{enumerate}
 \item Apply gravity to each non static body. 
-This step just makes programming easier as otherwise each program should add forces due to gravity in each step. 
-In this case, $\vec{f}_{ext}$ in  \ref{eq:eomV2} gets added by $\lbrace{0,-60000,0}\rbrace$.
-\item Predict unconstrained motion for each non static body. Prediction is done based on current linear and angular velocities of the body.
+This step makes programming easier as otherwise each program should add forces due to gravity in each step. 
+In this case, $\vec{f}_{ext}$ in  Equation \ref{eq:eomV2} gets added by $\lbrace{0,-60000,0}\rbrace$.
+\item Predict unconstrained motion for each body controlled by physics simulation.
+Static and kinematic bodies are not processed in this step.
+Prediction is done based on current linear and angular velocities of the body.
 \item Predict contacts. In this phase, continuous collision detection is done based on simplified objects. 
-Each rigid body is represented by sphere and contact prediction is done if body moves more than given threshold value during simulation step. Continuous collision detection is configured for each body and as default it is not active. 
+Each rigid body is represented by sphere geometry and contact prediction is done if body moves more than given threshold value during simulation step. Continuous collision detection is configured for each body. 
 Typical scenario that requires continuous collision detection is fast moving bodies that would otherwise go through walls.
-\item Perform discrete collision detection. All overlapping body pairs are processed and manifoldPoints are created for
+\item Perform discrete collision detection. All overlapping bodies are processed and manifoldPoints are created for
 each detected contact at end of simulation step. 
-In unconstrained case, contact is detected after t=0.55 s if continuous collision detection is not used and manifolds distance gets negative value (-0.058 m).
+In unconstrained case, contact is detected after $t$=0.55 s if continuous collision detection is not used and manifolds distance gets negative value (-0.058 m).
 \item Calculate simulation islands(groups). Bodies that are near each other based on contact prediction or discrete collision detection
  or connected with constraints are grouped in same group.
 \item Solve constraints. Both contact and other constraints are processed in this step. 
  This step is subdivided to setup, iterations and finish phases. 
-In setup phase constraints are queried for positional errors for calculation of c in
-equation \ref{eq:constraintEquation} and maximum and minimum impulses in equations \ref{eq:lambdaLow} and 
+In setup phase constraints are queried for positional errors for calculation of $c$ in
+Equation \ref{eq:constraintEquation} and maximum and minimum impulses in Equations \ref{eq:lambdaLow} and 
 \ref{eq:lambdaHigh}.
 In finish phase constraint forces are calculated if requested and velocities of bodies are updated.
 \item Integrate transforms using velocities modified in previous step.
@@ -85,8 +88,9 @@ Equations \ref{eq:lambdaLow} and \ref{eq:lambdaHigh} are not active for fixed ca
 For elastic-plastic case maximum impulse is set to product of yield stress, area of steel enforcement and time step (1330).
 
 Method btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup
-in \bullet\ was used to pick up values for internal variables. 
+in \bullet\ was used to pick up values for internal variables described in Figure \ref{fig:solVars}. 
 
+\begin{figure}[htb!]
 \begin{description}
 \item[velError] is calculated using velocities and external impulses of connected bodies.  
  \begin{description}
@@ -118,6 +122,9 @@ $\frac{-penetration\, erp}{timeStep}$. In contact cases default value for erp is
 \item[erp] Error reduction parameter (0...1) is used to handle numerical issues e.q. object drifting. 
 Setting erp to 1 would in theory eliminate error in one step but in practice value of 0.2 - 0.8 is used in most cases.
 \end{description}
+\caption{Internal variables used in \bullet\ in constraint solving.}
+\label{fig:solVars}
+\end{figure}
 
 Actual values for unconstrained case without continuous collision detection
 are shown in table \ref{tab:freeBlockValues}. Penetration is detected at time 0.567 s when
@@ -204,11 +211,12 @@ about 20 \% in each step as requested by using erp value 0.2.
 \end {table}
 
 There are currently two alternative six-dof-spring constraint implementations in \bullet\ and 
-in this work elastic-plastic versions of both of them were developed. 
+in this work elastic-plastic versions of both of them are developed. 
 
 Table  \ref{tab:ep2Parameters} summarizes most significant parameters for this study.
 There are also e.g. parameters for controlling joint motors.
-Additional equations are created if needed. Enabled springs and motors add one row and
+Additional equation is created if for each additional constraint. 
+Enabled springs and motors add one row and
 limits add one if upper and lower are same and two if both upper and lower limits are defined.
 
 \begin {table}[htb!]
@@ -270,16 +278,18 @@ This causes plastic strain during next three steps.
 \end {table}
 
 Six-dof-spring constraint 2 has optional feature to avoid unstability by automatically softening constraint
-spring if needed. Feature is activated if current timeStep is too large for spring-mass system simulation.
-Equation \ref{eq:frequencyLimited} is used for decision, where $k$ is elastic spring stiffness between bodies,
-$m_{min}$ is smaller of connected masses or inertias and $dt$ is integration timestep.
+spring. Feature is activated if current timeStep is too large for spring-mass system simulation.
+The feature is trigged based on the equation below 
 \begin{equation} \label{eq:frequencyLimited}
 \sqrt{ k /  m_{min}} dt > 0.25 
 \end{equation}
+where $k$ is elastic spring stiffness between bodies,
+$m_{min}$ is smaller of connected masses or inertias and $dt$ is integration timestep.
+
 If this feature is active for elastic-plastic constraint 2 constraint  
 it does not report positional error but it allows full plastic capacity to be used for correcting
 velocity based error instead of force provided by spring.
-In this scenario object behaves as shown in table  \ref{tab:ep2BlockValues} i.e. it does not move at all.
+In this scenario object behaves as depicted in table \ref{tab:ep2BlockValues} i.e. it does not move at all.
 
 \begin {table}[htb!]
 \begin{center}
