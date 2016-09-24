@@ -59,6 +59,8 @@ btScalar margin(0.001);
 btScalar floorHE(0.1);
 btScalar defaultTimeStep(0.005);
 btScalar timeStep(defaultTimeStep);
+int initialMaxSimSubSteps = 1;
+int maxSimSubSteps=initialMaxSimSubSteps;
 btScalar initialTimeStep = 1e-4;
 btScalar setTimeStep = initialTimeStep;
 int initialNumIterations = 10;
@@ -623,6 +625,10 @@ public:
 		}
 		dropFocus = true;
 	}
+	void setUiMaxSimSubSteps(Gwen::Controls::Base* control){
+		setInt(control, &maxSimSubSteps);
+		dropFocus = true;
+	}
 
 	Gwen::Controls::Base* pPage;
 	Gwen::Controls::Label* addLabel(string txt){
@@ -885,6 +891,17 @@ public:
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setUiNumIterations);
 	}
+	void addMaxSimSubSteps(){
+		addLabel("maxSimSubSteps");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = std::to_string(maxSimSubSteps);
+		gc->SetText(text);
+		gc->SetToolTip("Number of simulation steps for render");
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setUiMaxSimSubSteps);
+	}
 	bool isDampingUsed(){
 		switch (m_mode){
 		case 2:
@@ -943,6 +960,7 @@ public:
 		if (solverType != BT_MLCP_SOLVER){
 			addNumIterations();
 		}
+		addMaxSimSubSteps();
 		addPauseSimulationButton();
 		addSingleStepButton();
 		addRestartButton();
@@ -2015,7 +2033,12 @@ void CharpyDemo::stepSimulation(float deltaTime){
 	}
 	if (m_dynamicsWorld)	{
 		PlasticityData::setTime(currentTime);
-		stepCount += m_dynamicsWorld->stepSimulation(timeStep, 30, timeStep);
+		btScalar maxSimulationStep(timeStep*maxSimSubSteps);
+		if (deltaTime > maxSimulationStep){
+			deltaTime = maxSimulationStep;
+		}
+		stepCount += m_dynamicsWorld->stepSimulation
+			(deltaTime, maxSimSubSteps, timeStep);
 		if (stepCount > maxStepCount) {
 			PlasticityExampleBrowser::setPauseSimulation(true);
 		}
@@ -2024,7 +2047,7 @@ void CharpyDemo::stepSimulation(float deltaTime){
 			checkCollisions();
 			updateEnergy();
 			checkConstraints();
-			currentTime += timeStep;
+			currentTime += deltaTime;
 			writeGraphData();
 			writeRigidBodyData();
 			updateView();
@@ -2236,6 +2259,7 @@ void reinit(){
 	timeStep = defaultTimeStep;
 	setTimeStep = initialTimeStep;
 	numIterations = initialNumIterations;
+	maxSimSubSteps = initialMaxSimSubSteps;
 	variableTimeStep = true;
 	restitution = initialRestitution;
 	maxPlasticRotation = initialMaxPlasticRotation;
