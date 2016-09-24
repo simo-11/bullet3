@@ -1,6 +1,7 @@
 % !TeX root = article.tex
 \section{Numerical examples}
 
+\subsection{Block under tension}
 In this section, changes to constraint formulation are clarified by doing few simulation steps
 of non constrained, rigid and
 elastic-plastic examples using numerical values.
@@ -307,6 +308,43 @@ In this scenario object behaves as depicted in table \ref{tab:ep2BlockValues} i.
 \caption {Constraint parameter values for elastic-plastic constraint 2} \label{tab:ep2BlockValues} 
 \end {table}
 
-In following sections, results for few selected scenarios are presented.
-Simulation of Charpy impact test shows that plausible results can be obtained even for this quite difficult scenario.
+\subsection{Charpy impact test}
+Simulation of Charpy impact test was used to benchmark approach in more complicated scenario. 
+Material is steel. Density is 7800 $\frac{kg}{m^{3}}$. Young’s modulus is 200 GPa.
+Specimen dimensions are 10x10x55 mm with 2 mm notch in middle which is taken into account in calculations.
+Support anvils initially have 40 mm open space between them. Their width is 40 mm. 
+Hammer is 0.5 m wide and 0.25 m high, thickness is 0.02 m. Mass is 19.5 kg.
+Hammer has 40 mm draft.
+If specimen bends about 1.9 radians (108 degrees) it will go between anvils.
+Expected energy loss is product of plastic moment of section, hinge angle needed for specimen to go through supports and 
+yield stress of specimen. For hinge angle of 1.9 radians and yield stress of 400 MPa expected energy 
+loss is 122 J.
 
+Usually \bullet\ simulations are done using fixed time step of 1/60 s i.e. 16.67 ms. 
+For this case that is too large. 
+Default time step was selected to be 5 ms outside impact time and 0.1 ms during impact. 
+Automatic time stepping routine changes timestep so that at angles higher than 0.2 5 ms time step is
+used and adjusts it linearly to selected time step between angles of 0.2 and 0.05.
+
+Table \ref{tab:ep2ts} shows energy loss for few timesteps as example to demonstrate sensitivity of solution
+using  elastic-plastic constraint 2.
+
+\begin {table}[htb!]
+\begin{center}
+\begin{tabular}{| c| c|l|}
+\hline
+{\bf Timestep[ms]} & {\bf Energy loss [J]} & {\bf Notes} \\ \hline
+ 0.2 &  170 & specimen penetrates hammer  \\ \hline
+ 0.1 &  120 & \\ \hline
+ 0.05 &  150 & \\ \hline
+\end {tabular}
+\end{center}
+\caption {Energy loss for few timesteps} \label{tab:ep2ts} 
+\end {table}
+
+\begin{figure}[htb!]
+\centering
+\includegraphics[height=8cm]{figs/article-charpy}
+\caption{Simulation of Charpy impact test}
+\label{fig:f1-ok-results}
+\end{figure}
