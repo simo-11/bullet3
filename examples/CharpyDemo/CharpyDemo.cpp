@@ -54,7 +54,6 @@ btScalar startAngle(initialStartAngle);
 long  initialDisplayWait = 0;
 long displayWait = initialDisplayWait;
 long setDisplayWait = displayWait;
-btScalar ccdMotionThreshHold(0.001);
 btScalar margin(0.001);
 btScalar floorHE(0.1);
 btScalar defaultTimeStep(0.005);
@@ -124,6 +123,8 @@ btScalar initialFrequencyRatio(10);
 btScalar frequencyRatio(initialFrequencyRatio);
 bool initialLimitIfNeeded = true;
 bool limitIfNeeded=initialLimitIfNeeded;
+bool initialUseCcd = false;
+bool useCcd = initialUseCcd;
 float energy = 0;
 float maxEnergy;
 btDynamicsWorld* dw;
@@ -281,23 +282,6 @@ void setInt(Gwen::Controls::Base* control, int * vp){
 	*vp = fv;
 }
 
-/**
-http://www.bulletphysics.org/mediawiki-1.5.8/index.php?title=Anti_tunneling_by_Motion_Clamping
-*/
-void resetCcdMotionThreshHold()
-{
-	btScalar radius(ccdMotionThreshHold / 5.f);
-	for (int i = dw->getNumCollisionObjects() - 1; i >= 0; i--)
-	{
-		btCollisionObject* obj = dw->getCollisionObjectArray()[i];
-		btRigidBody* body = btRigidBody::upcast(obj);
-		if (body && body->getMotionState())
-		{
-			body->setCcdMotionThreshold(ccdMotionThreshHold);
-			body->setCcdSweptSphereRadius(radius);
-		}
-	}
-}
 float getRotationEnergy(btScalar invInertia, btScalar angularVelocity){
 	if (invInertia == 0){
 		return 0.f;
@@ -602,6 +586,12 @@ public:
 		limitIfNeeded = cb->IsChecked();
 		restartHandler(control);
 	}
+	void setUseCcd(Gwen::Controls::Base* control){
+		Gwen::Controls::CheckBox* cb =
+			static_cast<Gwen::Controls::CheckBox*>(control);
+		useCcd = cb->IsChecked();
+		restartHandler(control);
+	}
 	void setVariableTimeStep(Gwen::Controls::Base* control){
 		Gwen::Controls::CheckBox* cb =
 			static_cast<Gwen::Controls::CheckBox*>(control);
@@ -850,6 +840,15 @@ public:
 		gy += gyInc;
 		gc->onCheckChanged.Add(pPage, &CharpyDemo::setLimitIfNeeded);
 	}
+	void addUseCcd(){
+		Gwen::Controls::Label* label = addLabel("useCcd");
+		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
+		gc->SetToolTip("use continous collision detection");
+		gc->SetPos(gxi, gy);
+		gc->SetChecked(useCcd);
+		gy += gyInc;
+		gc->onCheckChanged.Add(pPage, &CharpyDemo::setUseCcd);
+	}
 	void addVariableTimeStep(){
 		Gwen::Controls::Label* label = addLabel("variableTimeStep");
 		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
@@ -954,6 +953,7 @@ public:
 		if (isLimitIfNeededUsed()){
 			addLimitIfNeeded();
 		}
+		addUseCcd();
 		addTimeStep();
 		addVariableTimeStep();
 		addDisplayWait();
@@ -1742,7 +1742,7 @@ public:
 		// corresponding to armPivot is at y=0
 		// rotate and then move back up and in
 		// x-direction so that at impact time hammer is in down position
-		// up so that center of hammer is about y=0.2
+		// so that center of hammer is about y=0.2
 		const btVector3 armPivot(btZero,
 			btScalar(1), btZero);
 		btVector3 cPos(btZero, btScalar(1.2+w/2), btZero);
@@ -1793,6 +1793,27 @@ public:
 			armPivot, axilPivot, pivotAxis, pivotAxis, false);
 		hammerHinge->setJointFeedback(&hammerHingeJointFeedback);
 		m_dynamicsWorld->addConstraint(hammerHinge, true);
+		if (useCcd){
+			btCollisionShape* ccdShape = new btSphereShape(zHalf);
+			const btVector3 ccdLocation(-xHalf-hammerDraft, w/2, 0);
+			const btVector3 ccdOrigin = (cTr*ccdLocation);
+			btTransform ccdTr;
+			ccdTr.setIdentity();
+			ccdTr.setOrigin(ccdOrigin);
+			m_collisionShapes.push_back(ccdShape);
+			btRigidBody* ccdBody = localCreateRigidBody(0.01, ccdTr, ccdShape);
+			btTransform frameInHammerBody;
+			frameInHammerBody.setIdentity();
+			frameInHammerBody.setOrigin(ccdLocation);
+			btTransform frameInCcdBody;
+			frameInCcdBody.setIdentity();
+			frameInCcdBody.setRotation(cTr.getRotation());
+			btFixedConstraint* ccdJoint =
+				new btFixedConstraint(*hammerBody, *ccdBody, frameInHammerBody, frameInCcdBody);
+			m_dynamicsWorld->addConstraint(ccdJoint, true);
+			ccdBody->setCcdSweptSphereRadius(zHalf);
+			ccdBody->setCcdMotionThreshold(0.001);
+		}
 	}
 	bool isBroken(){
 		int loopSize = tc.size();
@@ -1939,7 +1960,6 @@ void	CharpyDemo::initPhysics()
 	addAnvilParts();
 	addSpecimenParts();
 	addHammer();
-	resetCcdMotionThreshHold();
 	updateEnergy();
 	currentTime=0;
 	rtClock.reset();
@@ -2158,16 +2178,6 @@ void CharpyDemo::showMessage()
 	infoMsg(buf);
 	sprintf_s(buf,B_LEN, "solverType(<Ctrl>F1-F4)=F%d: %s", solverType, solverTypeNames[solverType]);
 	infoMsg(buf);
-	if (false){ // these do not currently seem interesting
-		sprintf_s(buf,B_LEN, "</> to change ccdMotionThreshHold, now=%1.8f m",
-			ccdMotionThreshHold);
-		infoMsg(buf);
-		sprintf_s(buf,B_LEN, "e/E to change margin, now=%1.8f m",margin);
-		infoMsg(buf);
-		sprintf_s(buf,B_LEN, "j/J to change floor half extents, now=%1.6f m",
-			floorHE);
-		infoMsg(buf);
-	}
 	if (openGraphFile){
 		sprintf_s(buf,B_LEN,"Writing force data to %s, disable with ^d",gfn);
 	}else{
@@ -2493,30 +2503,6 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 				resetScene=true;
 			}
 			break;
-	case '<':
-		ccdMotionThreshHold*=0.8;
-		resetCcdMotionThreshHold();
-		break;
-	case '>':
-		ccdMotionThreshHold/=0.8;
-		resetCcdMotionThreshHold();
-		break;
-	case 'e':
-		if (window->isModifierKeyPressed(B3G_SHIFT)){
-			margin /= 0.8;
-		}
-		else{
-			margin *= 0.8;
-		}
-		resetCollisionMargin();
-		break;
-	case 'j':
-		if (window->isModifierKeyPressed(B3G_SHIFT)){
-			floorHE /= 0.8;
-		}
-		else{
-			floorHE *= 0.8;
-		}
 	case 'k':
 		if (window->isModifierKeyPressed(B3G_SHIFT)){
 			w /= 0.8;
