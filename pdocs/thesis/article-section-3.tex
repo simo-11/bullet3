@@ -349,3 +349,28 @@ Figure \ref{fig:charpy} shows screenshot from simulation.
 \caption{Simulation of Charpy impact test}
 \label{fig:charpy}
 \end{figure}
+
+
+\subsection{Demolisher}
+Demolisher is  collection of possible scenarios that can be added to games to provide ductile joints between
+rigid bodies.  Simulation can be done in real time on modest hardware. 
+Figure \ref{fig:demolisher} shows three screenshots from simulation.
+
+\begin{figure}[htb!]
+\centering
+\includegraphics[height=5cm]{figs/demolisher-pre}
+\includegraphics[height=5cm]{figs/demolisher-wip}
+\includegraphics[height=5cm]{figs/demolisher-done}
+\caption{Simulation of Demolisher scenario}
+\label{fig:demolisher}
+\end{figure}
+
+Vehicle is modelled as single box btRaycastVehicle with four driving wheels. Wheels are rendered for visual feedback.
+In left picture, initial state is shown. Gate in front is modelled to be so slender that it has visible elastic deflection.
+Gate support is modelled as heavy box.
+Bridge has rigid ramps and supports at both ends.
+Gravity is applied gradually to avoid collapse of bridge at start of simulation.
+In middle picture,  bridge is shown in state where car hs driven once over bridge without stopping and
+other bodies have taken light damage.
+In right picture, some of joints have been broken.
+
