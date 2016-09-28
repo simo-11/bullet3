@@ -162,8 +162,6 @@ void ConvertURDF2BulletInternal(
     int mbParentIndex = cache.getMbIndexFromUrdfIndex(urdfParentIndex);
     btRigidBody* parentRigidBody = 0;
 
-    //std::string name = u2b.getLinkName(urdfLinkIndex);
-    //b3Printf("link name=%s urdf link index=%d\n",name.c_str(),urdfLinkIndex);
     //b3Printf("mb link index = %d\n",mbLinkIndex);
 
 	btTransform parentLocalInertialFrame;
@@ -227,7 +225,8 @@ void ConvertURDF2BulletInternal(
     {
 
 
-        btVector3 color = selectColor2();
+        btVector4 color = selectColor2();
+		u2b.getLinkColor(urdfLinkIndex,color);
         /*
          if (visual->material.get())
          {
@@ -257,7 +256,7 @@ void ConvertURDF2BulletInternal(
             btRigidBody* body = creation.allocateRigidBody(urdfLinkIndex, mass, localInertiaDiagonal, inertialFrameInWorldSpace, compoundShape);
             linkRigidBody = body;
 
-            world1->addRigidBody(body, bodyCollisionFilterGroup, bodyCollisionFilterMask);
+            world1->addRigidBody(body);
 
             compoundShape->setUserIndex(graphicsIndex);
 
@@ -322,7 +321,12 @@ void ConvertURDF2BulletInternal(
                         cache.m_bulletMultiBody->getLink(mbLinkIndex).m_jointDamping = jointDamping;
                         cache.m_bulletMultiBody->getLink(mbLinkIndex).m_jointFriction= jointFriction;
                         creation.addLinkMapping(urdfLinkIndex,mbLinkIndex);
-
+                        if (jointType == URDFRevoluteJoint && jointLowerLimit <= jointUpperLimit) {
+                          //std::string name = u2b.getLinkName(urdfLinkIndex);
+                          //printf("create btMultiBodyJointLimitConstraint for revolute link name=%s urdf link index=%d (low=%f, up=%f)\n", name.c_str(), urdfLinkIndex, jointLowerLimit, jointUpperLimit);
+                          btMultiBodyConstraint* con = new btMultiBodyJointLimitConstraint(cache.m_bulletMultiBody, mbLinkIndex, jointLowerLimit, jointUpperLimit);
+                          world1->addMultiBodyConstraint(con);
+                        }
                     } else
                     {
 
@@ -343,8 +347,14 @@ void ConvertURDF2BulletInternal(
                                                                    -offsetInB.getOrigin(),
                                                                    disableParentCollision);
                         creation.addLinkMapping(urdfLinkIndex,mbLinkIndex);
-                        btMultiBodyConstraint* con = new btMultiBodyJointLimitConstraint(cache.m_bulletMultiBody,mbLinkIndex,jointLowerLimit, jointUpperLimit);
-                        world1->addMultiBodyConstraint(con);
+						if (jointLowerLimit <= jointUpperLimit)
+						{
+							//std::string name = u2b.getLinkName(urdfLinkIndex);
+							//printf("create btMultiBodyJointLimitConstraint for prismatic link name=%s urdf link index=%d (low=%f, up=%f)\n", name.c_str(), urdfLinkIndex, jointLowerLimit,jointUpperLimit);
+
+							btMultiBodyConstraint* con = new btMultiBodyJointLimitConstraint(cache.m_bulletMultiBody, mbLinkIndex, jointLowerLimit, jointUpperLimit);
+							world1->addMultiBodyConstraint(con);
+						}
                         //printf("joint lower limit=%d, upper limit = %f\n", jointLowerLimit, jointUpperLimit);
 
                     } else
@@ -386,8 +396,9 @@ void ConvertURDF2BulletInternal(
                 //when syncing the btMultiBody link transforms to the btMultiBodyLinkCollider
 
                 col->setWorldTransform(tr);
-
-                bool isDynamic = true;
+				
+				//base and fixed? -> static, otherwise flag as dynamic
+                bool isDynamic = (mbLinkIndex<0 && cache.m_bulletMultiBody->hasFixedBase())? false : true;
                 short collisionFilterGroup = isDynamic? short(btBroadphaseProxy::DefaultFilter) : short(btBroadphaseProxy::StaticFilter);
                 short collisionFilterMask = isDynamic? 	short(btBroadphaseProxy::AllFilter) : 	short(btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter);
 
@@ -410,6 +421,10 @@ void ConvertURDF2BulletInternal(
 				{
 					col->setRollingFriction(contactInfo.m_rollingFriction);
 				}
+                if ((contactInfo.m_flags & URDF_CONTACT_HAS_SPINNING_FRICTION)!=0)
+                {
+                    col->setSpinningFriction(contactInfo.m_spinningFriction);
+                }
 				if ((contactInfo.m_flags & URDF_CONTACT_HAS_STIFFNESS_DAMPING)!=0)
 				{
 				    col->setContactStiffnessAndDamping(contactInfo.m_contactStiffness,contactInfo.m_contactDamping);

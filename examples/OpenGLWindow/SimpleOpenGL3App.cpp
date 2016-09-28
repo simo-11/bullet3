@@ -172,7 +172,7 @@ SimpleOpenGL3App::SimpleOpenGL3App(	const char* title, int width,int height, boo
     
     b3Assert(glGetError() ==GL_NO_ERROR);
 
-	m_instancingRenderer = new GLInstancingRenderer(128*1024,64*1024*1024);
+	m_instancingRenderer = new GLInstancingRenderer(128*1024,128*1024*1024);
     m_primRenderer = new GLPrimitiveRenderer(width,height);
     
     m_renderer = m_instancingRenderer ;
@@ -230,7 +230,7 @@ struct sth_stash* SimpleOpenGL3App::getFontStash()
 
 void SimpleOpenGL3App::drawText3D( const char* txt, float worldPosX, float worldPosY, float worldPosZ, float size1)
 {
-
+	B3_PROFILE("SimpleOpenGL3App::drawText3D");
 	float viewMat[16];
 	float projMat[16];
 	CommonCameraInterface* cam = m_instancingRenderer->getActiveCamera();
@@ -273,6 +273,7 @@ void SimpleOpenGL3App::drawText3D( const char* txt, float worldPosX, float world
 		bool measureOnly = false;
 
 		float fontSize= 32;//64;//512;//128;
+		
 		sth_draw_text(m_data->m_fontStash,
                     m_data->m_droidRegular,fontSize,posX,posY,
 					txt,&dx, this->m_instancingRenderer->getScreenWidth(),this->m_instancingRenderer->getScreenHeight(),measureOnly,m_window->getRetinaScale());

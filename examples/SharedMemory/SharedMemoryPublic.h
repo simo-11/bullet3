@@ -29,6 +29,7 @@ enum EnumSharedMemoryClientCommand
     CMD_APPLY_EXTERNAL_FORCE,
 	CMD_CALCULATE_INVERSE_DYNAMICS,
     CMD_CALCULATE_INVERSE_KINEMATICS,
+    CMD_CALCULATE_JACOBIAN,
     CMD_CREATE_JOINT,
     CMD_REQUEST_CONTACT_POINT_INFORMATION,
     //don't go beyond this command!
@@ -67,8 +68,12 @@ enum EnumSharedMemoryServerStatus
 		CMD_INVALID_STATUS,
 		CMD_CALCULATED_INVERSE_DYNAMICS_COMPLETED,
 		CMD_CALCULATED_INVERSE_DYNAMICS_FAILED,
+        CMD_CALCULATED_JACOBIAN_COMPLETED,
+        CMD_CALCULATED_JACOBIAN_FAILED,
 		CMD_CONTACT_POINT_INFORMATION_COMPLETED,
 		CMD_CONTACT_POINT_INFORMATION_FAILED,
+		CMD_CALCULATE_INVERSE_KINEMATICS_COMPLETED,
+		CMD_CALCULATE_INVERSE_KINEMATICS_FAILED,
         CMD_MAX_SERVER_COMMANDS
 };
 
@@ -93,6 +98,7 @@ enum
 enum JointType {
     eRevoluteType = 0,
     ePrismaticType = 1,
+    eFixedType = 2,
 };
 
 struct b3JointInfo
@@ -110,6 +116,13 @@ struct b3JointInfo
     double m_childFrame[7]; // ^^^
     double m_jointAxis[3]; // joint axis in parent local frame
 };
+
+struct b3BodyInfo
+{
+	const char* m_baseName;
+};
+
+
 
 struct b3JointSensorState
 {

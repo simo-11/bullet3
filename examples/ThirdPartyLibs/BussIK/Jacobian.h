@@ -54,11 +54,14 @@ enum UpdateMode {
 class Jacobian {
 public:
 	Jacobian(Tree*);
+	Jacobian(bool useAngularJacobian, int nDof);
 
 	void ComputeJacobian(VectorR3* targets);
 	const MatrixRmn& ActiveJacobian() const { return *Jactive; } 
 	void SetJendActive() { Jactive = &Jend; }						// The default setting is Jend.
 	void SetJtargetActive() { Jactive = &Jtarget; }
+    void SetJendTrans(MatrixRmn& J);
+    void SetDeltaS(VectorRn& S);
 
 	void CalcDeltaThetas();			// Use this only if the Current Mode has been set.
 	void ZeroDeltaThetas();
@@ -67,8 +70,10 @@ public:
 	void CalcDeltaThetasDLS();
 	void CalcDeltaThetasDLSwithSVD();
 	void CalcDeltaThetasSDLS();
+    
 
 	void UpdateThetas();
+    void UpdateThetaDot();
 	double UpdateErrorArray(VectorR3* targets);		// Returns sum of errors
 	const VectorRn& GetErrorArray() const { return errorArray; }
 	void UpdatedSClampValue(VectorR3* targets);
@@ -82,9 +87,12 @@ public:
 	static void CompareErrors( const Jacobian& j1, const Jacobian& j2, double* weightedDist1, double* weightedDist2 );
 	static void CountErrors( const Jacobian& j1, const Jacobian& j2, int* numBetter1, int* numBetter2, int* numTies );
 
-private:
-	Tree* tree;			// tree associated with this Jacobian matrix
-	int nEffector;		// Number of end effectors
+    int GetNumRows() {return nRow;}
+    int GetNumCols() {return nCol;}
+    
+public:
+	Tree* m_tree;			// tree associated with this Jacobian matrix
+	int m_nEffector;		// Number of end effectors
 	int nJoint;			// Number of joints
 	int nRow;			// Total number of rows the real J (= 3*number of end effectors for now)
 	int nCol;			// Total number of columns in the real J (= number of joints for now)

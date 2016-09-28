@@ -1,6 +1,6 @@
 
 #include "KukaGraspExample.h"
-#include "IKTrajectoryHelper.h"
+#include "../SharedMemory/IKTrajectoryHelper.h"
 
 #include "../CommonInterfaces/CommonGraphicsAppInterface.h"
 #include "Bullet3Common/b3Quaternion.h"
@@ -26,6 +26,9 @@ class KukaGraspExample : public CommonExampleInterface
     IKTrajectoryHelper m_ikHelper;
     int m_targetSphereInstance;
     b3Vector3 m_targetPos;
+    b3Vector3 m_worldPos;
+    b3Vector4 m_targetOri;
+    b3Vector4 m_worldOri;
     double m_time;
 	int m_options;
 	
@@ -45,6 +48,7 @@ public:
     m_time(0)
     {
         m_targetPos.setValue(0.5,0,1);
+        m_worldPos.setValue(0, 0, 0);
 		m_app->setUpAxis(2);
     }
     virtual ~KukaGraspExample()
@@ -74,7 +78,6 @@ public:
         
         
         
-        m_ikHelper.createKukaIIWA();
         
 		bool connected = m_robotSim.connect(m_guiHelper);
 		b3Printf("robotSim connected = %d",connected);
@@ -110,6 +113,7 @@ public:
                  */
             }
             
+			if (0)
         	{
 				b3RobotSimLoadFileArgs args("");
 				args.m_fileName = "kiva_shelf/model.sdf";
@@ -138,9 +142,12 @@ public:
     }
     virtual void	stepSimulation(float deltaTime)
 	{
-        m_time+=deltaTime;
-        m_targetPos.setValue(0.5, 0, 0.5+0.4*b3Sin(3 * m_time));
+		float dt = deltaTime;
+		btClamp(dt,0.0001f,0.01f);
 
+        m_time+=dt;
+        m_targetPos.setValue(0.4-0.4*b3Cos( m_time), 0, 0.8+0.4*b3Cos( m_time));
+        m_targetOri.setValue(0, 1.0, 0, 0);
         
         
         int numJoints = m_robotSim.getNumJoints(m_kukaIndex);
@@ -148,7 +155,11 @@ public:
         if (numJoints==7)
         {
             double q_current[7]={0,0,0,0,0,0,0};
+
+            double world_position[3]={0,0,0};
+            double world_orientation[4]={0,0,0,0};
             b3JointStates jointStates;
+            
             if (m_robotSim.getJointStates(m_kukaIndex,jointStates))
             {
                 //skip the base positions (7 values)
@@ -158,24 +169,54 @@ public:
                     q_current[i] = jointStates.m_actualStateQ[i+7];
                 }
             }
-            // m_robotSim.getJointInfo(m_kukaIndex,jointIndex,jointInfo);
-            double q_new[7];
-            int ikMethod=IK2_SDLS;
-            b3Vector3DoubleData dataOut;
-            m_targetPos.serializeDouble(dataOut);
-            m_ikHelper.computeIK(dataOut.m_floats,q_current, numJoints, q_new, ikMethod);
-            printf("q_new = %f,%f,%f,%f,%f,%f,%f\n", q_new[0],q_new[1],q_new[2],
-                   q_new[3],q_new[4],q_new[5],q_new[6]);
-        
-            //set the
-            for (int i=0;i<numJoints;i++)
-            {
-                b3JointMotorArgs t(CONTROL_MODE_POSITION_VELOCITY_PD);
-                t.m_targetPosition = q_new[i];
-                t.m_maxTorqueValue = 1000;
-                t.m_kp= 1;
-                m_robotSim.setJointMotorControl(m_kukaIndex,i,t);
+            // compute body position and orientation
+            m_robotSim.getLinkState(0, 6, world_position, world_orientation);
+            m_worldPos.setValue(world_position[0], world_position[1], world_position[2]);
+            m_worldOri.setValue(world_orientation[0], world_orientation[1], world_orientation[2], world_orientation[3]);
+            
+            b3Vector3DoubleData targetPosDataOut;
+            m_targetPos.serializeDouble(targetPosDataOut);
+            b3Vector3DoubleData worldPosDataOut;
+            m_worldPos.serializeDouble(worldPosDataOut);
+            b3Vector3DoubleData targetOriDataOut;
+            m_targetOri.serializeDouble(targetOriDataOut);
+            b3Vector3DoubleData worldOriDataOut;
+            m_worldOri.serializeDouble(worldOriDataOut);
 
+            
+			b3RobotSimInverseKinematicArgs ikargs;
+			b3RobotSimInverseKinematicsResults ikresults;
+			
+         
+			ikargs.m_bodyUniqueId = m_kukaIndex;
+//			ikargs.m_currentJointPositions = q_current;
+//			ikargs.m_numPositions = 7;
+            ikargs.m_endEffectorTargetPosition[0] = targetPosDataOut.m_floats[0];
+            ikargs.m_endEffectorTargetPosition[1] = targetPosDataOut.m_floats[1];
+            ikargs.m_endEffectorTargetPosition[2] = targetPosDataOut.m_floats[2];
+			
+			ikargs.m_flags |= B3_HAS_IK_TARGET_ORIENTATION;
+
+			ikargs.m_endEffectorTargetOrientation[0] = targetOriDataOut.m_floats[0];
+			ikargs.m_endEffectorTargetOrientation[1] = targetOriDataOut.m_floats[1];
+			ikargs.m_endEffectorTargetOrientation[2] = targetOriDataOut.m_floats[2];
+			ikargs.m_endEffectorTargetOrientation[3] = targetOriDataOut.m_floats[3];
+            ikargs.m_endEffectorLinkIndex = 6;
+
+			if (m_robotSim.calculateInverseKinematics(ikargs,ikresults))
+			{
+                //copy the IK result to the desired state of the motor/actuator
+                for (int i=0;i<numJoints;i++)
+                {
+                    b3JointMotorArgs t(CONTROL_MODE_POSITION_VELOCITY_PD);
+                    t.m_targetPosition = ikresults.m_calculatedJointPositions[i];
+                    t.m_maxTorqueValue = 100;
+                    t.m_kp= 1;
+					t.m_targetVelocity = 0;
+					t.m_kp = 0.5;
+                    m_robotSim.setJointMotorControl(m_kukaIndex,i,t);
+
+                }
             }
         }
         
@@ -219,7 +260,7 @@ public:
 	virtual void resetCamera()
 	{
 		float dist = 3;
-		float pitch = -75;
+		float pitch = 0;
 		float yaw = 30;
 		float targetPos[3]={-0.2,0.8,0.3};
 		if (m_app->m_renderer  && m_app->m_renderer->getActiveCamera())

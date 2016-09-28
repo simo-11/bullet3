@@ -14,7 +14,7 @@ subject to the following restrictions:
 
 #include "BulletUrdfImporter.h"
 #include "../../CommonInterfaces/CommonRenderInterface.h"
-
+#include"../../ThirdPartyLibs/Wavefront/tiny_obj_loader.h"
 #include "URDFImporterInterface.h"
 #include "btBulletCollisionCommon.h"
 #include "../ImportObjDemo/LoadMeshFromObj.h"
@@ -28,6 +28,7 @@ subject to the following restrictions:
 
 #include "../ImportMeshUtility/b3ImportMeshUtility.h"
 
+static btScalar gUrdfDefaultCollisionMargin = 0.001;
 
 #include <iostream>
 #include <fstream>
@@ -295,26 +296,66 @@ void  BulletURDFImporter::getMassAndInertia(int linkIndex, btScalar& mass,btVect
 	if (linkPtr)
 	{
 		UrdfLink* link = *linkPtr;
+		btMatrix3x3 linkInertiaBasis;
+		btScalar linkMass, principalInertiaX, principalInertiaY, principalInertiaZ;
 		if (link->m_parentJoint==0 && m_data->m_urdfParser.getModel().m_overrideFixedBase)
 		{
-			mass = 0.f;
-			localInertiaDiagonal.setValue(0,0,0);
+			linkMass = 0.f;
+			principalInertiaX = 0.f;
+			principalInertiaY = 0.f;
+			principalInertiaZ = 0.f;
+			linkInertiaBasis.setIdentity();
 		}
 		else
 		{
-			mass = link->m_inertia.m_mass;
-			localInertiaDiagonal.setValue(link->m_inertia.m_ixx,link->m_inertia.m_iyy,
-										  link->m_inertia.m_izz);
+			linkMass = link->m_inertia.m_mass;
+			if (link->m_inertia.m_ixy == 0.0 &&
+			    link->m_inertia.m_ixz == 0.0 &&
+			    link->m_inertia.m_iyz == 0.0)
+			{
+				principalInertiaX = link->m_inertia.m_ixx;
+				principalInertiaY = link->m_inertia.m_iyy;
+				principalInertiaZ = link->m_inertia.m_izz;
+				linkInertiaBasis.setIdentity();
+			}
+			else
+			{
+				principalInertiaX = link->m_inertia.m_ixx;
+				btMatrix3x3 inertiaTensor(link->m_inertia.m_ixx, link->m_inertia.m_ixy, link->m_inertia.m_ixz,
+							  link->m_inertia.m_ixy, link->m_inertia.m_iyy, link->m_inertia.m_iyz,
+							  link->m_inertia.m_ixz, link->m_inertia.m_iyz, link->m_inertia.m_izz);
+				btScalar threshold = 1.0e-6;
+				int numIterations = 30;
+				inertiaTensor.diagonalize(linkInertiaBasis, threshold, numIterations);
+				principalInertiaX = inertiaTensor[0][0];
+				principalInertiaY = inertiaTensor[1][1];
+				principalInertiaZ = inertiaTensor[2][2];
+			}
 		}
-		inertialFrame = link->m_inertia.m_linkLocalFrame;
-		
+		mass = linkMass;
+		if (principalInertiaX < 0 ||
+		    principalInertiaX > (principalInertiaY + principalInertiaZ) ||
+		    principalInertiaY < 0 ||
+		    principalInertiaY > (principalInertiaX + principalInertiaZ) ||
+		    principalInertiaZ < 0 ||
+		    principalInertiaZ > (principalInertiaX + principalInertiaY))
+		{
+			b3Warning("Bad inertia tensor properties, setting inertia to zero for link: %s\n", link->m_name.c_str());
+			principalInertiaX = 0.f;
+			principalInertiaY = 0.f;
+			principalInertiaZ = 0.f;
+			linkInertiaBasis.setIdentity();
+		}
+		localInertiaDiagonal.setValue(principalInertiaX, principalInertiaY, principalInertiaZ);
+		inertialFrame.setOrigin(link->m_inertia.m_linkLocalFrame.getOrigin());
+		inertialFrame.setBasis(link->m_inertia.m_linkLocalFrame.getBasis()*linkInertiaBasis);
 	}
 	else
-    {
-        mass = 1.f;
-        localInertiaDiagonal.setValue(1,1,1);
-        inertialFrame.setIdentity();
-    }
+	{
+		mass = 1.f;
+		localInertiaDiagonal.setValue(1,1,1);
+		inertialFrame.setIdentity();
+	}
 }
     
 bool BulletURDFImporter::getJointInfo(int urdfLinkIndex, btTransform& parent2joint, btTransform& linkTransformInWorld, btVector3& jointAxisInJointSpace, int& jointType, btScalar& jointLowerLimit, btScalar& jointUpperLimit, btScalar& jointDamping, btScalar& jointFriction) const
@@ -360,7 +401,49 @@ bool BulletURDFImporter::getRootTransformInWorld(btTransform& rootTransformInWor
     return true;
 }
 
+static btCollisionShape* createConvexHullFromShapes(std::vector<tinyobj::shape_t>& shapes, const btVector3& geomScale)
+{
+	btCompoundShape* compound = new btCompoundShape();
+	compound->setMargin(gUrdfDefaultCollisionMargin);
 
+	btTransform identity;
+	identity.setIdentity();
+
+	for (int s = 0; s<(int)shapes.size(); s++)
+	{
+		btConvexHullShape* convexHull = new btConvexHullShape();
+		convexHull->setMargin(gUrdfDefaultCollisionMargin);
+		tinyobj::shape_t& shape = shapes[s];
+		int faceCount = shape.mesh.indices.size();
+
+		for (int f = 0; f<faceCount; f += 3)
+		{
+
+			btVector3 pt;
+			pt.setValue(shape.mesh.positions[shape.mesh.indices[f] * 3 + 0],
+				shape.mesh.positions[shape.mesh.indices[f] * 3 + 1],
+				shape.mesh.positions[shape.mesh.indices[f] * 3 + 2]);
+			
+			convexHull->addPoint(pt*geomScale,false);
+
+			pt.setValue(shape.mesh.positions[shape.mesh.indices[f + 1] * 3 + 0],
+						shape.mesh.positions[shape.mesh.indices[f + 1] * 3 + 1],
+						shape.mesh.positions[shape.mesh.indices[f + 1] * 3 + 2]);
+			convexHull->addPoint(pt*geomScale, false);
+
+			pt.setValue(shape.mesh.positions[shape.mesh.indices[f + 2] * 3 + 0],
+						shape.mesh.positions[shape.mesh.indices[f + 2] * 3 + 1],
+						shape.mesh.positions[shape.mesh.indices[f + 2] * 3 + 2]);
+			convexHull->addPoint(pt*geomScale, false);
+		}
+
+		convexHull->recalcLocalAabb();
+		convexHull->optimizeConvexHull();
+		compound->addChildShape(identity,convexHull);
+	}
+
+	return compound;
+}
 
 btCollisionShape* convertURDFToCollisionShape(const UrdfCollision* collision, const char* urdfPathPrefix)
 {
@@ -385,16 +468,18 @@ btCollisionShape* convertURDFToCollisionShape(const UrdfCollision* collision, co
                 vertices.push_back(vert);
 
             }
-            btConvexHullShape* cylZShape = new btConvexHullShape(&vertices[0].x(), vertices.size(), sizeof(btVector3));
-            cylZShape->setMargin(0.001);
-			cylZShape->initializePolyhedralFeatures();
+            btConvexHullShape* convexHull = new btConvexHullShape(&vertices[0].x(), vertices.size(), sizeof(btVector3));
+            convexHull->setMargin(gUrdfDefaultCollisionMargin);
+			convexHull->initializePolyhedralFeatures();
+			convexHull->optimizeConvexHull();
+			
 			//btConvexShape* cylZShape = new btConeShapeZ(cyl->radius,cyl->length);//(vexHullShape(&vertices[0].x(), vertices.size(), sizeof(btVector3));
             
             //btVector3 halfExtents(cyl->radius,cyl->radius,cyl->length/2.);
             //btCylinderShapeZ* cylZShape = new btCylinderShapeZ(halfExtents);
             
 
-            shape = cylZShape;
+            shape = convexHull;
             break;
         }
         case URDF_GEOM_BOX:
@@ -403,7 +488,7 @@ btCollisionShape* convertURDFToCollisionShape(const UrdfCollision* collision, co
 			btBoxShape* boxShape = new btBoxShape(extents*0.5f);
 			//btConvexShape* boxShape = new btConeShapeX(extents[2]*0.5,extents[0]*0.5);
             shape = boxShape;
-			shape ->setMargin(0.001);
+			shape ->setMargin(gUrdfDefaultCollisionMargin);
             break;
         }
         case URDF_GEOM_SPHERE:
@@ -412,7 +497,7 @@ btCollisionShape* convertURDFToCollisionShape(const UrdfCollision* collision, co
 			btScalar radius = collision->m_geometry.m_sphereRadius;
 			btSphereShape* sphereShape = new btSphereShape(radius);
             shape = sphereShape;
-			shape ->setMargin(0.001);
+			shape ->setMargin(gUrdfDefaultCollisionMargin);
             break;
 
             break;
@@ -467,7 +552,19 @@ btCollisionShape* convertURDFToCollisionShape(const UrdfCollision* collision, co
 						{
                             case FILE_OBJ:
                             {
-                                glmesh = LoadMeshFromObj(fullPath,collisionPathPrefix);
+								if (collision->m_flags & URDF_FORCE_CONCAVE_TRIMESH)
+								{
+									glmesh = LoadMeshFromObj(fullPath, collisionPathPrefix);
+								}
+								else
+								{
+									std::vector<tinyobj::shape_t> shapes;
+									std::string err = tinyobj::LoadObj(shapes, fullPath, collisionPathPrefix);
+									//create a convex hull for each shape, and store it in a btCompoundShape
+
+									shape = createConvexHullFromShapes(shapes, collision->m_geometry.m_meshScale);
+									return shape;
+								}
                                 break;
                             }
 						case FILE_STL:
@@ -577,13 +674,30 @@ btCollisionShape* convertURDFToCollisionShape(const UrdfCollision* collision, co
                                            glmesh->m_vertices->at(i).xyzw[1]*collision->m_geometry.m_meshScale[1],
                                            glmesh->m_vertices->at(i).xyzw[2]*collision->m_geometry.m_meshScale[2]));
 							}
-							//btConvexHullShape* cylZShape = new btConvexHullShape(&glmesh->m_vertices->at(0).xyzw[0], glmesh->m_numvertices, sizeof(GLInstanceVertex));
-							btConvexHullShape* cylZShape = new btConvexHullShape(&convertedVerts[0].getX(), convertedVerts.size(), sizeof(btVector3));
-							//cylZShape->initializePolyhedralFeatures();
-							//btVector3 halfExtents(cyl->radius,cyl->radius,cyl->length/2.);
-							//btCylinderShapeZ* cylZShape = new btCylinderShapeZ(halfExtents);
-							cylZShape->setMargin(0.001);
-							shape = cylZShape;
+							
+							if (collision->m_flags & URDF_FORCE_CONCAVE_TRIMESH)
+							{
+								btTriangleMesh* meshInterface = new btTriangleMesh();
+								for (int i=0;i<glmesh->m_numIndices/3;i++)
+								{
+									float* v0 = glmesh->m_vertices->at(glmesh->m_indices->at(i*3)).xyzw;
+									float* v1 = glmesh->m_vertices->at(glmesh->m_indices->at(i*3+1)).xyzw;
+									float* v2 = glmesh->m_vertices->at(glmesh->m_indices->at(i*3+2)).xyzw;
+									meshInterface->addTriangle(btVector3(v0[0],v0[1],v0[2]),
+																btVector3(v1[0],v1[1],v1[2]),
+															btVector3(v2[0],v2[1],v2[2]));
+								}
+								
+								btBvhTriangleMeshShape* trimesh = new btBvhTriangleMeshShape(meshInterface,true,true);
+								shape = trimesh;
+							} else
+							{
+								btConvexHullShape* convexHull = new btConvexHullShape(&convertedVerts[0].getX(), convertedVerts.size(), sizeof(btVector3));
+								convexHull->optimizeConvexHull();
+								//convexHull->initializePolyhedralFeatures();
+								convexHull->setMargin(gUrdfDefaultCollisionMargin);
+								shape = convexHull;
+							}
 						} else
 						{
 							b3Warning("issue extracting mesh from STL file %s\n", fullPath);
@@ -640,7 +754,7 @@ static void convertURDFToVisualShapeInternal(const UrdfVisual* visual, const cha
 			}
 
 			btConvexHullShape* cylZShape = new btConvexHullShape(&vertices[0].x(), vertices.size(), sizeof(btVector3));
-			cylZShape->setMargin(0.001);
+			cylZShape->setMargin(gUrdfDefaultCollisionMargin);
 			convexColShape = cylZShape;
 			break;
 		}
@@ -652,7 +766,7 @@ static void convertURDFToVisualShapeInternal(const UrdfVisual* visual, const cha
 			btBoxShape* boxShape = new btBoxShape(extents*0.5f);
 			//btConvexShape* boxShape = new btConeShapeX(extents[2]*0.5,extents[0]*0.5);
 			convexColShape = boxShape;
-			convexColShape->setMargin(0.001);
+			convexColShape->setMargin(gUrdfDefaultCollisionMargin);
 			break;
 		}
 		case URDF_GEOM_SPHERE:
@@ -660,7 +774,7 @@ static void convertURDFToVisualShapeInternal(const UrdfVisual* visual, const cha
 			btScalar radius = visual->m_geometry.m_sphereRadius;
 			btSphereShape* sphereShape = new btSphereShape(radius);
 			convexColShape = sphereShape;
-			convexColShape->setMargin(0.001);
+			convexColShape->setMargin(gUrdfDefaultCollisionMargin);
 			break;
 
 			break;
@@ -1001,7 +1115,7 @@ int BulletURDFImporter::convertLinkVisualShapes(int linkIndex, const char* pathP
 	//delete textures
 	for (int i=0;i<textures.size();i++)
 	{
-		delete textures[i].textureData;
+		free( textures[i].textureData);
 	}
 	return graphicsIndex;
 }
@@ -1058,7 +1172,7 @@ btCollisionShape* BulletURDFImporter::getAllocatedCollisionShape(int index)
     btCompoundShape* compoundShape = new btCompoundShape();
     m_data->m_allocatedCollisionShapes.push_back(compoundShape);
     
-    compoundShape->setMargin(0.001);
+    compoundShape->setMargin(gUrdfDefaultCollisionMargin);
 	UrdfLink* const* linkPtr = m_data->m_urdfParser.getModel().m_links.getAtIndex(linkIndex);
 	btAssert(linkPtr);
 	if (linkPtr)

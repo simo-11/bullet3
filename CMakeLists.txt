@@ -9,6 +9,10 @@ SET(BULLET_VERSION 2.85)
 
 IF(COMMAND cmake_policy)
    cmake_policy(SET CMP0003 NEW)
+   if(POLICY CMP0042)
+      # Enable MACOSX_RPATH by default.
+      cmake_policy(SET CMP0042 NEW)
+   endif(POLICY CMP0042)
 ENDIF(COMMAND cmake_policy)
 
 
@@ -194,11 +198,28 @@ ENDIF()
 
 OPTION(BUILD_BULLET3 "Set when you want to build Bullet 3" ON)
 
-FIND_PACKAGE(PythonLibs)
 OPTION(BUILD_PYBULLET "Set when you want to build pybullet (experimental Python bindings for Bullet)" OFF)
 
 
 IF(BUILD_PYBULLET)
+
+	FIND_PACKAGE(PythonLibs)
+
+	OPTION(BUILD_PYBULLET_NUMPY "Set when you want to build pybullet with NumPy support" OFF)
+
+	IF(BUILD_PYBULLET_NUMPY)	
+		set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_LIST_DIR}/build3/cmake)
+		#include(FindNumPy)
+		FIND_PACKAGE(NumPy)
+		if (PYTHON_NUMPY_FOUND)
+			message("NumPy found")
+			add_definitions(-DPYBULLET_USE_NUMPY)
+		else()
+			message("NumPy not found")
+		endif()
+	ENDIF()
+	OPTION(BUILD_PYBULLET "Set when you want to build pybullet (experimental Python bindings for Bullet)" OFF)
+
 	IF(WIN32)
 		SET(BUILD_SHARED_LIBS OFF CACHE BOOL "Shared Libs" FORCE)
 	ELSE(WIN32)

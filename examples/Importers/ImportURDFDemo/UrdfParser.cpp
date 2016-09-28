@@ -489,6 +489,9 @@ bool UrdfParser::parseCollision(UrdfCollision& collision, TiXmlElement* config, 
 	if (name_char)
 		collision.m_name = name_char;
 	
+	const char *concave_char = config->Attribute("concave");
+	if (concave_char)
+		collision.m_flags |= URDF_FORCE_CONCAVE_TRIMESH;
 	
 	return true;
 }
@@ -669,7 +672,28 @@ bool UrdfParser::parseLink(UrdfModel& model, UrdfLink& link, TiXmlElement *confi
                   }
               }
           }
-
+          {
+              TiXmlElement *spinning_xml = ci->FirstChildElement("spinning_friction");
+              if (spinning_xml)
+              {
+                  if (m_parseSDF)
+                  {
+                      link.m_contactInfo.m_spinningFriction = urdfLexicalCast<double>(spinning_xml->GetText());
+                      link.m_contactInfo.m_flags |= URDF_CONTACT_HAS_SPINNING_FRICTION;
+                  } else
+                  {
+                      if (!spinning_xml->Attribute("value"))
+                      {
+                          logger->reportError("Link/contact: spinning friction element must have value attribute");
+                          return false;
+                      }
+                      
+                      link.m_contactInfo.m_spinningFriction = urdfLexicalCast<double>(spinning_xml->Attribute("value"));
+                      link.m_contactInfo.m_flags |= URDF_CONTACT_HAS_SPINNING_FRICTION;
+                      
+                  }
+              }
+          }
            {
            
               TiXmlElement *stiffness_xml = ci->FirstChildElement("stiffness");
@@ -792,7 +816,7 @@ bool UrdfParser::parseLink(UrdfModel& model, UrdfLink& link, TiXmlElement *confi
 bool UrdfParser::parseJointLimits(UrdfJoint& joint, TiXmlElement* config, ErrorLogger* logger)
 {
 	joint.m_lowerLimit = 0.f;
-	joint.m_upperLimit = 0.f;
+	joint.m_upperLimit = -1.f;
 	joint.m_effortLimit = 0.f;
 	joint.m_velocityLimit = 0.f;
 	joint.m_jointDamping = 0.f;
@@ -1033,12 +1057,15 @@ bool UrdfParser::parseJoint(UrdfJoint& joint, TiXmlElement *config, ErrorLogger*
                 TiXmlElement *limit_xml = axis_xml->FirstChildElement("limit");
                 if (limit_xml)
                 {
-                    if (!parseJointLimits(joint, limit_xml,logger))
-                    {
-                        logger->reportError("Could not parse limit element for joint:");
-                        logger->reportError(joint.m_name.c_str());
-                        return false;
-                    }
+					if (joint.m_type != URDFContinuousJoint)
+					{
+						if (!parseJointLimits(joint, limit_xml,logger))
+						{
+							logger->reportError("Could not parse limit element for joint:");
+							logger->reportError(joint.m_name.c_str());
+							return false;
+						}
+					}
                 }
                 else if (joint.m_type == URDFRevoluteJoint)
                 {

@@ -223,6 +223,7 @@ enum EnumSimParamUpdateFlags
 	SIM_PARAM_UPDATE_NUM_SOLVER_ITERATIONS=4,	
 	SIM_PARAM_UPDATE_NUM_SIMULATION_SUB_STEPS=8,
 	SIM_PARAM_UPDATE_REAL_TIME_SIMULATION = 16,
+	SIM_PARAM_UPDATE_DEFAULT_CONTACT_ERP=32
 };
 
 ///Controlling a robot involves sending the desired state to its joint motor controllers.
@@ -234,6 +235,7 @@ struct SendPhysicsSimulationParameters
 	int m_numSimulationSubSteps;
 	int m_numSolverIterations;
 	bool m_allowRealTimeSimulation;
+	double m_defaultContactERP;
 };
 
 struct RequestActualStateArgs
@@ -372,6 +374,46 @@ struct CalculateInverseDynamicsResultArgs
 	double m_jointForces[MAX_DEGREE_OF_FREEDOM];
 };
 
+struct CalculateJacobianArgs
+{
+    int m_bodyUniqueId;
+    int m_linkIndex;
+    double m_localPosition[3];
+    double m_jointPositionsQ[MAX_DEGREE_OF_FREEDOM];
+    double m_jointVelocitiesQdot[MAX_DEGREE_OF_FREEDOM];
+    double m_jointAccelerations[MAX_DEGREE_OF_FREEDOM];
+};
+
+struct CalculateJacobianResultArgs
+{
+    int m_dofCount;
+    double m_linearJacobian[3*MAX_DEGREE_OF_FREEDOM];
+    double m_angularJacobian[3*MAX_DEGREE_OF_FREEDOM];
+};
+
+enum EnumCalculateInverseKinematicsFlags
+{
+    IK_HAS_TARGET_POSITION=1,
+	IK_HAS_TARGET_ORIENTATION=2,
+    //IK_HAS_CURRENT_JOINT_POSITIONS=4,//not used yet
+};
+
+struct CalculateInverseKinematicsArgs
+{
+	int m_bodyUniqueId;
+//	double m_jointPositionsQ[MAX_DEGREE_OF_FREEDOM];
+	double m_targetPosition[3];
+	double m_targetOrientation[4];//orientation represented as quaternion, x,y,z,w
+	int m_endEffectorLinkIndex;
+};
+
+struct CalculateInverseKinematicsResultArgs
+{
+	int m_bodyUniqueId;
+	int m_dofCount;
+	double m_jointPositions[MAX_DEGREE_OF_FREEDOM];
+};
+
 struct CreateJointArgs
 {
     int m_parentBodyIndex;
@@ -411,8 +453,10 @@ struct SharedMemoryCommand
 		struct PickBodyArgs m_pickBodyArguments;
         struct ExternalForceArgs m_externalForceArguments;
 		struct CalculateInverseDynamicsArgs m_calculateInverseDynamicsArguments;
+        struct CalculateJacobianArgs m_calculateJacobianArguments;
         struct CreateJointArgs m_createJointArguments;
         struct RequestContactDataArgs m_requestContactPointArguments;
+		struct CalculateInverseKinematicsArgs m_calculateInverseKinematicsArguments;
     };
 };
 
@@ -444,7 +488,9 @@ struct SharedMemoryStatus
 		struct SendPixelDataArgs m_sendPixelDataArguments;
 		struct RigidBodyCreateArgs m_rigidBodyCreateArgs;
 		struct CalculateInverseDynamicsResultArgs m_inverseDynamicsResultArgs;
+        struct CalculateJacobianResultArgs m_jacobianResultArgs;
 		struct SendContactDataArgs m_sendContactPointArgs;
+		struct CalculateInverseKinematicsResultArgs m_inverseKinematicsResultArgs;
 	};
 };
 

@@ -50,6 +50,7 @@ struct b3RobotSimLoadFileArgs
 	}
 };
 
+
 struct b3RobotSimLoadFileResults
 {
 	b3AlignedObjectArray<int> m_uniqueObjectIds;
@@ -81,6 +82,42 @@ struct b3JointMotorArgs
 	}
 };
 
+enum b3InverseKinematicsFlags
+{
+	B3_HAS_IK_TARGET_ORIENTATION=1,
+};
+
+struct b3RobotSimInverseKinematicArgs
+{
+	int m_bodyUniqueId;
+//	double* m_currentJointPositions;
+//	int m_numPositions;
+	double m_endEffectorTargetPosition[3];
+	double m_endEffectorTargetOrientation[4];
+    int m_endEffectorLinkIndex;
+	int m_flags;
+
+	b3RobotSimInverseKinematicArgs()
+		:m_bodyUniqueId(-1),
+		m_endEffectorLinkIndex(-1),
+		m_flags(0)
+	{
+		m_endEffectorTargetPosition[0]=0;
+		m_endEffectorTargetPosition[1]=0;
+		m_endEffectorTargetPosition[2]=0;
+
+		m_endEffectorTargetOrientation[0]=0;
+		m_endEffectorTargetOrientation[1]=0;
+		m_endEffectorTargetOrientation[2]=0;
+		m_endEffectorTargetOrientation[3]=1;
+	}
+};
+
+struct b3RobotSimInverseKinematicsResults
+{
+	int m_bodyUniqueId;
+	b3AlignedObjectArray<double> m_calculatedJointPositions;
+};
 
 class b3RobotSimAPI
 {
@@ -113,8 +150,14 @@ public:
     
     void setNumSimulationSubSteps(int numSubSteps);
 
+	bool calculateInverseKinematics(const struct b3RobotSimInverseKinematicArgs& args, struct b3RobotSimInverseKinematicsResults& results);
+
 	void renderScene();
 	void debugDraw(int debugDrawMode);
+    
+    void getBodyJacobian(int bodyUniqueId, int linkIndex, const double* localPosition, const double* jointPositions, const double* jointVelocities, const double* jointAccelerations, double* linearJacobian, double* angularJacobian);
+    
+    void getLinkState(int bodyUniqueId, int linkIndex, double* worldPosition, double* worldOrientation);
 };
 
 #endif //B3_ROBOT_SIM_API_H

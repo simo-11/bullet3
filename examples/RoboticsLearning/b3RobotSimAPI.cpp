@@ -469,6 +469,55 @@ void b3RobotSimAPI::setNumSimulationSubSteps(int numSubSteps)
     b3Assert(b3GetStatusType(statusHandle)==CMD_CLIENT_COMMAND_COMPLETED);
 }
 
+/*
+b3SharedMemoryCommandHandle	b3CalculateInverseKinematicsCommandInit(b3PhysicsClientHandle physClient, int bodyIndex,
+	const double* jointPositionsQ, double targetPosition[3]);
+
+int b3GetStatusInverseKinematicsJointPositions(b3SharedMemoryStatusHandle statusHandle,
+	int* bodyUniqueId,
+	int* dofCount,
+	double* jointPositions);
+*/
+bool b3RobotSimAPI::calculateInverseKinematics(const struct b3RobotSimInverseKinematicArgs& args, struct b3RobotSimInverseKinematicsResults& results)
+{
+	btAssert(args.m_endEffectorLinkIndex>=0);
+	btAssert(args.m_bodyUniqueId>=0);
+	
+
+	b3SharedMemoryCommandHandle command = b3CalculateInverseKinematicsCommandInit(m_data->m_physicsClient,args.m_bodyUniqueId);
+	if (args.m_flags & B3_HAS_IK_TARGET_ORIENTATION)
+	{
+		b3CalculateInverseKinematicsAddTargetPositionWithOrientation(command,args.m_endEffectorLinkIndex,args.m_endEffectorTargetPosition,args.m_endEffectorTargetOrientation);
+	} else
+	{
+		b3CalculateInverseKinematicsAddTargetPurePosition(command,args.m_endEffectorLinkIndex,args.m_endEffectorTargetPosition);
+	}
+	
+
+    b3SharedMemoryStatusHandle statusHandle;
+	statusHandle = b3SubmitClientCommandAndWaitStatus(m_data->m_physicsClient, command);
+
+	
+
+    int numPos=0;
+    
+	bool result = b3GetStatusInverseKinematicsJointPositions(statusHandle,
+		&results.m_bodyUniqueId,
+		&numPos,
+		0);
+    if (result && numPos)
+    {
+        results.m_calculatedJointPositions.resize(numPos);
+        result = b3GetStatusInverseKinematicsJointPositions(statusHandle,
+                                                                 &results.m_bodyUniqueId,
+                                                                 &numPos,
+                                &results.m_calculatedJointPositions[0]);
+        
+    }
+	return result;
+}
+
+
 b3RobotSimAPI::~b3RobotSimAPI()
 {
 	delete m_data;
@@ -911,4 +960,34 @@ void b3RobotSimAPI::renderScene()
 		m_data->m_clientServerDirect->renderScene();
 	}
 	m_data->m_physicsServer.renderScene();
+}
+
+void b3RobotSimAPI::getBodyJacobian(int bodyUniqueId, int linkIndex, const double* localPosition, const double* jointPositions, const double* jointVelocities, const double* jointAccelerations, double* linearJacobian, double* angularJacobian)
+{
+    b3SharedMemoryCommandHandle command = b3CalculateJacobianCommandInit(m_data->m_physicsClient, bodyUniqueId, linkIndex, localPosition, jointPositions, jointVelocities, jointAccelerations);
+    b3SharedMemoryStatusHandle statusHandle = b3SubmitClientCommandAndWaitStatus(m_data->m_physicsClient, command);
+    
+    if (b3GetStatusType(statusHandle) == CMD_CALCULATED_JACOBIAN_COMPLETED)
+    {
+        b3GetStatusJacobian(statusHandle, linearJacobian, angularJacobian);
+    }
+}
+
+void b3RobotSimAPI::getLinkState(int bodyUniqueId, int linkIndex, double* worldPosition, double* worldOrientation)
+{
+    b3SharedMemoryCommandHandle command = b3RequestActualStateCommandInit(m_data->m_physicsClient,bodyUniqueId);
+    b3SharedMemoryStatusHandle statusHandle = b3SubmitClientCommandAndWaitStatus(m_data->m_physicsClient, command);
+    
+    if (b3GetStatusType(statusHandle) == CMD_ACTUAL_STATE_UPDATE_COMPLETED)
+    {
+        b3LinkState linkState;
+        b3GetLinkState(m_data->m_physicsClient, statusHandle, linkIndex, &linkState);
+        worldPosition[0] = linkState.m_worldPosition[0];
+        worldPosition[1] = linkState.m_worldPosition[1];
+        worldPosition[2] = linkState.m_worldPosition[2];
+        worldOrientation[0] = linkState.m_worldOrientation[0];
+        worldOrientation[1] = linkState.m_worldOrientation[1];
+        worldOrientation[2] = linkState.m_worldOrientation[2];
+        worldOrientation[3] = linkState.m_worldOrientation[3];
+    }
 }

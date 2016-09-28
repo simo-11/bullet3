@@ -5,9 +5,16 @@ INCLUDE_DIRECTORIES(
 		${BULLET_PHYSICS_SOURCE_DIR}/examples/ThirdPartyLibs
 		${PYTHON_INCLUDE_DIRS}
   )
+IF(BUILD_PYBULLET_NUMPY)
+	INCLUDE_DIRECTORIES(
+		${PYTHON_NUMPY_INCLUDE_DIR}
+	)
+ENDIF()
 
 SET(pybullet_SRCS
 	pybullet.c
+		../../examples/SharedMemory/IKTrajectoryHelper.cpp
+		../../examples/SharedMemory/IKTrajectoryHelper.h
 		../../examples/ExampleBrowser/InProcessExampleBrowser.cpp
     ../../examples/SharedMemory/TinyRendererVisualShapeConverter.cpp
 		../../examples/SharedMemory/TinyRendererVisualShapeConverter.h
@@ -76,6 +83,6 @@ ADD_LIBRARY(pybullet SHARED ${pybullet_SRCS})
 SET_TARGET_PROPERTIES(pybullet PROPERTIES VERSION ${BULLET_VERSION})
 SET_TARGET_PROPERTIES(pybullet PROPERTIES SOVERSION ${BULLET_VERSION})
 
-TARGET_LINK_LIBRARIES(pybullet BulletExampleBrowserLib BulletFileLoader BulletWorldImporter BulletSoftBody BulletDynamics BulletCollision BulletInverseDynamicsUtils BulletInverseDynamics LinearMath OpenGLWindow gwen Bullet3Common ${PYTHON_LIBRARIES})
+TARGET_LINK_LIBRARIES(pybullet BulletExampleBrowserLib BulletFileLoader BulletWorldImporter BulletSoftBody BulletDynamics BulletCollision BulletInverseDynamicsUtils BulletInverseDynamics LinearMath OpenGLWindow gwen BussIK Bullet3Common ${PYTHON_LIBRARIES})
 
 
