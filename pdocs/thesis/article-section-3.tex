@@ -353,7 +353,13 @@ Figure \ref{fig:charpy} shows screenshot from simulation.
 
 \subsection{Demolisher}
 Demolisher is  collection of possible scenarios that can be added to games to provide ductile joints between
-rigid bodies.  Simulation can be done in real time on modest hardware. 
+rigid bodies.  Rigid concrete bodies are connected by steel enforcement.
+Concrete density is $2000 \frac{kg}{m^3}$ and steel density is $7800 \frac{kg}{m^3}$. 
+Steel is assumed to handle load. Yield stress of steel is 200 MPa.
+Gravity is $10 \frac{m}{s^2}$. Simulation step is $\frac{1}{60} s$ and 10 
+iterations are done for single step. Multiple simulation steps are done for each render if needed.
+
+Simulation can be done in real time on modest hardware. 
 Figure \ref{fig:demolisher} shows three screenshots from simulation.
 
 \begin{figure}[htb!]

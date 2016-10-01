@@ -9,8 +9,27 @@ simulations without significant extra work.
 For gaming purposes presented method works 
 best in scenarios where connected parts are relatively heavy. This allows normal 
 integration timestep to be used without stability issues. 
-This kind of metodology also opens large area of combining old structural analysis
-methods to modern simulation frameworks.
+
+This kind of metodology also opens large area of combining  structural analysis
+methods to realtime simulation frameworks.
+Handling of significant axial and shear forces and moments at same time
+is one possible area of further studies.
+Handling of more complex structures is already being studied by author.
+
+There is also work to be done in the area of performance optimization.
+One possible area is reusing once calculated values if memory usage is not highly limited.
+This could done e.g. when dealing with high frequency modes.
+Another area is usage of graphics processing unit (GPU) for calculation.
+\bullet\ already has already experimental GPU pipeline but most constraint types are not 
+yet supported. GPU support was one reason for selecting
+it to be used in this study
+
+Integration to 3D modelling and animation software products 
+should also be solved before we can expect to
+see realistic plasticity in main stream games. 
+\bullet\ is already integrated into several ones and it was another significant reason for selecting
+it to be used in this study.
+
 As already noted in \cite{cg1988}, the modeling of inelastic deformation
 remains open for further exploration in the context of computer graphics.
 
