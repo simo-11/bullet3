@@ -129,6 +129,10 @@ public:
 	void ComputeSVD( MatrixRmn& U, VectorRn& w, MatrixRmn& V ) const;
 	// Good for debugging SVD computations (I recommend this be used for any new application to check for bugs/instability).
 	bool DebugCheckSVD( const MatrixRmn& U, const VectorRn& w, const MatrixRmn& V ) const;
+    // Compute inverse of a matrix, the result is written in R
+    void ComputeInverse( MatrixRmn& R) const;
+    // Debug matrix inverse computation
+    bool DebugCheckInverse( const MatrixRmn& MInv ) const;
 
 	// Some useful routines for experts who understand the inner workings of these classes.
 	inline static double DotArray( long length, const double* ptrA, long strideA, const double* ptrB, long strideB );
@@ -181,7 +185,7 @@ inline MatrixRmn::MatrixRmn( long numRows, long numCols )
 
 inline MatrixRmn::~MatrixRmn() 
 {
-	delete x;
+	delete[] x;
 }
 
 // Resize.  
@@ -191,7 +195,7 @@ inline void MatrixRmn::SetSize( long numRows, long numCols )
 	assert ( numRows>0 && numCols>0 );
 	long newLength = numRows*numCols;
 	if ( newLength>AllocSize ) {
-		delete x;
+		delete[] x;
 		AllocSize = Max(newLength, AllocSize<<1);
 		x = new double[AllocSize];
 	}
