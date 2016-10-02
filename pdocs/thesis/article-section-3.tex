@@ -34,14 +34,14 @@ Cross section is one square meter.
 Constraint is set so that connecting frame is at top of block. 
 In this case frame could be anywhere but if multiple bodies are involved, connecting frame must be defined
 so that it reflects scenario under investigation.
-Concrete density is $2000 \frac{kg}{m^3}$ and steel density is $7800 \frac{kg}{m^3}$. 
+Concrete density is $2000\ \frac{kg}{m^3}$ and steel density is $7800\ \frac{kg}{m^3}$. 
 Steel is assumed to handle load in elastic-plastic case. Yield stress of steel is 200 MPa.
-Gravity is $10 \frac{m}{s^2}$. Simulation step is $\frac{1}{60} s$ and 10 
+Gravity is $10\ \frac{m}{s^2}$. Simulation step is $\frac{1}{60}\ s$ and 10 
 iterations are done for single step.
-Body is 1.5 meters above rigid ground. In unconstrained case body will hit hit ground at t=0.548 s 
+Body is 1.5 meters above rigid ground. In unconstrained case body will hit hit ground at t = 0.548 s 
 ($\sqrt{2 \cdot 1.5 / 10}$).
 
-Single simulation step is done using following substeps. 
+Single simulation step is performed using following substeps. 
 In this work, changes are made only to constraint setup and update actions.
 \begin{enumerate}
 \item Apply gravity to each non static body. 
@@ -135,6 +135,10 @@ After few steps location and position stabilize although internally calculation 
 until body is deactivated.
 
 \begin {table}[htb!]
+\caption {Simulation values for unconstrained case. 
+For internal contact values typical values are shown
+as number of contacts and values at contact points are different.} 
+\label{tab:freeBlockValues} 
 \begin{center}
 \begin{tabular}{|l| l|l| l|l|l|l|l|}
 \hline
@@ -154,10 +158,6 @@ until body is deactivated.
 0.917 &  -1.500 & & & & & -0.001 & 1000 \\  \hline
 \end {tabular}
 \end{center}
-\caption {Simulation values for unconstrained case. 
-For internal contact values typical values are shown
-as number of contacts and values at contact points are different.} 
-\label{tab:freeBlockValues} 
 \end {table}
 
 Actual values for unconstrained case with continuous collision detection (ccd) using 1.5 
@@ -169,6 +169,8 @@ It should be noted that in general ccd sphere should not extend actual body as
 premature contacts are created if collision takes place in those regions.
 
 \begin {table}[htb!]
+\caption {Simulation values for unconstrained case with continuous collision detection. } 
+\label{tab:freeBlockValuesWithCcd} 
 \begin{center}
 \begin{tabular}{|l| l|l| l|l|l|l|l|}
 \hline
@@ -184,8 +186,6 @@ premature contacts are created if collision takes place in those regions.
 0.600 &  -1.500 & 0.17 & 0 & 0 & 600  & 0 & 1040 \\  \hline
 \end {tabular}
 \end{center}
-\caption {Simulation values for unconstrained case with continuous collision detection. } 
-\label{tab:freeBlockValuesWithCcd} 
 \end {table}
 
 Values for fixed constraint are shown in table
@@ -193,6 +193,8 @@ Values for fixed constraint are shown in table
 about 20 \% in each step as requested by using erp value 0.2.
 
 \begin {table}[htb!]
+\caption {Constraint parameter values for fixed constraint} 
+\label{tab:fixedBlockValues} 
 \begin{center}
 \begin{tabular}{|l|l| l| l|l|l|l|}
 \hline
@@ -208,7 +210,6 @@ about 20 \% in each step as requested by using erp value 0.2.
 0.35... & 0 &-0.17 & $\approx$ 0 & -1000 &0.0 & 1000 \\  \hline
 \end {tabular}
 \end{center}
-\caption {Constraint parameter values for fixed constraint} \label{tab:fixedBlockValues} 
 \end {table}
 
 There are currently two alternative six-dof-spring constraint implementations in \bullet\ and 
@@ -221,6 +222,8 @@ Enabled springs and motors add one row and
 limits add one if upper and lower are same and two if both upper and lower limits are defined.
 
 \begin {table}[htb!]
+\caption {Selected constraint parameters for elastic-plastic constraint 2}
+\label{tab:ep2Parameters} 
 \begin{center}
 \begin{tabular}{|l|p{10cm}|}
 \hline
@@ -249,7 +252,6 @@ currentLimit & describes state of constraint \newline
 
 \end {tabular}
 \end{center}
-\caption {Selected constraint parameters for elastic-plastic constraint 2} \label{tab:ep2Parameters} 
 \end {table}
 
 
@@ -259,6 +261,8 @@ gains enough kinetic energy so that higher impulses are needed in few following 
 This causes plastic strain during next three steps.
 
 \begin {table}[htb!]
+\caption {Constraint parameter values for elastic-plastic constraint} 
+\label{tab:epBlockValues} 
 \begin{center}
 \begin{tabular}{|l|l| l| l|l|l|l|l|}
 \hline
@@ -275,7 +279,6 @@ This causes plastic strain during next three steps.
 0.083... & -0.0056  & -0.17 & 0 & -1000 &  0.0&  1000 & 0.004\\  \hline
 \end {tabular}
 \end{center}
-\caption {Constraint parameter values for elastic-plastic constraint} \label{tab:epBlockValues} 
 \end {table}
 
 Six-dof-spring constraint 2 has optional feature to avoid unstability by automatically softening constraint
@@ -293,6 +296,8 @@ velocity based error instead of force provided by spring.
 In this scenario object behaves as depicted in table \ref{tab:ep2BlockValues} i.e. it does not move at all.
 
 \begin {table}[htb!]
+\caption {Constraint parameter values for elastic-plastic constraint 2} 
+\label{tab:ep2BlockValues} 
 \begin{center}
 \begin{tabular}{|l|l| l| l|l|l|l|l|}
 \hline
@@ -305,12 +310,11 @@ In this scenario object behaves as depicted in table \ref{tab:ep2BlockValues} i.
 0.017... &  0 & -0.17  & 0 & -1000 & 0       & 1000 & 0 \\  \hline
 \end {tabular}
 \end{center}
-\caption {Constraint parameter values for elastic-plastic constraint 2} \label{tab:ep2BlockValues} 
 \end {table}
 
 \subsection{Charpy impact test}
 Simulation of Charpy impact test was used to benchmark approach in more complicated scenario. 
-Material is steel. Density is 7800 $\frac{kg}{m^{3}}$. Young’s modulus is 200 GPa.
+Material is steel and density is 7800 $\frac{kg}{m^{3}}$. Young’s modulus is 200 GPa.
 Specimen dimensions are 10x10x55 mm with 2 mm notch in middle which is taken into account in calculations.
 Support anvils initially have 40 mm open space between them. Their width is 40 mm. 
 Hammer is 0.5 m wide and 0.25 m high, thickness is 0.02 m. Mass is 19.5 kg.
@@ -330,6 +334,8 @@ Table \ref{tab:ep2ts} shows energy loss for few timesteps as example to demonstr
 using  elastic-plastic constraint 2.
 
 \begin {table}[htb!]
+\caption {Energy loss for few timesteps}
+\label{tab:ep2ts} 
 \begin{center}
 \begin{tabular}{| c| c|l|}
 \hline
@@ -339,7 +345,6 @@ using  elastic-plastic constraint 2.
  0.05 &  150 & \\ \hline
 \end {tabular}
 \end{center}
-\caption {Energy loss for few timesteps} \label{tab:ep2ts} 
 \end {table}
 
 Figure \ref{fig:charpy} shows screenshot from simulation.
@@ -354,9 +359,9 @@ Figure \ref{fig:charpy} shows screenshot from simulation.
 \subsection{Demolisher}
 Demolisher is  collection of possible scenarios that can be added to games to provide ductile joints between
 rigid bodies.  Rigid concrete bodies are connected by steel enforcement.
-Concrete density is $2000 \frac{kg}{m^3}$ and steel density is $7800 \frac{kg}{m^3}$. 
+Concrete density is 2000 $\frac{kg}{m^3}$ and steel density is 7800 $\frac{kg}{m^3}$. 
 Steel is assumed to handle load. Yield stress of steel is 200 MPa.
-Gravity is $10 \frac{m}{s^2}$. Simulation step is $\frac{1}{60} s$ and 10 
+Gravity is 10  $\frac{m}{s^2}$. Simulation step is $\frac{1}{60} $ s and 10 
 iterations are done for single step. Multiple simulation steps are done for each render if needed.
 
 Simulation can be done in real time on modest hardware. 

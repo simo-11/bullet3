@@ -84,6 +84,8 @@ With this formulation, simplified scenario can be simulated.
 
 % pdf page 33, notation in typical ODEs
 \begin {table}[htb!]
+\caption {Nomenclature for equations of motion}
+\label{tab:eom}
 \begin{center}
 \begin{tabular}{|l| l|}
 \hline
@@ -145,7 +147,6 @@ $C$ & contact condition matrix  $ C \in \mathbb{R}^{6n \times 3K}$ \\ \hline
 $N$ & contact normal matrix  $ N \in \mathbb{R}^{3K \times K}$ \\ \hline
 \end {tabular}
 \end{center}
-\caption {Nomenclature for equations of motion} \label{tab:eom}
 \end {table}
 
 Friction in contacts and joint constraints can be handled in unified way by refactoring
@@ -192,6 +193,8 @@ joint constraint is applied.
 
 % pdf page 33, notation in typical ODEs
 \begin {table}[htb!]
+\caption {Additional terms  for generalized equations of motion}
+\label{tab:eom-g}
 \begin{center}
 \begin{tabular}{|l| l|}
 \hline
@@ -202,7 +205,6 @@ $J_{joint}$ & Jacobian matrix for joints  \\ \hline
 $\lambda_{joint}$ & vector of lagrange multipliers for joints  \\ \hline
 \end {tabular}
 \end{center}
-\caption {Additional terms  for generalized equations of motion} \label{tab:eom-g}
 \end {table}
 
 Constraint processing in \bullet\ is based on ODE, \cite{ode}.
@@ -230,6 +232,8 @@ Main parameters  and corresponding fields in \bullet\
  are described in Table \ref{tab:constraintParameters}.
 
 \begin {table}[htb!]
+\caption {Constraint parameters}
+\label{tab:constraintParameters} 
 \begin{center}
 \begin{tabular}{|c| l| l|}
 \hline
@@ -245,7 +249,6 @@ $\vec{l}$ & low limit for constraint force & m\_lowerLimit \\ \hline
 $\vec{h}$ & high limit for constraint force & m\_upperLimit \\ \hline
 \end {tabular}
 \end{center}
-\caption {Constraint parameters} \label{tab:constraintParameters} 
 \end {table}
 
 
@@ -335,14 +338,14 @@ surface of body
 \node[above] at (S) [align=center] {\large{$\sigma=f_y$}};
 \node[anchor=west] at (3,3) {
 \begin{tabular}{l}
-Under plastic load\\
+Under fully plastic load\\
 stress is at yield\\
 level over full\\
 cross section
 \end{tabular}
 };
 \end{tikzpicture}
-\caption{Axial stress distribution over cross section for bending under elastic and plastic loads.}
+\caption{Axial stress distribution over cross section for bending under elastic and fully plastic loads.}
 \label{fig:wp}
 \end{figure}
 
@@ -369,8 +372,8 @@ Q_{max}= \int_A \tau_y
 
 Maximum moments acting around axis perpendicular to $\vec{r}_{anc}^{\,i} $
 are integrals of perpdendicular distance 
-and yield stress $f_y$ as given for the moment around x-axis and,
-correspondingly, moment around z-axis.
+and yield stress $f_y$ as given for the moment around $x$-axis 
+and moment around $z$-axis, respectively.
 
 \begin{equation} \label{eq:Mx}
 M_{max}^x= \int_A z f_y
