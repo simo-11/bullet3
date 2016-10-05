@@ -6,14 +6,19 @@ traditional structural analysis and physics engines are reviewed and discussed.
 
 Velocity-based formulation is  popular within physics based game
 developers and film production teams.
- \citet[p.~45]{erleben.thesis} provides reasoning and theoretical details on why 
+%\citet[p.~45]{erleben.thesis} 
+\citet{erleben.thesis} 
+provides reasoning and theoretical details on why 
 velocity-based formulation is  popular in constraint-based rigid body simulation. 
 Main reason is that collision handling can be done without additional procedures.
 
 Background
-for velocity based formulation shown here is based on  \citet[p.~45-50]{erleben.thesis}.
+for velocity based formulation shown here is based on  
+\citet{erleben.thesis}.
+%\citet[p.~45-50]{erleben.thesis}.
 % pdf page 64
 In following section, these formulations will be clarified by simple example using \bullet\ implementation.
+
 Impulse $\vec{J}$
 in the time interval $\Delta t $ can we written as
 \begin{equation} \label{eq:impulseIntegral}
@@ -21,8 +26,8 @@ in the time interval $\Delta t $ can we written as
 \end{equation}
 where $\vec{f}_{true}(t)$ is force.
 
-Using Newton's second law of motion $\vec{F}=m\vec{a}$ one can solve for the velocity,
-$\vec{v}^{\Delta t}$
+Newton's second law of motion $\vec{F}=m\vec{a}$ one can solve for the velocity,
+$\vec{v}^{\Delta t}$ as
 \begin{equation} \label{eq:impulseIntegraWithNewton}
 \int_{0}^{\Delta t} m \frac{d\vec{v}}{dt}dt= \int_{0}^{\Delta t} \vec{f}_{true}(t)
 \end{equation}
@@ -32,9 +37,8 @@ m(\vec{v}^{\, \Delta t} - \vec{v}^{\, 0})=\vec{J}
 where superscripts denote time, i.e. ${\vec{v}}^{\Delta t}=\vec{v}(\Delta t)$.
 Next position can be found
 by integrating the velocity.
-Updates after each step can be summarized as Equation
- \ref{eq:eomL} for locations and  Equation 
-\ref{eq:eomV} for velocities. 
+Updates after each step can be summarized  for locations and  
+for velocities correspondingly as follows.
 
 \begin{equation} \label{eq:eomL} % pdf page 69
 \vec{s}^{\, t+\Delta t} = \vec{s}^{\, t}+\Delta t S \vec{u}^{\, t+\Delta t}
@@ -44,7 +48,8 @@ Updates after each step can be summarized as Equation
 \vec{u}^{\, t+\Delta t} = \vec{u}^{\, t}+\Delta t M^{-1}(C N \vec{f}^{\ t+\Delta t} + \vec{f}_{ext}) 
 \end{equation}
 
-Symbols are summarized in Table \ref{tab:eom} and Figure \ref{fig:eom-contact}.
+Symbols used in Equations \ref{eq:eomL} and \ref{eq:eomV}
+are summarized in Table \ref{tab:eom} and Figure \ref{fig:eom-contact}.
 Figure \ref{fig:eom-contact} describes collision of two bodies $B_1$ and $B_2$
 
 \begin{figure}[htb!]
@@ -74,12 +79,12 @@ $\vec{r}_i$  =  orientation of body i
 \label{fig:eom-contact}
 \end{figure}
 
-where $\vec{r}_i$ is orientation of body i,
-$\vec{p}_k $ is orientation of contact point k,
-$\vec{r}_{ik} $ is vector  between center of gravity of body i and contact point k
+where $\vec{r}_i$ is orientation of body $i$,
+$\vec{p}_k $ is orientation of contact point $k$,
+$\vec{r}_{ik} $ is vector  between center of gravity of body i and contact point $k$
 and
-$\vec{n}_{k}$ is contact normal for contact point k.
-With this formulation, simplified scenario can be simulated.
+$\vec{n}_{k}$ is contact normal for contact point $k$.
+By employing this formulation, simplified scenario can be simulated.
 
 
 % pdf page 33, notation in typical ODEs
@@ -150,7 +155,9 @@ $N$ & contact normal matrix  $ N \in \mathbb{R}^{3K \times K}$ \\ \hline
 \end {table}
 
 Friction in contacts and joint constraints can be handled in unified way by refactoring
-equation \ref{eq:eomV} to get \ref{eq:eomV2},  \citet[p.~66-67]{erleben.thesis}
+equation \ref{eq:eomV} as,  
+\citet{erleben.thesis}
+%\citet[p.~66-67]{erleben.thesis}
 \begin{equation} \label{eq:eomV2}
 \vec{u}^{\, t+\Delta t} = \vec{u}^{\, t}+\Delta t M^{-1}(
  J_{contact}^T \vec{\lambda}_{contact}
@@ -161,7 +168,7 @@ equation \ref{eq:eomV} to get \ref{eq:eomV2},  \citet[p.~66-67]{erleben.thesis}
 where jacobian terms $J_{contact}^T$ for joints are 
 derived by taking time derivates of kinematic constraints.
 
-Added symbols are summarized in Table
+Symbols used in Equation \ref{eq:eomV2} are summarized in Table
 \ref{tab:eom-g} and Figure \ref{fig:eom-joint}.
 Figure \ref{fig:eom-joint} shows terms needed for joint processing.
 
@@ -209,7 +216,9 @@ $\lambda_{joint}$ & vector of lagrange multipliers for joints  \\ \hline
 
 Constraint processing in \bullet\ is based on ODE, \cite{ode}.
 Mathematical background and detailed examples are available by \cite{ode.joints}.
-Joints are also discussed in detail in  \citet[p.~60-90]{erleben.thesis}.
+Joints are also discussed in detail in  
+\citet{erleben.thesis}.
+%\citet[p.~60-90]{erleben.thesis}.
 Equations \ref{eq:constraintEquation}, \ref{eq:lambdaLow} and
 \ref{eq:lambdaHigh} 
 are created for each constraint.
@@ -289,7 +298,8 @@ Typical engineering stress-strain curve of ductile steel is shown in Figure \ref
 
 where $\sigma$ is stress, $E$ is Youngs modulus and $f_y$ is yield stress.
 Engineering stress and strain mean that original dimensions are used in stress calculation,
-\citet[p.~108]{dowling}.
+\citet{dowling}.
+%\citet[p.~108]{dowling}.
 Stress-strain curve is not drawn to scale as elastic strain could not be seen as it is typically 0.001 to 0.005.
 
 In this work elastic-fully plastic material model is used in most scenarios.
@@ -302,7 +312,9 @@ of objects is not updated during analysis and thus engineering stress-strain pro
 be used.
 
 Strain hardening is taken into account in this work mainly by assuming that plasticity in bending
-expands, \citet[p.~672]{dowling}.
+expands, 
+\citet{dowling}.
+%\citet[p.~672]{dowling}.
 Material that starts to yield first is hardened and yielding moves slightly.
 This can be seen e.g. by bending paperclip. It does not break at low angles but can take few full bends. 
 
