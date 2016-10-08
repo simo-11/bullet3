@@ -7,7 +7,7 @@ well known Charpy impact test was selected to be used as primary scenario
 although it is against first two tips in \bullet Manual.
 
 \begin{itemize}
-\item Avoid very small and very larger collision shapes
+\item Avoid small and large collision shapes
 \item Avoid large mass ratios
 \end{itemize}
 
@@ -88,9 +88,9 @@ Arm and draft are not taken into account for mass and inertia calculation.
 Energy for whole system is calculated so that potential energy and kinetic energy are calculated in updateEnergy. 
 When hammer is resting in low position, energy is 64 J. 
 
-\subsubsection{Breaking of constraints between objects}
+\subsubsection{Breaking of constraints between bodies}
 For standard \bullet constraints breakingImpulseThreshold (BITh) can be defined. If impulse is larger than set limit constraint is activated. 
-This allows object breaking to be simulated with very cheap calculation. 
+This allows breaking to be simulated with fast calculation. 
 This method is too simplified for ductile material and developing more precise and realistic methods is main objective of this work.  
 
 \subsubsection{Timestep}
@@ -109,11 +109,11 @@ This is basic reference case without plasticity. Specimen should stop hammer.
 \subsection{Constraint with zero limits}
 In this case btGeneric6DofConstraint is used with high and low limits set to zero. 
 Constraint is made breakable by setting breakingImpulseThreshold.
-This is common technique to provide breakable objects in games and provides visually accetable results for brittle materials.
+This is common technique to provide breakable bodies in games and provides visually accetable results for brittle materials.
 
 \subsection{SpringConstraint}
 This shows how btGeneric6DofSpringConstraints act in case like this. 
-Specimen can absorb very little elastic energy so rotational spring constants are calculated using plastic state i.e.
+Specimen can absorb little elastic energy so rotational spring constants are calculated using plastic state i.e.
 $W=bh^2/4$ where h=b-0.002m and yield stress is used instead of Young’s modulus for rotational springs.
 
 \subsection{Spring2Constraint}
@@ -177,7 +177,7 @@ calculated in similar way as for case where upper limit equals lower limit, (m\_
 
 \section{Charpy impact test results using \bullet}
 \label{sec:bullet-charpy-results}
-Results are quite sensitive and obtained in February 2016 using following processes
+Results are sensitive and they were obtained in February 2016 using following processes
 \begin{itemize}
 \item single precision debug build is used
 \item sequential impulse constraint solver with 10 iterations is used
@@ -251,7 +251,7 @@ Unstable behaviour starts immediately at start of simulation and is triggered wi
 
 
 \subsection{Results for spring2Constraint}
-Results are quite similar as for springConstraint but automatic parameter tuning prevents unstable simulations.
+Results are similar as for springConstraint but automatic parameter tuning prevents unstable simulations.
 Energy loss is about 40 J.
 
 \subsection{Results for hinge constraint with motors}
@@ -269,7 +269,7 @@ Visual feedback is realistic as specimen keeps deformed shape as seen in figure 
 
 
 \subsection{Results for plasticHingeConstraint}
-Results are quite similar as for hinge constraint with motors. 
+Results are similar as for hinge constraint with motors. 
 Breaking point can be configured based on rotation angle which makes material behaviour more realistic.
 In figure \ref{fig:f6-results} maximum plastic rotation is limited to 1.5 and energy loss is about 95 J.
 
@@ -284,11 +284,11 @@ In figure \ref{fig:f6-results} maximum plastic rotation is limited to 1.5 and en
 
 
 \subsection{Results for elasticPlasticConstraint}
-Results are quite similar as for plasticHingeConstraint as this case is dominated by plastic bending.
+Results are similar as for plasticHingeConstraint as this case is dominated by plastic bending.
 Additional logic helps to avoid stablity issues.
 
 \subsection{Results for elasticPlastic2Constraint}
-Results are quite similar as for elasticPlasticConstraint and this constraint seems to best candidate for further development.
+Results are similar as for elasticPlasticConstraint and this constraint seems to best candidate for further development.
 Table \ref{tab:ep2ts} shows energy loss for few timesteps as example to demonstrate sensitivity of solution.
 
 \begin {table}[htb!]
@@ -311,7 +311,7 @@ Suggested methods for handling plasticity are well suited for cases where simula
 It requires only slightly more computational effort than methods that are used for simulation of brittle failures.
 Hinge constraint with motors method can be used without introducing any additional code to most existing dynamic engine
 as it is based on widely used motor-codes. 
-Additional features are quite simple to implement and make spring based constraints even more usable than currently by 
+Additional features are simple to implement and make spring based constraints even more usable than currently by 
 allowing stiff constraints to be used without instability.
 
 Suggested methods cannot at least currently be used if exact results are needed but are well suited for educational and entertainment scenarios.

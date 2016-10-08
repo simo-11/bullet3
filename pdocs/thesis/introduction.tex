@@ -3,8 +3,8 @@
 This work tries to invite structural engineers to take active part in development of more realistic physis engines.
 Current computer systems provide enough computing performance and efficient algorithms so collision detection and 
 rigid body dynamics can be handled in real time in most scenarios.
-Soft body dynamics in which  object are deformable is in many cases still too complicated for real time applications.
-Finite element method will probably replace other methods by providing general solution at some time but not in very near future.
+Soft body dynamics in which  bodies are deformable is in many cases still too complicated for real time applications.
+Finite element method will probably replace other methods by providing general solution at some time but not in near future.
 In this work focus is on method where rigid bodies are connected by constraints.
 
 
@@ -44,7 +44,7 @@ Structural analysis for advanced structures is nowadays typically done using fin
 analysis time is typically hours. Finite element method is already used in physics engines and usage will come 
 more widespread in future as more computing capacity and memory will be available.
 
-In this work all theories in area of structural analysis are quite old and e.g. 
+In this work all theories in area of structural analysis are old and e.g. 
 \cite{timoshenko} is typical reference. Main focus is on elastic and 
 linear plastic parts of stress-strain curve and elastic and plastic section modulus.
 
@@ -111,15 +111,15 @@ In \lut simulation of working machines has been active research area, e.g. \cite
 Physics engines cannot used in serious structural analysis but using structural analysis in physics engines is not rare.  
 E.g. \cite{Obrien:1999:GMA} used finite element model to analyze crack initiation and propagation.
 
-Already \cite{cg1988} used quite similar principles as in this work to handle plasticity and there are quite a few further
+Already \cite{cg1988} used similar principles as in this work to handle plasticity and there are a few further
 papers that cite \cite{cg1988}. E.g. following papers provide alternative solutions to similar kind of simulations as 
 are handled in this work 
 \begin{itemize}
-\item \cite{gibson1997survey} presents quite extensive study on deformable modelling in computer graphics
+\item \cite{gibson1997survey} presents extensive study on deformable modelling in computer graphics
 \item \cite{o2002graphical} provides excellent paper on ductile behaviour of material
 \item \cite{muller2004point} presents a method for modeling and animating of 
-elastic and plastic objects in realtime using point based animation
-\item \cite{irving2004invertible} introduces algortithm for  finite element simulation of elastoplastic solids with very 
+elastic and plastic bodies in realtime using point based animation
+\item \cite{irving2004invertible} introduces algortithm for  finite element simulation of elastoplastic solids with
 large deformations in reasonable time 
 \end{itemize}
 
@@ -159,11 +159,11 @@ Main requirements for software implementation can be summarized
 \end{itemize}
 
 Few decades ago software engineering and structural analysis were highly coupled
-and e.g. \cite{bathe} and \cite{cook} contain very detailed instructions on
+and e.g. \cite{bathe} and \cite{cook} contain detailed instructions on
 computer implementation. Those books provided good baseline for many computer 
 standalone programs created in \lut for for analysis of 
 thin-walled structures \cite{agifap,fsm,vtb}.  
-Getting and compiling complicated software packages is currently quite easy. 
+Getting and compiling complicated software packages is currently easy. 
 Understanding and getting enough knowledge to extend them requires a fair amount of hard work.
 
 Using calculation methods that have initially planned to be hand calculated gives good starting point for 
@@ -174,14 +174,18 @@ getting fast processing. Lack of clean boundary conditions will require addition
 
 Target of this work is to find out suitable methods for handling of plasticity and verify them 
 in commonly used physics engine \bullet. 
-Handling of plasticity basically means that objects involved may absorb kinetic energy and break. 
+Handling of plasticity basically means that involved bodies may absorb kinetic energy and break. 
 
 There are two major areas of applications for these new features.
 
 Possibility to provide simulated demostrations and verifications of new theories or exercises  would be targeted for 
 studies of mechanics and strength of material. 
  
-Methods presented in this work can be used in gaming industry to provide objects that behave more realistically than currently without significant extra work. Efficient simulation algorithms can also help in saving energy. Saving even few wats or percent for single user makes big difference as gaming PCs are estimated to have consumed 75 TWh/year of electricity globally in 2012, \cite{gaming.energy}.
+Methods presented in this work can be used in gaming industry to provide 
+bodies that behave more realistically than currently without significant extra work. 
+Efficient simulation algorithms can also help in saving energy. 
+Saving even few wats or percent for single user makes big difference as gaming PCs are estimated to have consumed 
+75 TWh/year of electricity globally in 2012, \cite{gaming.energy}.
 
 \subsection{Scope}
 

@@ -1,23 +1,22 @@
 \section{Conclusion}
 
-This study has presented an approach to account plastic deformation in 
+This study presents an approach to account plastic deformation in 
 velocity based formulation.
 In the introduced method, the plastic deformation takes place if force or moment exceeds given 
 limit, deformation absorbs energy and joint breaks if plastic capacity is exceeded. 
-Approach presented in this work can be used in gaming industry to provide more realistic 
-simulations without significant extra work. 
+Approach presented in this work can be used in gaming industry to provide realistic 
+simulations. 
 For gaming purposes presented method works 
-best in scenarios where connected parts are relatively heavy. This allows normal 
+best in scenarios where connected parts are heavy. This allows normal 
 integration timestep to be used without stability issues. 
 
 This kind of metodology also opens large area of combining  structural analysis
 methods to realtime simulation frameworks.
 Handling of significant axial and shear forces and moments at same time
 is one possible area of further studies.
-Handling of more complex structures is already being studied by author.
 
 There is also work to be done in the area of performance optimization.
-One possible area is reusing once calculated values if memory usage is not highly limited.
+One possible area is reusing once calculated values if memory usage is not limited.
 This could done e.g. when dealing with high frequency modes.
 Another area is usage of graphics processing unit (GPU) for calculation.
 \bullet\ already has already experimental GPU pipeline but most constraint types are not 

@@ -195,7 +195,7 @@ $\vec{r}_i$  =  orientation of body $i$
 \label{fig:eom-joint}
 \end{figure}
 
-where $\vec{r}_{anc}^{\,i}$ is used to define at which point
+In Figure \ref{fig:eom-joint}, $\vec{r}_{anc}^{\,i}$ is used to define at which point
 joint constraint is applied.
 
 % pdf page 33, notation in typical ODEs
@@ -215,13 +215,16 @@ $\lambda_{joint}$ & vector of lagrange multipliers for joints  \\ \hline
 \end {table}
 
 Constraint processing in \bullet\ is based on ODE, \cite{ode}.
-Mathematical background and detailed examples are available by \cite{ode.joints}.
 Joints are also discussed in detail in  
 \citet{erleben.thesis}.
 %\citet[p.~60-90]{erleben.thesis}.
 Equations \ref{eq:constraintEquation}, \ref{eq:lambdaLow} and
 \ref{eq:lambdaHigh} 
-are created for each constraint.
+are created for each constraint. 
+Derivation for terms in Equation \ref{eq:constraintEquation}
+can be done using position and orientation of connected bodies.
+E.g. for ball joint formulation is based on both joint points having same position.
+In contact cases formulation is easier if it is done using velocities, \cite{ode.joints}.
 
 \begin{equation} \label{eq:constraintEquation}
 J_1 \vec{v}_1 + \Omega_1 \vec{\omega}_1 + 
@@ -275,7 +278,7 @@ while assuming bodies to be undeformable.
 
 Material plasticity can be accounted in games by using suitable coefficient of restitution.
 This provides reasonable means to simulate loss of energy in collisions.
-Simulation of breaking of objects made of ductile material can be made more realistic by splitting rigid bodies
+Simulation of breaking of bodies made of ductile material can be made more realistic by splitting rigid body
 to multiple bodies which are connected by energy absorbing joints.
 Typical engineering stress-strain curve of ductile steel is shown in Figure \ref{fig:sscurve}.
 
@@ -296,7 +299,7 @@ Typical engineering stress-strain curve of ductile steel is shown in Figure \ref
 \label{fig:sscurve}
 \end{figure}
 
-where $\sigma$ is stress, $E$ is Youngs modulus and $f_y$ is yield stress.
+In Figure \ref{fig:sscurve}, $\sigma$ is stress, $E$ is Youngs modulus and $f_y$ is yield stress.
 Engineering stress and strain mean that original dimensions are used in stress calculation,
 \citet{dowling}.
 %\citet[p.~108]{dowling}.
@@ -308,17 +311,17 @@ Elastic material behavior is ignored in approach introduced in this work provide
 that deformation is related to higher frequency
 than integration stability would allow.
 It should be noted that geometry
-of objects is not updated during analysis and thus engineering stress-strain properties should
+of bodies is not updated during analysis and thus engineering stress-strain properties should
 be used.
 
-Strain hardening is taken into account in this work mainly by assuming that plasticity in bending
+In this work, strain hardening is taken into account by assuming that plasticity in bending
 expands, 
 \citet{dowling}.
 %\citet[p.~672]{dowling}.
-Material that starts to yield first is hardened and yielding moves slightly.
+Material that starts to yield first is hardened and as a result of which yielding moves.
 This can be seen e.g. by bending paperclip. It does not break at low angles but can take few full bends. 
 
-Difference between elastic and plastic section modulus is shown in Figure \ref{fig:wp}.
+Difference between elastic and plastic section modulus is depicted in Figure \ref{fig:wp}.
 
 \begin{figure}[htb!]
 \centering
@@ -361,13 +364,13 @@ cross section
 \label{fig:wp}
 \end{figure}
 
-If stress is below yield limit $f_y$, stress and strain are linear within material.
-If cross section is fully plastic, stress is assumed to be at yield level over whole cross section and 
-so plastic section modulus is higher than elastic section modulus.
+As shown in Figure 2.4, if stress is below yield limit $f_y$, stress and strain are linear within material.
+If cross section is fully plastic, stress is assumed to be at yield level over whole cross section such that 
+plastic section modulus is higher than elastic section modulus.
 
-Plasticity is handled by defining maximum forces
+In this work, plasticity is handled by defining maximum forces
 in Equations \ref{eq:lambdaLow} and  
-\ref{eq:lambdaHigh} using plastic capasities as maximum forces.
+\ref{eq:lambdaHigh} using plastic capasities which are defined below.
 
 Maximum force acting in a direction of $\vec{r}_{anc}^{\,i} $
 is product of area and yield stress as follows
@@ -407,9 +410,10 @@ Maximum forces and moments for
 rectangular section using constant yield stress
 are summarized in Figure \ref{fig:maxForces}.
 Yield shear stress is assumed to be $ 0.5\, f_y$ using Tresca yield critetion.
-If von Mises yield criterion is used 0.5 is replaced by 0.58 ($1/\sqrt{3}$).
+If von Mises yield criterion is used 0.5 is replaced by 0.58 ($1/\sqrt{3}$), \cite{dowling}.
+% p. 262, p. 268
 These are not exact values in multiaxial stress state but they
-should be quite usable in most cases.
+are usable in most cases.
 
 
 
@@ -464,13 +468,13 @@ maximum moment around $z$-axis = $0.25\, b^2\, h\, f_y$
 \label{fig:maxForces}
 \end{figure}
 
-For rotation around y-axis there is closed form solution only for
+For rotation around $y$-axis there is closed form solution only for
 circular cross sections.
 Given approximation is 
-best suited for cases where $b$ and $h$ are quite similar.
+best suited for cases where $b$ and $h$ are similar.
 Better approximation for any given $b$ and $h$ can be obtained 
 by integrating distance from center of joint over cross section and
-multiplying it with yield shear stress e.g. using octave.
+multiplying it with yield shear stress e.g. using octave, \cite{octave}.
 Example of calculation of maximum moment  around $\vec{r}_{anc}^{\,i} $
 is shown in Figure \ref{fig:octave-mp}
 
@@ -488,7 +492,7 @@ wpy=fy/2*dblquad(@(x,z) sqrt(x.*x+z.*z),-b/2,b/2,-h/2,h/2)
 \end{figure}
 
 
-Basic idea in this work can be tested with any framework having motors and hinge constraints.
+Basic idea introduced in this study can be tested with any framework having motors and hinge constraints.
 This can be done by setting target velocity of motor to zero and limiting maximum motor impulse to plastic moment 
 multiplied by timestep.
 
