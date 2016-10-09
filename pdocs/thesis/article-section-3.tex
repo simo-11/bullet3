@@ -335,6 +335,19 @@ Default time step was selected to be 5 ms outside impact time and 0.1 ms during 
 Automatic time stepping routine changes timestep so that at angles higher than 0.2 5 ms time step is
 used and adjusts it linearly to selected time step between angles of 0.2 and 0.05.
 
+Figure \ref{fig:charpy-series} shows three detailed pictures from simulation.
+Left picture shows early phase of simulation. In middle picture hammer has not yet collided with specimen.
+In right picture specimen is bending.
+
+\begin{figure}[htb!]
+\centering
+\includegraphics[height=3cm]{figs/article-charpy-1}
+\includegraphics[height=3cm]{figs/article-charpy-2}
+\includegraphics[height=3cm]{figs/article-charpy-3}
+\caption{Detailed pictures from simulation of Charpy impact test}
+\label{fig:charpy-series}
+\end{figure}
+
 Table \ref{tab:ep2ts} shows energy loss for few timesteps as example to demonstrate sensitivity of solution
 using  elastic-plastic constraint 2.
 
@@ -352,13 +365,15 @@ using  elastic-plastic constraint 2.
 \end{center}
 \end {table}
 
-Figure \ref{fig:charpy} shows screenshot from simulation.
+Figure \ref{fig:charpy} shows overview from simulation as specimen is going between supports.
+
 \begin{figure}[htb!]
 \centering
 \includegraphics[height=8cm]{figs/article-charpy}
-\caption{Simulation of Charpy impact test}
+\caption{Overview of simulation of Charpy impact test}
 \label{fig:charpy}
 \end{figure}
+
 
 
 \subsection{Demolisher}
