@@ -132,7 +132,7 @@ Setting erp to 1 would in theory eliminate error in one step but in practice val
 \end{figure}
 
 Actual values for unconstrained case without continuous collision detection
-are shown in table \ref{tab:freeBlockValues}. Penetration is detected at time 0.567 s when
+are shown in Table \ref{tab:freeBlockValues}. Penetration is detected at time 0.567 s when
 {\it velError} is 5.67 (5.5+0.167) and
 {\it posError} is 2.8 (0.058*0.8/0.0167). Impulse is 34000 and contact force is thus about 2 MN (34000/0.0167).
 After few steps location and position stabilize although internally calculation is needed for each time step
@@ -192,7 +192,7 @@ premature contacts are created if collision takes place in those regions.
 \end{center}
 \end {table}
 
-Values for fixed constraint are shown in table
+Values for fixed constraint are shown in Table
 \ref{tab:fixedBlockValues}. Constraint is activated in second step and positional error is corrected
 about 20 \% in each step as requested by using erp value 0.2.
 
@@ -259,7 +259,7 @@ currentLimit & describes state of constraint \newline
 \end {table}
 
 
-Values for elastic-plastic case are shown in tables \ref{tab:epBlockValues}.
+Values for elastic-plastic case are shown in Tables \ref{tab:epBlockValues}.
 Body drops freely during first simulation step and 
 gains enough kinetic energy so that higher impulses are needed in few following steps.
 This causes plastic strain during next three steps.
@@ -297,7 +297,7 @@ $m_{min}$ is smaller of connected masses or inertias and $dt$ is integration tim
 If this feature is active for elastic-plastic constraint 2 constraint  
 it does not report positional error but it allows full plastic capacity to be used for correcting
 velocity based error instead of force provided by spring.
-In this scenario body behaves as depicted in table \ref{tab:ep2BlockValues} i.e. it does not move at all.
+In this scenario body behaves as depicted in Table \ref{tab:ep2BlockValues} i.e. it does not move at all.
 
 \begin {table}[htb!]
 \caption {Constraint parameter values for elastic-plastic constraint 2} 
