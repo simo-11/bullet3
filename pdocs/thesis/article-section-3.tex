@@ -151,7 +151,8 @@ as number of contacts and values at contact points are different.}
 {\it velError} & {\it penetration} & {\it posError} & {\it rhs} &
 {\bf Velocity} & 
 {\bf Impulse} \\  \hline
-0.017 &  0 & & & &  &-0.17 & 0 \\  \hline
+0.017 &  -0.003 & & & &  &-0.17 & 0 \\  \hline
+0.533 &  -1.467 & & & & & -5.33 & 0 \\  \hline
 0.550 &  -1.558 & & & & & -5.5 & 0 \\  \hline
 0.567 &  -1.511 & 5.67 &-0.058 &2.8 &  21270 & 0.01 & 34000 \\  \hline
 0.583 &  -1.502 & 0.14 &-0.011 & 0.54& 2570  & 0.55 & 420 \\  \hline
@@ -163,6 +164,8 @@ as number of contacts and values at contact points are different.}
 \end {tabular}
 \end{center}
 \end {table}
+
+\include{octave/uc-fig}
 
 Actual values for unconstrained case with continuous collision detection (ccd) using 1.5 
 as radius of ccd sphere and 0.001 as ccd motion threshold
@@ -183,7 +186,7 @@ premature contacts are created if collision takes place in those regions.
 {\it velError} & {\it penetration} & {\it posError} & {\it rhs} &
 {\bf Velocity} & 
 {\bf Impulse} \\  \hline
-0.017 &  0 & & & &  &-0.17 & 0 \\  \hline
+0.017 &  -0.003 & & & &  &-0.17 & 0 \\  \hline
 0.550 &  -1.500 & 3.5 & 0.033 & 0 & 21000& -2 & 21000 \\  \hline
 0.567 &  -1.500 & 2.17 & 0 & 0  &  8100 & 0.01 & 13000 \\  \hline
 0.583 &  -1.500 & 0.15 & 0 & 0 & 600  & 0 & 937 \\  \hline

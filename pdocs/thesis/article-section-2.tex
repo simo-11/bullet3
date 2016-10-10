@@ -407,8 +407,8 @@ M_{max}^y= \int_A d \tau_y
 \end{equation}
 
 Maximum forces and moments for 
-rectangular section using constant yield stress
-are summarized in Figure \ref{fig:maxForces}.
+rectangular section with width $b$ and height $h$ using constant yield stress
+are summarized in Table \ref{tab:maxForces}.
 Yield shear stress is assumed to be $ 0.5\, f_y$ using Tresca yield critetion.
 If von Mises yield criterion is used 0.5 is replaced by 0.58 ($1/\sqrt{3}$), \cite{dowling}.
 % p. 262, p. 268
@@ -416,59 +416,24 @@ These are not exact values in multiaxial stress state but they
 are usable in most cases.
 
 
-
-\begin{figure}[htb!]
-\centering
-\begin{tikzpicture}
-\coordinate (O) at (2,2,0);
-
-% axes
-\draw[->] (O) -- ++(1,0,0) node[anchor=north east]{$x$};
-\draw[->] (O) -- ++(0,1,0) node[anchor=north west]{$y$};
-\draw[->] (O) -- ++(0,0,1) node[anchor=south]{$z$};
-
-% 1,3,1 block, base at y=1.5
-\draw (1,1.5,0) -- ++(0,3,0) -- ++(-1,0,0);
-\draw (0,1.5,1) -- ++(1,0,0) -- ++(0,3,0) -- ++(-1,0,0) -- ++(0,-3,0);
-\draw (1,1.5,0) -- ++(0,0,1);
-\draw (0,4.5,0) -- ++(0,0,1);
-\draw (1,4.5,0) -- ++(0,0,1);
-
-% l is not significant
-%\draw[Stealth-Stealth] (2,1.5,0) -- ++(0,3,0);
-%\node[] at (2.5,3) [anchor=west]{l};
-
-\draw[Stealth-Stealth] (0,5,0) -- ++(1,0,0);
-\node[] at (0.5,5) [anchor=south]{$b$};
-
-\draw[Stealth-Stealth] (0,5,0) -- ++(0,0,1);
-\node[] at (0,5,0.5) [anchor=south east]{$h$};
-
-\draw[ultra thin](0,4.5,0) -- ++(0,0.6);
-\draw[ultra thin](1,4.5,0) -- ++(0,0.6);
-\draw[ultra thin](0,4.5,1) -- ++(0,0.6);
-
-\draw[-Stealth] (0.5,3,0.5) -- ++(0,1.5,0);
-\node at (0,3.8) {$\vec{r}_{anc}$};
-
-\node[anchor=west] at (4.0,3) {
-\begin{tabular}{l}
-maximum force in $x$ and $z$ directions = $0.5\, b\, h f_y$ \\
-maximum force in $y$ direction = $b\, h\, f_y$  \\
-\\
-maximum moment around $x$-axis = $0.25\, b\, h^2 \, f_y$  \\
-maximum moment around $y$-axis $ \approx 0.19\, b\, h\, \frac{b\, + h}{2} f_y$  \\
-maximum moment around $z$-axis = $0.25\, b^2\, h\, f_y$ 
+\begin {table}[htb!]
+\caption {Maximum forces and moments for 
+rectangular section with width $b$ and height $h$ using constant yield stress $f_y$}
+\label{tab:maxForces} 
+\begin{center}
+\begin{tabular}{| c| c|}
+\hline
+{\bf Direction} & {\bf Maximum value}  \\ \hline
+maximum shear force & $0.5\, b\, h f_y$ \\ \hline
+maximum normal force & $b\, h\, f_y$  \\ \hline
+maximum bending moment in direction of $h$& $0.25\, b\, h^2 \, f_y$  \\ \hline
+maximum bending moment in direction of $b$ & $0.25\, b^2\, h\, f_y$  \\ \hline
+maximum torque & $ \approx 0.19\, b\, h\, \frac{b\, + h}{2} f_y$  \\ \hline
 \end{tabular}
-};
+\end{center}
+\end {table}
 
-
-\end{tikzpicture}
-\caption{Maximum forces in plastic joint for rectangular cross section.}
-\label{fig:maxForces}
-\end{figure}
-
-For rotation around $y$-axis there is closed form solution only for
+For torque there is closed form solution only for
 circular cross sections.
 Given approximation is 
 best suited for cases where $b$ and $h$ are similar.
