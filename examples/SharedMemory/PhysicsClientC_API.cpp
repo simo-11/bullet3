@@ -30,7 +30,27 @@ b3SharedMemoryCommandHandle	b3LoadSdfCommandInit(b3PhysicsClientHandle physClien
 	return (b3SharedMemoryCommandHandle) command;
 }
 
-
+b3SharedMemoryCommandHandle	b3SaveWorldCommandInit(b3PhysicsClientHandle physClient, const char* sdfFileName)
+{
+	PhysicsClient* cl = (PhysicsClient* ) physClient;
+    b3Assert(cl);
+    b3Assert(cl->canSubmitCommand());
+    
+	struct SharedMemoryCommand* command = cl->getAvailableSharedMemoryCommand();
+    b3Assert(command);
+	command->m_type = CMD_SAVE_WORLD;
+	int len = strlen(sdfFileName);
+	if (len<MAX_SDF_FILENAME_LENGTH)
+	{
+		strcpy(command->m_sdfArguments.m_sdfFileName,sdfFileName);
+	} else
+	{
+		command->m_sdfArguments.m_sdfFileName[0] = 0;
+	}
+	command->m_updateFlags = SDF_ARGS_FILE_NAME;
+	
+	return (b3SharedMemoryCommandHandle) command;
+}
 
 b3SharedMemoryCommandHandle	b3LoadUrdfCommandInit(b3PhysicsClientHandle physClient, const char* urdfFileName)
 {
@@ -142,6 +162,15 @@ int     b3PhysicsParamSetRealTimeSimulation(b3SharedMemoryCommandHandle commandH
 	b3Assert(command->m_type == CMD_SEND_PHYSICS_SIMULATION_PARAMETERS);
 	command->m_physSimParamArgs.m_allowRealTimeSimulation = enableRealTimeSimulation;
 	command->m_updateFlags |= SIM_PARAM_UPDATE_REAL_TIME_SIMULATION;
+	return 0;
+}
+
+int b3PhysicsParamSetNumSolverIterations(b3SharedMemoryCommandHandle commandHandle, int numSolverIterations)
+{
+	struct SharedMemoryCommand* command = (struct SharedMemoryCommand*) commandHandle;
+	b3Assert(command->m_type == CMD_SEND_PHYSICS_SIMULATION_PARAMETERS);
+	command->m_physSimParamArgs.m_numSolverIterations = numSolverIterations;
+	command->m_updateFlags |= SIM_PARAM_UPDATE_NUM_SOLVER_ITERATIONS;
 	return 0;
 }
 
