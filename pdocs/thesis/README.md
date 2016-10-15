@@ -1,6 +1,6 @@
 # Documents for my thesis
 
-For more details about bullet plasticity is see goo.gl/pGe3Zd
+For more details about bullet plasticity is see http://goo.gl/pGe3Zd
 
 This page documents only processing of latex sources to create pdf files.
 
