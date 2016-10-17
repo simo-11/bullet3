@@ -39,6 +39,22 @@ int		gNumSplitImpulseRecoveries = 0;
 
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 
+#define CDBG_CALLBACK
+#ifdef CDBG_CALLBACK
+extern int cdbgActive;
+extern void 
+cdbgCallback(
+	int i,
+	int j,
+	btTypedConstraint* constraint, 
+	const btTypedConstraint::btConstraintInfo1* info1,
+	btTypedConstraint::btConstraintInfo2* info2,
+	btScalar positionalError,
+	btScalar velocityError,
+	btSolverConstraint* solverConstraint
+	);
+#endif
+
 
 ///This is the scalar reference implementation of solving a single constraint row, the innerloop of the Projected Gauss Seidel/Sequential Impulse constraint solver
 ///Below are optional SSE2 and SSE4/FMA3 versions. We assume most hardware has SSE2. For SSE4/FMA3 we perform a CPU feature check.
@@ -1491,8 +1507,12 @@ btScalar btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup(btCol
 							btScalar	velocityImpulse = velocityError *solverConstraint.m_jacDiagABInv;
 							solverConstraint.m_rhs = penetrationImpulse+velocityImpulse;
 							solverConstraint.m_appliedImpulse = 0.f;
-
-
+#ifdef CDBG_CALLBACK
+							if (cdbgActive){
+								cdbgCallback(i,j,constraint, &info1, &info2, 
+									positionalError, velocityError, &solverConstraint);
+							}
+#endif // CDBG_CALLBACK
 						}
 					}
 				}

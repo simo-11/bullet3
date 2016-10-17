@@ -54,6 +54,8 @@ Based on DemolisherDemo by Simo Nikula 2016-
 #include "Gwen/Utility.h"
 const char * PROFILE_TENSION_SLEEP = "BlockDemo::Sleep";
 
+#define CDBG_CALLBACK
+
 class BlockDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 {
 public:
@@ -296,6 +298,7 @@ public:
 			updateYTimeSeries();
 			break;
 		}
+		updateErrorTimeSeries();
 	}
 	void resetView(){
 		c_impulse = 0;
@@ -473,6 +476,11 @@ public:
 		b_location=0, b_velocity=0, yStart=0;
 	TimeSeriesCanvas *tsYLocation=0, *tsYVelocity=0, *tsYForce=0;
 	TimeSeriesCanvas *tsZRLocation = 0, *tsZRVelocity = 0, *tsZMoment = 0, *tsXForce=0;
+	TimeSeriesCanvas *tsError = 0;
+#ifdef CDBG_CALLBACK
+#define C_ERROR_SIZE 6
+	float cError[C_ERROR_SIZE];
+#endif
 	btScalar getMass(){
 		return btScalar(lsx*lsy*lsz*getDensity(blockSteelScale));
 	}
@@ -1301,7 +1309,52 @@ public:
 			tsXForce->nextTick();
 		}
 	}
+	float maxError = 0.1, currentMaxError;
+	void updateMaxError(float offer){
+		offer = btFabs(offer);
+		if (offer > maxError){
+			maxError = offer;
+		}
+	}
+	void addErrorTimeSeries(){
+#ifdef CDBG_CALLBACK
+		int tsWidth = 300, tsHeight = 200;
+		CommonGraphicsApp * app = PlasticityExampleBrowser::getApp();
+		if (0 == tsError){
+			tsError = new TimeSeriesCanvas
+				(app->m_2dCanvasInterface, tsWidth, tsHeight, "constraintError");
+		}
+		currentMaxError = maxError;
+		tsError->setupTimeSeries(maxError, intFreq, 0);
+		tsError->addDataSource("velError x", 255, 0, 0);
+		tsError->addDataSource("velError y", 255, 0, 127);
+		tsError->addDataSource("velError rz", 255, 0, 255);
+		tsError->addDataSource("posError x", 0, 255, 0);
+		tsError->addDataSource("posError y", 0, 255, 127);
+		tsError->addDataSource("posError rz", 0, 255, 255);
+		for (int i = 0; i < C_ERROR_SIZE; i++){
+			cError[i] = 0;
+		}
+		maxError = 0;
+#endif
+	}
+	void updateErrorTimeSeries(){
+#ifdef CDBG_CALLBACK
+		for (int i = 0; i < C_ERROR_SIZE; i++){
+			if (btFabs(cError[i])>0.01*currentMaxError){
+				tsError->insertDataAtCurrentTime(cError[i], 0, false);
+			}
+			cError[i] = 0;
+		}
+		tsError->nextTick();
+#endif
+	}
+
 	void deleteTimeSeries(){
+		if (tsError){
+			delete tsError;
+			tsError = 0;
+		}
 		if (tsYLocation){
 			delete tsYLocation;
 			tsYLocation = 0;
@@ -1693,6 +1746,7 @@ void BlockDemo::initPhysics()
 	default:
 		assert(0); // Add if new orientation is added
 	}
+	addErrorTimeSeries();
 }
 
 void BlockDemo::physicsDebugDraw(int debugFlags)
@@ -2006,3 +2060,49 @@ CommonExampleInterface*    BlockDemoCreateFunc(struct CommonExampleOptions& opti
 	return demo;
 
 }
+
+#ifdef CDBG_CALLBACK
+int cdbgActive = 1;
+void
+cdbgCallback(
+int i,
+int j,
+btTypedConstraint* constraint,
+const btTypedConstraint::btConstraintInfo1* info1,
+btTypedConstraint::btConstraintInfo2* info2,
+btScalar positionalError,
+btScalar velocityError,
+btSolverConstraint* solverConstraint
+){
+	if (demo == 0){
+		return;
+	}
+	if (!cdbgActive){
+		return;
+	}
+	if (i != 0){
+		return;
+	}
+	if (velocityError == 0 && positionalError == 0){
+		return;
+	}
+	int il = -1;
+	switch (j){
+	case 0: // x 
+		il = 0;
+		break;
+	case 4:// y
+		il = 1;
+		break;
+	case 6: // rz
+		il = 1;
+		break;
+	default:
+		return;
+	}
+	demo->cError[il] = velocityError;
+	demo->cError[il + 3] = positionalError;
+	demo->updateMaxError(velocityError);
+	demo->updateMaxError(positionalError);
+}
+#endif

@@ -477,7 +477,7 @@ void quitCallback()
     s_window->setRequestExit();
 }
 
-#define MAX_GRAPH_WINDOWS 5
+#define MAX_GRAPH_WINDOWS 15
 
 struct GraphWindowInfo {
 	const char * name;
