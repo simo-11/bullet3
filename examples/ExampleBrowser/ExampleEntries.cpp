@@ -6,7 +6,7 @@
 #include "../RenderingExamples/CoordinateSystemDemo.h"
 #include "../RenderingExamples/RaytracerSetup.h"
 #include "../RenderingExamples/TinyRendererSetup.h"
-
+#include "../RenderingExamples/DynamicTexturedCubeDemo.h"
 #include "../ForkLift/ForkLiftDemo.h"
 #include "../BasicDemo/BasicExample.h"
 #include "../Planar2D/Planar2D.h"
@@ -73,6 +73,7 @@
 #include "../ExtendedTutorials/NewtonsCradle.h"
 #include "../ExtendedTutorials/NewtonsRopeCradle.h"
 #include "../ExtendedTutorials/MultiPendulum.h"
+#include "../Evolution/NN3DWalkers.h"
 
 struct ExampleEntry
 {
@@ -267,6 +268,7 @@ static ExampleEntry gDefaultExamples[]=
     ExampleEntry(1,"Gripper Grasp","Grasp experiment with a gripper to improve contact model", GripperGraspExampleCreateFunc,eGRIPPER_GRASP),
     ExampleEntry(1,"Two Point Grasp","Grasp experiment with two point contact to test rolling friction", GripperGraspExampleCreateFunc, eTWO_POINT_GRASP),
 	ExampleEntry(1,"One Motor Gripper Grasp","Grasp experiment with a gripper with one motor to test slider constraint for closed loop structure", GripperGraspExampleCreateFunc, eONE_MOTOR_GRASP),
+    ExampleEntry(1,"Grasp Soft Body","Grasp soft body experiment", GripperGraspExampleCreateFunc, eGRASP_SOFT_BODY),
 
 
 #ifdef ENABLE_LUA
@@ -290,6 +292,9 @@ static ExampleEntry gDefaultExamples[]=
 	ExampleEntry(1,"CoordinateSystemDemo","Show the axis and positive rotation direction around the axis.", CoordinateSystemCreateFunc),
 	ExampleEntry(1,"Time Series", "Render some value(s) in a 2D graph window, shifting to the left", TimeSeriesCreateFunc),
 	ExampleEntry(1,"TinyRenderer", "Very small software renderer.", TinyRendererCreateFunc),
+	ExampleEntry(1,"Dynamic Texture", "Dynamic updated textured applied to a cube.", DynamicTexturedCubeDemoCreateFunc),
+
+		
 
 	//Extended Tutorials Added by Mobeen
 	ExampleEntry(0,"Extended Tutorials"),
@@ -304,6 +309,8 @@ static ExampleEntry gDefaultExamples[]=
 	ExampleEntry(1,"Newton's Rope Cradle", "Create a Newton's Cradle using ropes. Press 3 to displace pendula. Use the sliders to select the number (reset simulation), length and restitution of pendula and the number of displaced pendula and apply the displacement force.",ET_NewtonsRopeCradleCreateFunc),
 	ExampleEntry(1,"Multi-Pendulum", "Create a Multi-Pendulum using point2point/slider constraints. Press 1/2 to lengthen/shorten the pendula, press 3 to displace pendula. Use the sliders to select the number (reset simulation), length and restitution of pendula, the number of displaced pendula and apply the displacement force.",ET_MultiPendulumCreateFunc),
 
+	ExampleEntry(9,"Evolution"),
+	ExampleEntry(1,"Neural Network 3D Walkers","A simple example of using evolution to make a creature walk.",ET_NN3DWalkersCreateFunc),
 
 	//todo: create a category/tutorial about advanced topics, such as optimizations, using different collision detection algorithm, different constraint solvers etc.
 	//ExampleEntry(0,"Advanced"),

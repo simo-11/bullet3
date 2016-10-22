@@ -5,7 +5,6 @@
 #include "../Importers/ImportURDFDemo/URDF2Bullet.h"
 #include "../Extras/InverseDynamics/btMultiBodyTreeCreator.hpp"
 #include "TinyRendererVisualShapeConverter.h"
-#include "BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h"
 #include "BulletDynamics/Featherstone/btMultiBodyConstraintSolver.h"
 #include "BulletDynamics/Featherstone/btMultiBodyPoint2Point.h"
 #include "BulletDynamics/Featherstone/btMultiBodyLinkCollider.h"
@@ -26,6 +25,17 @@
 #include "Bullet3Common/b3Logging.h"
 #include "../CommonInterfaces/CommonGUIHelperInterface.h"
 #include "SharedMemoryCommands.h"
+
+#ifdef USE_SOFT_BODY_MULTI_BODY_DYNAMICS_WORLD
+#include "BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.h"
+#include "BulletSoftBody/btSoftBodySolvers.h"
+#include "BulletSoftBody/btSoftBodyHelpers.h"
+#include "BulletSoftBody/btSoftMultiBodyDynamicsWorld.h"
+#include "../SoftDemo/BunnyMesh.h"
+#else
+#include "BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h"
+#endif
+
 
 //@todo(erwincoumans) those globals are hacks for a VR demo, move this to Python/pybullet!
 btVector3 gLastPickPos(0, 0, 0);
@@ -403,6 +413,8 @@ struct PhysicsServerCommandProcessorInternalData
 	btMultiBody* m_kukaGripperMultiBody;
 	btMultiBodyPoint2Point* m_kukaGripperRevolute1;
 	btMultiBodyPoint2Point* m_kukaGripperRevolute2;
+	
+
 	int m_huskyId;
 	int m_KukaId;
 	int m_sphereId;
@@ -428,9 +440,17 @@ struct PhysicsServerCommandProcessorInternalData
 	btCollisionDispatcher*	m_dispatcher;
 	btMultiBodyConstraintSolver*	m_solver;
 	btDefaultCollisionConfiguration* m_collisionConfiguration;
-	btMultiBodyDynamicsWorld* m_dynamicsWorld;
+    
+#ifdef USE_SOFT_BODY_MULTI_BODY_DYNAMICS_WORLD
+	btSoftMultiBodyDynamicsWorld* m_dynamicsWorld;
+    btSoftBodySolver* m_softbodySolver;
+    btSoftBodyWorldInfo	m_softBodyWorldInfo;
+#else
+    btMultiBodyDynamicsWorld* m_dynamicsWorld;
+#endif
+    
 	SharedMemoryDebugDrawer*		m_remoteDebugDrawer;
-	
+    
 	btAlignedObjectArray<b3ContactPointData> m_cachedContactPoints;
 
 	btAlignedObjectArray<int> m_sdfRecentLoadedBodies;
@@ -457,6 +477,10 @@ struct PhysicsServerCommandProcessorInternalData
 		:m_hasGround(false),
 		m_gripperRigidbodyFixed(0),
 		m_gripperMultiBody(0),
+		m_kukaGripperFixed(0),
+		m_kukaGripperMultiBody(0),
+		m_kukaGripperRevolute1(0),
+		m_kukaGripperRevolute2(0),
 		m_allowRealTimeSimulation(false),
 		m_huskyId(-1),
 		m_KukaId(-1),
@@ -601,28 +625,35 @@ PhysicsServerCommandProcessor::~PhysicsServerCommandProcessor()
 
 void PhysicsServerCommandProcessor::createEmptyDynamicsWorld()
 {
-	///collision configuration contains default setup for memory, collision setup
-	m_data->m_collisionConfiguration = new btDefaultCollisionConfiguration();
-	//m_collisionConfiguration->setConvexConvexMultipointIterations();
-
-	///use the default collision dispatcher. For parallel processing you can use a diffent dispatcher (see Extras/BulletMultiThreaded)
-	m_data->m_dispatcher = new	btCollisionDispatcher(m_data->m_collisionConfiguration);
-
-	m_data->m_broadphase = new btDbvtBroadphase();
-
-	m_data->m_solver = new btMultiBodyConstraintSolver;
-
-	m_data->m_dynamicsWorld = new btMultiBodyDynamicsWorld(m_data->m_dispatcher, m_data->m_broadphase, m_data->m_solver, m_data->m_collisionConfiguration);
-
-	//Workaround: in a VR application, where we avoid synchronizaing between GFX/Physics threads, we don't want to resize this array, so pre-allocate it
-	m_data->m_dynamicsWorld->getCollisionObjectArray().reserve(8192);
-
-	m_data->m_remoteDebugDrawer = new SharedMemoryDebugDrawer();
-
-
-	m_data->m_dynamicsWorld->setGravity(btVector3(0, 0, 0));
-	m_data->m_dynamicsWorld->getSolverInfo().m_erp2 = 0.08;
-
+    ///collision configuration contains default setup for memory, collision setup
+    //m_collisionConfiguration->setConvexConvexMultipointIterations();
+#ifdef USE_SOFT_BODY_MULTI_BODY_DYNAMICS_WORLD
+    m_data->m_collisionConfiguration = new btSoftBodyRigidBodyCollisionConfiguration();
+#else
+    m_data->m_collisionConfiguration = new btDefaultCollisionConfiguration();
+#endif
+    ///use the default collision dispatcher. For parallel processing you can use a diffent dispatcher (see Extras/BulletMultiThreaded)
+    m_data->m_dispatcher = new	btCollisionDispatcher(m_data->m_collisionConfiguration);
+    
+    m_data->m_broadphase = new btDbvtBroadphase();
+    
+    m_data->m_solver = new btMultiBodyConstraintSolver;
+    
+#ifdef USE_SOFT_BODY_MULTI_BODY_DYNAMICS_WORLD
+    m_data->m_dynamicsWorld = new btSoftMultiBodyDynamicsWorld(m_data->m_dispatcher, m_data->m_broadphase, m_data->m_solver, m_data->m_collisionConfiguration);
+#else
+    m_data->m_dynamicsWorld = new btMultiBodyDynamicsWorld(m_data->m_dispatcher, m_data->m_broadphase, m_data->m_solver, m_data->m_collisionConfiguration);
+#endif
+    
+    //Workaround: in a VR application, where we avoid synchronizaing between GFX/Physics threads, we don't want to resize this array, so pre-allocate it
+    m_data->m_dynamicsWorld->getCollisionObjectArray().reserve(8192);
+    
+    m_data->m_remoteDebugDrawer = new SharedMemoryDebugDrawer();
+    
+    
+    m_data->m_dynamicsWorld->setGravity(btVector3(0, 0, 0));
+    m_data->m_dynamicsWorld->getSolverInfo().m_erp2 = 0.08;
+    
 }
 
 void PhysicsServerCommandProcessor::deleteCachedInverseDynamicsBodies()
@@ -1363,7 +1394,7 @@ bool PhysicsServerCommandProcessor::processCommand(const struct SharedMemoryComm
 					///this is a very rudimentary way to save the state of the world, for scene authoring
 					///many todo's, for example save the state of motor controllers etc.
 
-					if (clientCmd.m_sdfArguments.m_sdfFileName)
+					
 					{
 						//saveWorld(clientCmd.m_sdfArguments.m_sdfFileName);
 
@@ -1592,6 +1623,36 @@ bool PhysicsServerCommandProcessor::processCommand(const struct SharedMemoryComm
 
 
 
+                    break;
+                }
+                case CMD_LOAD_BUNNY:
+                {
+#ifdef USE_SOFT_BODY_MULTI_BODY_DYNAMICS_WORLD
+                    m_data->m_softBodyWorldInfo.air_density		=	(btScalar)1.2;
+                    m_data->m_softBodyWorldInfo.water_density	=	0;
+                    m_data->m_softBodyWorldInfo.water_offset	=	0;
+                    m_data->m_softBodyWorldInfo.water_normal	=	btVector3(0,0,0);
+                    m_data->m_softBodyWorldInfo.m_gravity.setValue(0,0,-10);
+                    m_data->m_softBodyWorldInfo.m_broadphase = m_data->m_broadphase;
+                    m_data->m_softBodyWorldInfo.m_sparsesdf.Initialize();
+                    
+                    btSoftBody*	psb=btSoftBodyHelpers::CreateFromTriMesh(m_data->m_softBodyWorldInfo,gVerticesBunny,                                                       &gIndicesBunny[0][0],                                                         BUNNY_NUM_TRIANGLES);
+                    
+                    btSoftBody::Material*	pm=psb->appendMaterial();
+                    pm->m_kLST				=	1.0;
+                    pm->m_flags				-=	btSoftBody::fMaterial::DebugDraw;
+                    psb->generateBendingConstraints(2,pm);
+                    psb->m_cfg.piterations	=	2;
+                    psb->m_cfg.kDF			=	0.5;
+                    psb->randomizeConstraints();
+                    psb->rotate(btQuaternion(0.70711,0,0,0.70711));
+                    psb->translate(btVector3(0,0,3.0));
+                    psb->scale(btVector3(0.1,0.1,0.1));
+                    psb->setTotalMass(1,true);
+                    psb->getCollisionShape()->setMargin(0.01);
+                    
+                    m_data->m_dynamicsWorld->addSoftBody(psb);
+#endif
                     break;
                 }
                 case CMD_CREATE_SENSOR:
@@ -2910,7 +2971,36 @@ bool PhysicsServerCommandProcessor::processCommand(const struct SharedMemoryComm
 						hasStatus = true;
 						break;
 					}
-			
+                case CMD_REQUEST_VISUAL_SHAPE_INFO:
+                {
+                    
+                    SharedMemoryStatus& serverCmd = serverStatusOut;
+                    serverCmd.m_type = CMD_VISUAL_SHAPE_INFO_FAILED;
+                    //retrieve the visual shape information for a specific body
+                    
+					int totalNumVisualShapes = m_data->m_visualConverter.getNumVisualShapes(clientCmd.m_requestVisualShapeDataArguments.m_bodyUniqueId);
+					int totalBytesPerVisualShape = sizeof (b3VisualShapeData);
+					int visualShapeStorage = bufferSizeInBytes / totalBytesPerVisualShape - 1;
+					b3VisualShapeData* visualShapeStoragePtr = (b3VisualShapeData*)bufferServerToClient;
+
+					int remain = totalNumVisualShapes - clientCmd.m_requestVisualShapeDataArguments.m_startingVisualShapeIndex;
+					int shapeIndex = clientCmd.m_requestVisualShapeDataArguments.m_startingVisualShapeIndex;
+
+					m_data->m_visualConverter.getVisualShapesData(clientCmd.m_requestVisualShapeDataArguments.m_bodyUniqueId,
+						shapeIndex,
+						visualShapeStoragePtr);
+
+
+                    //m_visualConverter
+					serverCmd.m_sendVisualShapeArgs.m_numRemainingVisualShapes = remain-1;
+					serverCmd.m_sendVisualShapeArgs.m_numVisualShapesCopied = 1;
+					serverCmd.m_sendVisualShapeArgs.m_startingVisualShapeIndex = clientCmd.m_requestVisualShapeDataArguments.m_startingVisualShapeIndex;
+					serverCmd.m_sendVisualShapeArgs.m_bodyUniqueId = clientCmd.m_requestVisualShapeDataArguments.m_bodyUniqueId;
+
+                    serverCmd.m_type =CMD_VISUAL_SHAPE_INFO_COMPLETED;
+                    hasStatus = true;
+                    break;
+                }
                 default:
                 {
                     b3Error("Unknown command encountered");
@@ -2937,7 +3027,17 @@ void PhysicsServerCommandProcessor::renderScene()
 		m_data->m_guiHelper->syncPhysicsToGraphics(m_data->m_dynamicsWorld);
 		m_data->m_guiHelper->render(m_data->m_dynamicsWorld);
 	}
-
+#ifdef USE_SOFT_BODY_MULTI_BODY_DYNAMICS_WORLD
+    for (  int i=0;i<m_data->m_dynamicsWorld->getSoftBodyArray().size();i++)
+    {
+        btSoftBody*	psb=(btSoftBody*)m_data->m_dynamicsWorld->getSoftBodyArray()[i];
+        if (m_data->m_dynamicsWorld->getDebugDrawer() && !(m_data->m_dynamicsWorld->getDebugDrawer()->getDebugMode() & (btIDebugDraw::DBG_DrawWireframe)))
+        {
+            //btSoftBodyHelpers::DrawFrame(psb,m_data->m_dynamicsWorld->getDebugDrawer());
+            btSoftBodyHelpers::Draw(psb,m_data->m_dynamicsWorld->getDebugDrawer(),m_data->m_dynamicsWorld->getDrawFlags());
+        }
+    }
+#endif
 }
 
 void    PhysicsServerCommandProcessor::physicsDebugDraw(int debugDrawFlags)
@@ -3128,6 +3228,7 @@ void PhysicsServerCommandProcessor::stepSimulationRealTime(double dtInSec)
 		gBufferServerToClient.resize(SHARED_MEMORY_MAX_STREAM_CHUNK_SIZE);
 		int bodyId = 0;
 
+		
 		if (gCreateObjectSimVR >= 0)
 		{
 			gCreateObjectSimVR = -1;
@@ -3317,7 +3418,7 @@ void PhysicsServerCommandProcessor::stepSimulationRealTime(double dtInSec)
 				//loadUrdf("rook.urdf", btVector3(-1.2, 0, 0.7), btQuaternion(btVector3(1, 0, 0), SIMD_HALF_PI), true, false, &bodyId, &gBufferServerToClient[0], gBufferServerToClient.size());
 				//loadUrdf("knight.urdf", btVector3(-1.2, 0.2, 0.7), btQuaternion(btVector3(1, 0, 0), SIMD_HALF_PI), true, false, &bodyId, &gBufferServerToClient[0], gBufferServerToClient.size());
 
-				loadUrdf("husky/husky.urdf", btVector3(2, -5, 1), btQuaternion(0, 0, 0, 1), true, false, &bodyId, &gBufferServerToClient[0], gBufferServerToClient.size());
+				//loadUrdf("husky/husky.urdf", btVector3(2, -5, 1), btQuaternion(0, 0, 0, 1), true, false, &bodyId, &gBufferServerToClient[0], gBufferServerToClient.size());
 				m_data->m_huskyId = bodyId;
 
 				m_data->m_dynamicsWorld->setGravity(btVector3(0, 0, -10));

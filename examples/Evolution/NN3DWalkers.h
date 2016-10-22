@@ -1,6 +1,6 @@
 /*
 Bullet Continuous Collision Detection and Physics Library
-Copyright (c) 2016 Google Inc. http://bulletphysics.org
+Copyright (c) 2015 Google Inc. http://bulletphysics.org
 
 This software is provided 'as-is', without any express or implied warranty.
 In no event will the authors be held liable for any damages arising from the use of this software.
@@ -13,18 +13,10 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef GRIPPER_GRASP_EXAMPLE_H
-#define GRIPPER_GRASP_EXAMPLE_H
+#ifndef ET_NN_3D_WALKERS_EXAMPLE_H
+#define ET_NN_3D_WALKERS_EXAMPLE_H
 
-enum GripperGraspExampleOptions
-{
-    eGRIPPER_GRASP=1,
-    eTWO_POINT_GRASP=2,
-    eONE_MOTOR_GRASP=4,
-    eGRASP_SOFT_BODY=8,
-};
-
-class CommonExampleInterface*    GripperGraspExampleCreateFunc(struct CommonExampleOptions& options);
+class CommonExampleInterface*    ET_NN3DWalkersCreateFunc(struct CommonExampleOptions& options);
 
 
-#endif //GRIPPER_GRASP_EXAMPLE_H
+#endif //ET_NN_3D_WALKERS_EXAMPLE_H
