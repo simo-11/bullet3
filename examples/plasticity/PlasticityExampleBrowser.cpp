@@ -268,7 +268,7 @@ void selectDemo(int demoIndex)
 				bool isLeft = true;
 				gui->setStatusBarMessage("Status: OK", false);
 			}
-			b3Printf("Selected demo: %s",gAllExamples->getExampleName(demoIndex));
+			b3Printf("Selected demo: %s (%d)",gAllExamples->getExampleName(demoIndex),demoIndex);
 			gui->setExampleDescription(gAllExamples->getExampleDescription(demoIndex));
 			
 			sCurrentDemo->initPhysics();
