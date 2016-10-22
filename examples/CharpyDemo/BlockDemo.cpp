@@ -90,7 +90,7 @@ public:
 	btJointFeedback jf;
 	AxisMapper* axisMapper=0;
 	long stepCount,maxStepCount,syncedStep;
-	btScalar stepTime,gravityRampUpTime;
+	btScalar stepTime,targetTime,gravityRampUpTime;
 	btVector3 m_gravity;
 	btScalar frequencyRatio;
 	btScalar E,fy,G;
@@ -476,10 +476,11 @@ public:
 		b_location=0, b_velocity=0, yStart=0;
 	TimeSeriesCanvas *tsYLocation=0, *tsYVelocity=0, *tsYForce=0;
 	TimeSeriesCanvas *tsZRLocation = 0, *tsZRVelocity = 0, *tsZMoment = 0, *tsXForce=0;
-	TimeSeriesCanvas *tsError = 0;
+	TimeSeriesCanvas *tsVelError = 0,*tsPosError=0;
 #ifdef CDBG_CALLBACK
 #define C_ERROR_SIZE 6
-	float cError[C_ERROR_SIZE];
+	float velError[C_ERROR_SIZE];
+	float posError[C_ERROR_SIZE];
 #endif
 	btScalar getMass(){
 		return btScalar(lsx*lsy*lsz*getDensity(blockSteelScale));
@@ -1309,51 +1310,103 @@ public:
 			tsXForce->nextTick();
 		}
 	}
-	float maxError = 0.1, currentMaxError;
-	void updateMaxError(float offer){
-		offer = btFabs(offer);
-		if (offer > maxError){
-			maxError = offer;
+	float maxVelError = 0.1, currentMaxVelError;
+	void updateMaxVelError(float offer){
+		float absValue = btFabs(offer);
+		if (absValue > maxVelError){
+			maxVelError = absValue;
 		}
+	}
+	float maxPosError = 0.1, currentMaxPosError;
+	void updateMaxPosError(float offer){
+		float absValue = btFabs(offer);
+		if (absValue > maxPosError){
+			maxPosError = absValue;
+		}
+	}
+	/**
+	*/
+	unsigned char getRGBVal(int k1, int b1, int i, int k2, int b2){
+		int v = 255*b1 + 255*k1 * i *3/ C_ERROR_SIZE;
+		if (v>255){
+			v = 255*b2+255*k2*i*3/C_ERROR_SIZE;
+		}
+		if (v < 0){
+			v = 0;
+		}
+		return (unsigned char)v;
+
+	}
+	unsigned char getR(int i){
+		return getRGBVal(-1, 1, i,0,0);
+	}
+	unsigned char getG(int i){
+		return getRGBVal(1, 0, i,-1,2);
+	}
+	unsigned char getB(int i){
+		return getRGBVal(1, -1, i,0,0);
+	}
+	/**
+	provide clean scaling value
+	*/
+	float getScale(float in){
+		float s = 1000;
+		float v=ceilf(s*in);
+		return v;
 	}
 	void addErrorTimeSeries(){
 #ifdef CDBG_CALLBACK
-		int tsWidth = 300, tsHeight = 200;
+		const char *label[] = {"0","1","2","3","4","5"};
+		int tsWidth = 300, tsHeight = 300;
 		CommonGraphicsApp * app = PlasticityExampleBrowser::getApp();
-		if (0 == tsError){
-			tsError = new TimeSeriesCanvas
-				(app->m_2dCanvasInterface, tsWidth, tsHeight, "constraintError");
+		if (0 == tsVelError){
+			tsVelError = new TimeSeriesCanvas
+				(app->m_2dCanvasInterface, tsWidth, tsHeight, "velError [mm or mrad/s]");
 		}
-		currentMaxError = maxError;
-		tsError->setupTimeSeries(maxError, intFreq, 0);
-		tsError->addDataSource("velError x", 255, 0, 0);
-		tsError->addDataSource("velError y", 255, 0, 127);
-		tsError->addDataSource("velError rz", 255, 0, 255);
-		tsError->addDataSource("posError x", 0, 255, 0);
-		tsError->addDataSource("posError y", 0, 255, 127);
-		tsError->addDataSource("posError rz", 0, 255, 255);
+		if (0 == tsPosError){
+			tsPosError = new TimeSeriesCanvas
+				(app->m_2dCanvasInterface, tsWidth, tsHeight, "posError [mm or mrad]");
+		}
+		currentMaxVelError = maxVelError;
+		tsVelError->setupTimeSeries(getScale(maxVelError), intFreq, 0);
+		currentMaxPosError = maxPosError;
+		tsPosError->setupTimeSeries(getScale(maxPosError), intFreq, 0);
 		for (int i = 0; i < C_ERROR_SIZE; i++){
-			cError[i] = 0;
+			velError[i] = 0;
+			posError[i] = 0;
+			unsigned char r=getR(i), g=getG(i), b=getB(i);
+			tsVelError->addDataSource(label[i], r, g, b);
+			tsPosError->addDataSource(label[i], r, g, b);
 		}
-		maxError = 0;
+		maxVelError = 0;
+		maxPosError = 0;
 #endif
 	}
 	void updateErrorTimeSeries(){
 #ifdef CDBG_CALLBACK
 		for (int i = 0; i < C_ERROR_SIZE; i++){
-			if (btFabs(cError[i])>0.01*currentMaxError){
-				tsError->insertDataAtCurrentTime(cError[i], 0, false);
+			if (btFabs(velError[i])>0.01*currentMaxVelError){
+				tsVelError->insertDataAtCurrentTime(1000*velError[i], i, true);
 			}
-			cError[i] = 0;
+			if (btFabs(posError[i])>0.01*currentMaxPosError){
+				tsPosError->insertDataAtCurrentTime(1000*posError[i], i, true);
+			}
+			velError[i] = 0;
+			posError[i] = 0;
 		}
-		tsError->nextTick();
+		tsVelError->nextTick();
+		tsPosError->nextTick();
 #endif
 	}
 
 	void deleteTimeSeries(){
-		if (tsError){
-			delete tsError;
-			tsError = 0;
+		if (tsVelError){
+			delete tsVelError;
+			tsVelError = 0;
+		}
+		if (tsPosError){
+			delete tsPosError;
+			tsPosError = 0;
 		}
 		if (tsYLocation){
 			delete tsYLocation;
@@ -1812,6 +1865,7 @@ void BlockDemo::stepSimulation(float deltaTime)
 		}else if (maxSimSubSteps*m_fixedTimeStep<deltaTime){
 			timeStep = maxSimSubSteps*m_fixedTimeStep;
 		}
+		targetTime = stepTime + timeStep;
 		stepCount += m_dynamicsWorld->stepSimulation
 			(timeStep, maxSimSubSteps, m_fixedTimeStep);
 		if (stepCount >= maxStepCount){
@@ -2086,23 +2140,9 @@ btSolverConstraint* solverConstraint
 	if (velocityError == 0 && positionalError == 0){
 		return;
 	}
-	int il = -1;
-	switch (j){
-	case 0: // x 
-		il = 0;
-		break;
-	case 4:// y
-		il = 1;
-		break;
-	case 6: // rz
-		il = 1;
-		break;
-	default:
-		return;
-	}
-	demo->cError[il] = velocityError;
-	demo->cError[il + 3] = positionalError;
-	demo->updateMaxError(velocityError);
-	demo->updateMaxError(positionalError);
+	demo->velError[j] = velocityError;
+	demo->posError[j] = positionalError;
+	demo->updateMaxVelError(velocityError);
+	demo->updateMaxPosError(positionalError);
 }
 #endif
