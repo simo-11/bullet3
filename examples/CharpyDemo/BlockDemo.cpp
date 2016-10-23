@@ -690,9 +690,9 @@ public:
 	void addPauseSimulationButton(){
 		Gwen::Controls::Button* gc = new Gwen::Controls::Button(pPage);
 		pauseButton = gc;
-		gc->SetText(L"Pause");
 		gc->SetPos(gx, gy);
 		gc->SetSize(wxi - 4, gyInc - 4);
+		updatePauseButtonText();
 		gc->onPress.Add(pPage, &BlockDemo::handlePauseSimulation);
 	}
 	void addSingleStepButton(){
@@ -1310,16 +1310,17 @@ public:
 			tsXForce->nextTick();
 		}
 	}
-	float maxVelError = 0.1, currentMaxVelError;
-	void updateMaxVelError(float offer){
-		float absValue = btFabs(offer);
+	bool errorScaled = false;
+	float maxVelError = 1000, currentMaxVelError;
+	void updateMaxVelError(int index){
+		float absValue = btFabs(velError[index]);
 		if (absValue > maxVelError){
 			maxVelError = absValue;
 		}
 	}
-	float maxPosError = 0.1, currentMaxPosError;
-	void updateMaxPosError(float offer){
-		float absValue = btFabs(offer);
+	float maxPosError = 1000, currentMaxPosError;
+	void updateMaxPosError(int index){
+		float absValue = btFabs(posError[index]);
 		if (absValue > maxPosError){
 			maxPosError = absValue;
 		}
@@ -1350,22 +1351,25 @@ public:
 	provide clean scaling value
 	*/
 	float getScale(float in){
-		float s = 1000;
+		float s = 1;
 		float v=ceilf(s*in);
 		return v;
 	}
 	void addErrorTimeSeries(){
 #ifdef CDBG_CALLBACK
+		if (0==m_constraint){
+			return;
+		}
 		const char *label[] = {"0","1","2","3","4","5"};
 		int tsWidth = 300, tsHeight = 300;
 		CommonGraphicsApp * app = PlasticityExampleBrowser::getApp();
 		if (0 == tsVelError){
 			tsVelError = new TimeSeriesCanvas
-				(app->m_2dCanvasInterface, tsWidth, tsHeight, "velError [mm or mrad/s]");
+				(app->m_2dCanvasInterface, tsWidth, tsHeight, "constraint's velImpulse [Ns]");
 		}
 		if (0 == tsPosError){
 			tsPosError = new TimeSeriesCanvas
-				(app->m_2dCanvasInterface, tsWidth, tsHeight, "posError [mm or mrad]");
+				(app->m_2dCanvasInterface, tsWidth, tsHeight, "constraint's posImpulse [Ns]");
 		}
 		currentMaxVelError = maxVelError;
 		tsVelError->setupTimeSeries(getScale(maxVelError), intFreq, 0);
@@ -1386,10 +1390,10 @@ public:
 #ifdef CDBG_CALLBACK
 		for (int i = 0; i < C_ERROR_SIZE; i++){
 			if (btFabs(velError[i])>0.01*currentMaxVelError){
-				tsVelError->insertDataAtCurrentTime(1000*velError[i], i, true);
+				tsVelError->insertDataAtCurrentTime(velError[i], i, errorScaled);
 			}
 			if (btFabs(posError[i])>0.01*currentMaxPosError){
-				tsPosError->insertDataAtCurrentTime(1000*posError[i], i, true);
+				tsPosError->insertDataAtCurrentTime(posError[i], i, errorScaled);
 			}
 			velError[i] = 0;
 			posError[i] = 0;
@@ -1403,6 +1407,7 @@ public:
 		if (tsVelError){
 			delete tsVelError;
 			tsVelError = 0;
+			errorScaled = true;
 		}
 		if (tsPosError){
 			delete tsPosError;
@@ -2128,7 +2133,7 @@ btScalar positionalError,
 btScalar velocityError,
 btSolverConstraint* solverConstraint
 ){
-	if (demo == 0){
+	if (0==demo || 0==demo->m_constraint){
 		return;
 	}
 	if (!cdbgActive){
@@ -2140,9 +2145,10 @@ btSolverConstraint* solverConstraint
 	if (velocityError == 0 && positionalError == 0){
 		return;
 	}
-	demo->velError[j] = velocityError;
-	demo->posError[j] = positionalError;
-	demo->updateMaxVelError(velocityError);
-	demo->updateMaxPosError(positionalError);
+	btScalar jInv = solverConstraint->m_jacDiagABInv;
+	demo->velError[j] = velocityError*jInv;
+	demo->posError[j] = positionalError*jInv;
+	demo->updateMaxVelError(j);
+	demo->updateMaxPosError(j);
 }
 #endif
