@@ -281,8 +281,13 @@ public:
 		if (m_body){
 			switch (orientationType){
 			case X:
-				b_location = m_body->getWorldTransform().getRotation().getAngle();
+			{
+				btTransform tr = m_body->getWorldTransform();
+				btScalar yaw, pitch, roll;
+				tr.getBasis().getEulerYPR(yaw, pitch, roll);
+				b_location = yaw;
 				b_velocity = m_body->getAngularVelocity().z();
+			}
 				break;
 			case Y:
 				b_location = m_body->getWorldTransform().getOrigin().y() - yStart;
@@ -1215,7 +1220,7 @@ public:
 		m_dynamicsWorld->setConstraintSolver(m_constraintSolver);
 	}
 	void addYTimeSeries(){
-		int tsWidth = 300, tsHeight = 200;
+		int tsWidth = 300, tsHeight = 300;
 		CommonGraphicsApp * app = PlasticityExampleBrowser::getApp();
 		if (0 == tsYLocation){
 			tsYLocation = new TimeSeriesCanvas
@@ -1248,13 +1253,13 @@ public:
 		}
 	}
 	void addXTimeSeries(){
-		int tsWidth = 300, tsHeight = 200;
+		int tsWidth = 300, tsHeight = 300;
 		CommonGraphicsApp * app = PlasticityExampleBrowser::getApp();
 		if (0 == tsZRLocation){
 			tsZRLocation = new TimeSeriesCanvas
 				(app->m_2dCanvasInterface, tsWidth, tsHeight, "Z rotation");
 		}
-		tsZRLocation->setupTimeSeries(1, intFreq, 0);
+		tsZRLocation->setupTimeSeries(3.2, intFreq, 0);
 		tsZRLocation->addDataSource("", 255, 0, 0);
 		if (0 == tsZRVelocity){
 			tsZRVelocity = new TimeSeriesCanvas
@@ -1627,7 +1632,7 @@ void BlockDemo::reinit(){
 	resetClocks();
 	useCcd = false;
 	limitIfNeeded = true;
-	ammoVelocity = 30;
+	ammoVelocity = 300;
 	ammoCcdMotionThreshold=minDist/2;
 	ammoCcdSweptSphereRadius = minDist / 10;
 	loadCcdMotionThreshold = 1e-3;
