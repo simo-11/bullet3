@@ -1115,10 +1115,38 @@ public:
 			infoMsg(buf);
 		}
 		if (m_constraint != 0 && m_constraint->isEnabled()){
-			sprintf_s(buf, B_LEN * 2, "FX=%8.3g FY=%8.3g MZ=%8.3g",
+			sprintf_s(buf, B_LEN * 2, "B: FX=%8.3g FY=%8.3g MZ=%8.3g",
 				jf.m_appliedForceBodyB.getX(),
 				jf.m_appliedForceBodyB.getY(),
 				jf.m_appliedTorqueBodyB.getZ());
+			infoMsg(buf);
+			sprintf_s(buf, B_LEN * 2, "A: FX=%8.3g FY=%8.3g MZ=%8.3g",
+				jf.m_appliedForceBodyA.getX(),
+				jf.m_appliedForceBodyA.getY(),
+				jf.m_appliedTorqueBodyA.getZ());
+			infoMsg(buf);
+		}
+		if (m_body != 0){
+			btVector3 loc = m_body->getCenterOfMassPosition();
+			sprintf_s(buf, B_LEN * 2, "x=%8.3g y=%8.3g z=%8.3g",
+				loc.x(),
+				loc.y(),
+				loc.z());
+			infoMsg(buf);
+			btTransform tr = m_body->getCenterOfMassTransform();
+			btQuaternion q = tr.getRotation();
+			sprintf_s(buf, B_LEN * 2, "q={%8.3g, %8.3g, %8.3g, %8.3g}",
+				q.x(),
+				q.y(),
+				q.z(),
+				q.w());
+			infoMsg(buf);
+			btScalar yaw, pitch, roll;
+			tr.getBasis().getEulerYPR(yaw, pitch, roll);
+			sprintf_s(buf, B_LEN * 2, "yaw=%8.3g pitch=%8.3g roll=%8.3g",
+				yaw,
+				pitch,
+				roll);
 			infoMsg(buf);
 		}
 		PlasticityData::setData(&pData);
@@ -1609,7 +1637,7 @@ void BlockDemo::reinit(){
 	gravityRampUpTime = 0;
 	switch (orientationType){
 	case X:
-		lsx = 5;
+		lsx = 6;
 		lsy = 1;
 		blockSteelScale = 0.004;
 		break;
