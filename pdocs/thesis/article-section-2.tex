@@ -1,20 +1,19 @@
 % !TeX root = article.tex
-\section{Description of plasticity in the framework of physics engine}
+\section{Description of plasticity in the framework of physics engines}
 
-In this section, key concepts related to the introduced model are explained. Main differences between 
-traditional structural analysis and physics engines are reviewed and discussed.
+In this section, key concepts related to the introduced model are explained. The main differences between 
+traditional structural analysis and physics engines based approaches are reviewed and discussed.
 
-Velocity-based formulation is  popular within physics based game
+Velocity-based formulation is  commonly used by physics based game
 developers and film production teams.
 %\citet[p.~45]{erleben.thesis} 
 \citet{erleben.thesis} 
-provides reasoning and theoretical details on why 
-velocity-based formulation is  popular in constraint-based rigid body simulation. 
-Main reason is that collision handling can be done without additional procedures.
+provides reasoning and theoretical details for the popularity of 
+velocity-based formulation in constraint-based rigid body simulation. 
+The main reason is that collision handling can be done without the use of additional procedures.
 
-Background
-for velocity based formulation shown here is based on  
-\citet{erleben.thesis}.
+Work presented by  
+\citet{erleben.thesis} provides the basis for the velocity-based formulation discussed in this work.
 %\citet[p.~45-50]{erleben.thesis}.
 % pdf page 64
 In following section, these formulations will be clarified by simple example using \bullet\ implementation.
@@ -22,7 +21,7 @@ In following section, these formulations will be clarified by simple example usi
 Impulse $\vec{J}$
 in the time interval $\Delta t $ can we written as
 \begin{equation} \label{eq:impulseIntegral}
-\vec{J} = \int_{0}^{\Delta t} \vec{f}_{true}(t) dt
+\vec{J} = \int_{0}^{\Delta t} \vec{f}_{true}(t) dt,
 \end{equation}
 where $\vec{f}_{true}(t)$ is force.
 
