@@ -4,54 +4,60 @@
 In this section, key concepts related to the introduced model are explained. The main differences between 
 traditional structural analysis and physics engines based approaches are reviewed and discussed.
 
-Velocity-based formulation is  commonly used by physics based game
+Velocity-based formulation of constraint based rigid body simulation 
+is  commonly used by physics based game
 developers and film production teams.
 %\citet[p.~45]{erleben.thesis} 
 \citet{erleben.thesis} 
 provides reasoning and theoretical details for the popularity of 
-velocity-based formulation in constraint-based rigid body simulation. 
+velocity-based formulation in constraint-based rigid body simulation instead of accelaration based. 
 The main reason is that collision handling can be done without the use of additional procedures.
 
 Work presented by  
 \citet{erleben.thesis} provides the basis for the velocity-based formulation discussed in this work.
 %\citet[p.~45-50]{erleben.thesis}.
 % pdf page 64
-In following section, these formulations will be clarified by simple example using \bullet\ implementation.
+In the following section, these formulations will be clarified by a simple example using \bullet\ implementation.
 
 Impulse $\vec{J}$
-in the time interval $\Delta t $ can we written as
+in the time interval $\Delta t $ can be written as
 \begin{equation} \label{eq:impulseIntegral}
 \vec{J} = \int_{0}^{\Delta t} \vec{f}_{true}(t) dt,
 \end{equation}
 where $\vec{f}_{true}(t)$ is force.
 
-Newton's second law of motion $\vec{F}=m\vec{a}$ one can solve for the velocity,
-$\vec{v}^{\Delta t}$ as
+Using Newton's second law of motion $\vec{F}=m\vec{a}$ ,
+$\vec{v}^{\Delta t}$ can be solved as
 \begin{equation} \label{eq:impulseIntegraWithNewton}
 \int_{0}^{\Delta t} m \frac{d\vec{v}}{dt}dt= \int_{0}^{\Delta t} \vec{f}_{true}(t)
 \end{equation}
 \begin{equation} \label{eq:impulse}
-m(\vec{v}^{\, \Delta t} - \vec{v}^{\, 0})=\vec{J}
+m(\vec{v}^{\, \Delta t} - \vec{v}^{\, 0})=\vec{J},
 \end{equation}
 where superscripts denote time, i.e. ${\vec{v}}^{\Delta t}=\vec{v}(\Delta t)$.
 Next position can be found
 by integrating the velocity.
 Updates after each step can be summarized  for locations and  
-for velocities correspondingly as follows.
+for velocities respectively as follows:
 
 \begin{equation} \label{eq:eomL} % pdf page 69
 \vec{s}^{\, t+\Delta t} = \vec{s}^{\, t}+\Delta t S \vec{u}^{\, t+\Delta t}
 \end{equation}
 
 \begin{equation} \label{eq:eomV}
-\vec{u}^{\, t+\Delta t} = \vec{u}^{\, t}+\Delta t M^{-1}(C N \vec{f}^{\ t+\Delta t} + \vec{f}_{ext}) 
+\vec{u}^{\, t+\Delta t} = \vec{u}^{\, t}+\Delta t M^{-1}(C N \vec{f}^{\ t+\Delta t} + \vec{f}_{ext}) .
 \end{equation}
 
-Symbols used in Equations \ref{eq:eomL} and \ref{eq:eomV}
-are summarized in Table \ref{tab:eom} and Figure \ref{fig:eom-contact}.
-Figure \ref{fig:eom-contact} describes collision of two bodies $B_1$ and $B_2$
+The symbols used in Equations \ref{eq:eomL} and \ref{eq:eomV}
+are summarized in Table \ref{tab:eom}.
+Figure \ref{fig:eom-contact} describes the collision of two bodies, $B_1$ and $B_2$
+where $\vec{r}_i$ is orientation of body $i$,
+$\vec{p}_k $ is orientation of contact point $k$,
+$\vec{r}_{ik} $ is a vector  between the center of gravity of body $i$ and contact point $k$, 
+and
+$\vec{n}_{k}$ is the contact normal for contact point $k$.
 
-\begin{figure}[htb!]
+\begin{figure}[tb!]
 \centering
 \begin{tikzpicture}
 \coordinate (O1) at(2,1);
@@ -74,17 +80,9 @@ $\vec{r}_i$  =  orientation of body $i$
 \node[anchor=west] at (4.5,3.5) {$\vec{r}_{ik} $ = $\vec{p}_k - \vec{r}_i $};
 \node[anchor=west] at (4.5,3) {$\vec{n}_{k} $ = normal for contact point $k$};
 \end{tikzpicture}
-\caption{Illustration of nomenclature for equations of motion for contact.}
+\caption{Illustration of nomenclature for equations of motion for collision.}
 \label{fig:eom-contact}
 \end{figure}
-
-where $\vec{r}_i$ is orientation of body $i$,
-$\vec{p}_k $ is orientation of contact point $k$,
-$\vec{r}_{ik} $ is vector  between center of gravity of body $i$ and contact point $k$
-and
-$\vec{n}_{k}$ is contact normal for contact point $k$.
-By employing this formulation, simplified scenario can be simulated.
-
 
 % pdf page 33, notation in typical ODEs
 \begin {table}[htb!]
@@ -153,7 +151,7 @@ $N$ & contact normal matrix  $ N \in \mathbb{R}^{3K \times K}$ \\ \hline
 \end{center}
 \end {table}
 
-Friction in contacts and joint constraints can be handled in unified way by refactoring
+Friction in contacts and joint constraints can be handled in a unified way by refactoring
 equation \ref{eq:eomV} as,  
 \citet{erleben.thesis}
 %\citet[p.~66-67]{erleben.thesis}
@@ -161,15 +159,14 @@ equation \ref{eq:eomV} as,
 \vec{u}^{\, t+\Delta t} = \vec{u}^{\, t}+\Delta t M^{-1}(
  J_{contact}^T \vec{\lambda}_{contact}
 + J_{joint}^T \vec{\lambda}_{joint}
-+ \vec{f}_{ext})
++ \vec{f}_{ext}),
 \end{equation}
-
-where jacobian terms $J_{contact}^T$ for joints are 
-derived by taking time derivates of kinematic constraints.
+where Jacobian terms $J_{contact}^T$ for joints are 
+derived by taking time derivatives of the kinematic constraints.
 
 Symbols used in Equation \ref{eq:eomV2} are summarized in Table
 \ref{tab:eom-g} and Figure \ref{fig:eom-joint}.
-Figure \ref{fig:eom-joint} shows terms needed for joint processing.
+Figure \ref{fig:eom-joint} presents terms needed for joint processing.
 
 \begin{figure}[htb!]
 \centering
@@ -221,9 +218,9 @@ Equations \ref{eq:constraintEquation}, \ref{eq:lambdaLow} and
 \ref{eq:lambdaHigh} 
 are created for each constraint. 
 Derivation for terms in Equation \ref{eq:constraintEquation}
-can be done using position and orientation of connected bodies.
-E.g. for ball joint formulation is based on both joint points having same position.
-In contact cases formulation is easier if it is done using velocities, \cite{ode.joints}.
+can be done using the position and orientation of connected bodies
+e.g. for ball joint formulation is based on both joint points having the same position.
+In contact cases, formulation is easier if it is done using velocities, \cite{ode.joints}.
 
 \begin{equation} \label{eq:constraintEquation}
 J_1 \vec{v}_1 + \Omega_1 \vec{\omega}_1 + 
@@ -238,9 +235,9 @@ J_2 \vec{v}_2 + \Omega_2 \vec{\omega}_2 = \vec{c} + C \vec{\lambda}
 \vec{\lambda} \leq \vec{h}
 \end{equation}
 
-In following section, these equations will be clarified by simple example.
-Main parameters  and corresponding fields in \bullet\  
- are described in Table \ref{tab:constraintParameters}.
+In the following section, these equations will be explained by a simple example.
+The main parameters  and corresponding fields in \bullet\  
+are given in Table \ref{tab:constraintParameters}.
 
 \begin {table}[htb!]
 \caption {Constraint parameters}
@@ -249,7 +246,7 @@ Main parameters  and corresponding fields in \bullet\
 \begin{tabular}{|c| l| l|}
 \hline
 {\bf Parameter} & {\bf Description} & {\bf btConstraintInfo2 pointer}\\  \hline
-$J_1, \Omega_1$ & jacobian & m\_J1linearAxis, m\_J1angularAxis \\
+$J_1, \Omega_1$ & Jacobian & m\_J1linearAxis, m\_J1angularAxis \\
 $J_2, \Omega_2$ & & m\_J2linearAxis, m\_J2angularAxis \\ \hline
 $\vec{v}$ & linear velocity & \\ \hline
 $\vec{\omega}$ & angular velocity & \\ \hline
@@ -266,20 +263,21 @@ $\vec{h}$ & high limit for constraint force & m\_upperLimit \\ \hline
 In structural analysis, a formulation and associated numerical solution procedure are selected 
 based on needed features.
 Often,  finite element method is used.
-In most cases, static solution with assumption of linear strain-displacement relation
+In most cases, a static solution with an assumption of linear strain-displacement relation
 using displacement based boundary conditions is used.
-\citet{bathe-1975} provides description for handling of various nonlinearities.
+\citet{bathe-1975} provides a description for handling of various nonlinearities.
 In large displacement analysis, formulation may be based on updated formulation (Eulerian) or
 Lagrangian formulation where initial configuration is used.
 Further enhancements are material nonlinearity and dynamic analysis.
 Physics engine provides dynamic analysis with large reference translations and rotations
 while assuming bodies to be undeformable.
 
-Material plasticity can be accounted in games by using suitable coefficient of restitution.
-This provides reasonable means to simulate loss of energy in collisions.
-Simulation of breaking of bodies made of ductile material can be made more realistic by splitting rigid body
-to multiple bodies which are connected by energy absorbing joints.
-Typical engineering stress-strain curve of ductile steel is shown in Figure \ref{fig:sscurve}.
+Material plasticity can be accounted for in simulations by using a suitable coefficient of restitution.
+This provides a reasonable means to simulate loss of energy in collisions.
+In this work simulation of breaking of bodies made of ductile material is made more realistic 
+by splitting the rigid body
+to multiple bodies that are connected by energy absorbing joints.
+A typical engineering stress-strain curve of ductile steel is shown in Figure \ref{fig:sscurve}.
 
 \begin{figure}[htb!]
 \centering
@@ -302,25 +300,24 @@ In Figure \ref{fig:sscurve}, $\sigma$ is stress, $E$ is Youngs modulus and $f_y$
 Engineering stress and strain mean that original dimensions are used in stress calculation,
 \citet{dowling}.
 %\citet[p.~108]{dowling}.
-Stress-strain curve is not drawn to scale as elastic strain could not be seen as it is typically 0.001 to 0.005.
+The stress-strain curve is not drawn to scale as elastic strain could not be seen as it is typically 
+0.001 to 0.005 and fracture strain can be 100 times larger.
 
-In this work elastic-fully plastic material model is used in most scenarios.
+In this work, an elastic-fully plastic material model is used in most scenarios.
 Having elastic part allows elastic displacements for slender structures. 
-Elastic material behavior is ignored in approach introduced in this work provided
-that deformation is related to higher frequency
+Elastic material behavior is ignored in approach introduced in this work if
+the deformation is related to ahigher frequency
 than integration stability would allow.
 It should be noted that geometry
-of bodies is not updated during analysis and thus engineering stress-strain properties should
-be used.
+of bodies is not updated during analysis and thus engineering stress-strain properties are used.
 
-In this work, strain hardening is taken into account by assuming that plasticity in bending
+In this work, strain hardening is taken into account by assuming that plastic volume in bending
 expands, 
 \citet{dowling}.
 %\citet[p.~672]{dowling}.
 Material that starts to yield first is hardened and as a result of which yielding moves.
-This can be seen e.g. by bending paperclip. It does not break at low angles but can take few full bends. 
 
-Difference between elastic and plastic section modulus is depicted in Figure \ref{fig:wp}.
+The difference between the elastic and plastic section modulus is depicted in Figure \ref{fig:wp}.
 
 \begin{figure}[htb!]
 \centering
@@ -359,17 +356,17 @@ cross section
 \end{tabular}
 };
 \end{tikzpicture}
-\caption{Axial stress distribution over cross section for bending under elastic and fully plastic loads.}
+\caption{Axial stress distribution over a cross section for bending under elastic and fully plastic loads.}
 \label{fig:wp}
 \end{figure}
 
-As shown in Figure 2.4, if stress is below yield limit $f_y$, stress and strain are linear within material.
-If cross section is fully plastic, stress is assumed to be at yield level over whole cross section such that 
-plastic section modulus is higher than elastic section modulus.
+As shown in Figure 2.4, if stress is below yield limit $f_y$, stress and strain are linear within the material.
+If cross section is fully plastic, stress is assumed to be at yield level over the whole cross section such that 
+the plastic section modulus is higher than the elastic section modulus.
 
 In this work, plasticity is handled by defining maximum forces
 in Equations \ref{eq:lambdaLow} and  
-\ref{eq:lambdaHigh} using plastic capasities which are defined below.
+\ref{eq:lambdaHigh} using plastic capacities, which are defined below.
 
 Maximum force acting in a direction of $\vec{r}_{anc}^{\,i} $
 is product of area and yield stress as follows
@@ -379,15 +376,15 @@ N_{max}= \int_A f_y
 \end{equation}
 
 Maximum forces acting perpendicular to $\vec{r}_{anc}^{\,i} $
-are product of area and shear yield stress $\tau_y$ as follows
+are a product of area and shear yield stress $\tau_y$ as follows
 \begin{equation} \label{eq:fQ}
 Q_{max}= \int_A \tau_y
 \end{equation}
 
-Maximum moments acting around axis perpendicular to $\vec{r}_{anc}^{\,i} $
-are integrals of perpdendicular distance 
-and yield stress $f_y$ as given for the moment around $x$-axis 
-and moment around $z$-axis, respectively.
+Maximum moments acting around the axis perpendicular to $\vec{r}_{anc}^{\,i} $
+are integrals of the perpdendicular distance 
+and yield stress $f_y$ as given for the moment around the $x$-axis 
+and moment around the $z$-axis, respectively.
 
 \begin{equation} \label{eq:Mx}
 M_{max}^x= \int_A z f_y
@@ -398,22 +395,21 @@ M_{max}^z= \int_A x f_y
 \end{equation}
 
 Maximum moment around $\vec{r}_{anc}^{\,i} $
-is integral of distance $d$ from joint point
+is an integral of distance $d$ from the joint point
 and shear yield stress $\tau_y$ as 
 
 \begin{equation} \label{eq:My}
 M_{max}^y= \int_A d \tau_y
 \end{equation}
 
-Maximum forces and moments for 
+Maximum forces and moments for a
 rectangular section with width $b$ and height $h$ using constant yield stress
-are summarized in Table \ref{tab:maxForces}.
-Yield shear stress is assumed to be $ 0.5\, f_y$ using Tresca yield critetion.
-If von Mises yield criterion is used 0.5 is replaced by 0.58 ($1/\sqrt{3}$), \cite{dowling}.
+are given in Table \ref{tab:maxForces}.
+Yield shear stress is assumed to be $ 0.5\, f_y$ using the Tresca yield critetion.
+If the von Mises yield criterion is used 0.5 is replaced by 0.58 ($1/\sqrt{3}$), \cite{dowling}.
 % p. 262, p. 268
-These are not exact values in multiaxial stress state but they
-are usable in most cases.
-
+These are not exact values in a multiaxial stress state but they
+should be acceptable in most gaming scenarios.
 
 \begin {table}[htb!]
 \caption {Maximum forces and moments for 
@@ -432,14 +428,14 @@ maximum torque & $ \approx 0.19\, b\, h\, \frac{b\, + h}{2} f_y$  \\ \hline
 \end{center}
 \end {table}
 
-For torque there is closed form solution only for
+For torque there is a closed form solution only for
 circular cross sections.
 Given approximation is 
 best suited for cases where $b$ and $h$ are similar.
 Better approximation for any given $b$ and $h$ can be obtained 
-by integrating distance from center of joint over cross section and
-multiplying it with yield shear stress e.g. using octave, \cite{octave}.
-Example of calculation of maximum moment  around $\vec{r}_{anc}^{\,i} $
+by integrating distance from the center of the joint over cross section and
+multiplying it with the yield shear stress e.g. using Octave, \cite{octave}.
+An example of calculation of the maximum moment  around $\vec{r}_{anc}^{\,i} $
 is shown in Figure \ref{fig:octave-mp}
 
 \begin{figure}[htb!]
@@ -451,14 +447,14 @@ wpy=fy/2*dblquad(@(x,z) sqrt(x.*x+z.*z),-b/2,b/2,-h/2,h/2)
 38.2
 \end{lstlisting}
 
-\caption{Calculation of maximum moment  around $\vec{r}_{anc}^{\,i} $ using octave.}
+\caption{Calculation of maximum moment  around $\vec{r}_{anc}^{\,i} $ using Octave.}
 \label{fig:octave-mp}
 \end{figure}
 
 
-Basic idea introduced in this study can be tested with any framework having motors and hinge constraints.
-This can be done by setting target velocity of motor to zero and limiting maximum motor impulse to plastic moment 
-multiplied by timestep.
+The basic idea introduced in this study can be tested with any framework having motors and hinge constraints.
+This can be done by setting the target velocity of the motor to zero and limiting 
+the maximum motor impulse to plastic moment multiplied by a timestep.
 
 Further enhancements were created and tested by forking \bullet\ source code
 and adding new constraints, \cite{pbullet}.
