@@ -1,89 +1,77 @@
 % Simo.Nikula@gmail.com
-% based on latex template at http://www.lut.fi/web/en/library/dissertations1 
 \def\mytitle{Elastic-plastic Constraint for Rigid Body Simulation}
-\def\myisbn{978-952-265-XXX-X}
-\def\mypdfisbn{978-952-265-XXX-X}
-\def\myyear{2017}
-\def\mymonth{May}
-\def\myname{Simo Nikula}
 \def\lut{Lappeenranta University of Technology}
 \def\bullet{Bullet Physics}
 \def\demolisher{DemolisherDemo}
 \def\charpy{CharpyDemo}
-\documentclass[a4paper,twoside,12pt,notitlepage]{article}
+\def\myvolume{VV}
+\def\mynumber{N}
+\def\myyear{YYYY}
+\def\mymonth{Month}
+\def\myaan{XXX}
+\def\mydoi{XXXXXXX.YYYYYYY}
+
+\documentclass{acmtog}
+\acmVolume{\myvolume}
+\acmNumber{\mynumber}
+\acmYear{\myyear}
+\acmMonth{\mymon}
+\acmArticleNum{\myaan}  
+\acmdoi{10.1145/\mydoi}
+
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
-\usepackage{natbib}
-\usepackage{lastpage}   % page count
-\usepackage{amsmath}
+%\usepackage{natbib}
+%\usepackage{lastpage}   % page count
+%\usepackage{amsmath}
 \usepackage{listings}
 % \usepackage{mathdots}  % improved \ddots and \iidots
-\usepackage{amssymb}
-\usepackage[english]{babel}
-\usepackage[intoc]{nomencl} % including table of content
-\usepackage{ifthen}
-\usepackage[hmargin=2.0cm,vmargin=1.6cm]{geometry} % setting marginals
-\usepackage{fancyhdr,extramarks}  % header ja footer manipulation
-\usepackage{times}  % to change font to times
-\usepackage{setspace} % for linespacingx
+%\usepackage{amssymb}
+%\usepackage[english]{babel}
+%\usepackage[intoc]{nomencl} % including table of content
+%\usepackage{ifthen}
+%\usepackage[hmargin=2.0cm,vmargin=1.6cm]{geometry} % setting marginals
+%\usepackage{fancyhdr,extramarks}  % header ja footer manipulation
+%\usepackage{times}  % to change font to times
+%\usepackage{setspace} % for linespacingx
 \usepackage{tikz}
 \usetikzlibrary{arrows}
 \usetikzlibrary{arrows.meta}
 \usepackage{caption}
 \usepackage{varwidth}
 \usepackage{enumitem} % 
-\newcommand{\nomunit}[1]{\renewcommand{\nomentryend}{\hspace*{\fill}#1}} % Inserts units on the right at symbol list
-\renewcommand{\nomgroup}[1]{%
- \ifthenelse{\equal{#1}{C}}{\item[\textbf{Latin alphabet}]\item}{%
- \ifthenelse{\equal{#1}{G}}{\item\item[\textbf{Greek alphabet}]\item}{}}{%
- \ifthenelse{\equal{#1}{L}}{\item\item[\textbf{Subscripts}]\item}{}}{%
- \ifthenelse{\equal{#1}{H}}{\item\item[\textbf{Superscripts}]\item}{}}{%
- \ifthenelse{\equal{#1}{W}}{\item\item[\textbf{Abbreviations}]\item}{}}{}}
-
-\singlespacing
-
-\pagestyle{fancy}
-\fancyhf{}% clearing the header and footer
-\fancyhead[LE,RO]{\bfseries\thepage}    % page number to header
-\fancyhead[LO]{\nouppercase{\bfseries\rightmark}}     %
-\fancyhead[RE]{\nouppercase{\bfseries\leftmark}}%
-
-\renewcommand\sectionmark[1]
- {\markboth{\thesection\ #1}{}}         % section name to header
-\renewcommand\subsectionmark[1]
- {\markright{\thesubsection\ #1}}       % subsection name to header
-\renewcommand{\headrulewidth}{0.5pt}    % ruler thickness between head and body
-\renewcommand{\footrulewidth}{0pt}      % no ruler between body and footer
-
-\setlength{\nomitemsep}{-\parsep}   % removing default extra skip between entries at nomenclature
-
-\numberwithin{equation}{section}    % equation numbers with section numbers
-\numberwithin{table}{section}       % table numbers with section numbers
-\numberwithin{figure}{section}      % figure numbers with section numbers
-
-% makeindex command needs to run at command prompt to create nomenclature list file
-\makenomenclature % makeindex main_v2.nlo -s nomencl.ist -o main_v2.nls
-%\bibpunct{(}{)}{;}{a}{,}{,}%
-
 \begin{document}
 
-\pagestyle{empty}
 \title{\mytitle}
-\author{Simo Nikula, Aki Mikkola and Timo Björk}
-\author{}
+markboth{S. Nikula et al.}{\mytitle}
+
+\title{\mytitle}
+
+\author{SIMO NIKULA {\upshape and} AKI MIKKOLA {\upshape and} TIMO BJÖRK
+\affil{\lut}}
+
+\category{I.3.7}{Computer Graphics}{Three-Dimensional Graphics and Realism}[Animation]
+\category{I.6.3}{Computer Graphics}{Simulation and Modelling}[Applications]
+
+\keywords{Modeling, Animation, Deformation, Elasticity, Plasticity, Dynamics, Simulation}
+
+\acmformat{Nikula, S., Mikkola, A., Björk, T.,  G. V. G. \myyear. 
+\mytitle.  {ACM Trans. Graph.} \myvolume, \mynumber, Article \myaan (\mymon \myyear), # pages.\newline  DOI $=$
+10.1145/\mydoi\newline http://doi.acm.org/10.1145/\mydoi}
+
 \maketitle
+
+\begin{bottomstuff} 
+
+Authors' addresses: Simo.Nikula@gmail.com
+\end{bottomstuff}
+
 \include{article-introduction}
 \include{article-section-2}
 \include{article-section-3}
 \include{article-conclusion}
 
-\fancyhead[LO]{\nouppercase{\bfseries\firstleftxmark}}%
-\fancyhead[RE]{\nouppercase{\bfseries\lastrightxmark}}%
-\extramarks{}{References}   % this will remove the "References" to be appearing at the header at first page of bibliography
-\extramarks{References}{References}
-\bibliographystyle{LUTapa}% LUTapa
-\bibliography{ref}%
-
-%\cleardoublepage %
+\bibliographystyle{acmtog}
+\bibliography{ref}
 
 \end{document}
