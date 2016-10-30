@@ -103,35 +103,35 @@ in \bullet\ is used to get values for the internal variables described in Figure
 
 \begin{figure}[htb!]
 \begin{description}
-\item[velError] is calculated using velocities and external impulses of connected bodies.  
+\item[velError] is calculated using velocities and external impulses of the connected bodies.  
  \begin{description}
-\item[In constraint cases,] main contibutor is bodies relative speed at joint point.
-\item[In contact case,] main contributor is bodies relative speed at point of contact. 
+\item[In constraint cases,] the main contibutor is the relative speed of the bodies at the joint point.
+\item[In contact cases,] the main contributor is the relative speed of the bodies at the point of contact. 
 Bodies are not allowed to penetrate each other. Restitution increases velError.
 If contact is not penetrating velError is reduced by $penetration * timeStep$.
 \end{description}
-\item[posError] is calculated by constraint. It is significant factor in designing stable constraints.
+\item[posError] is provided by the constraint. It is a significant factor in designing stable constraints.
  \begin{description}
- \item[In fixed case,] value is about 12 times actual position error. Factor 12 is based on time step (60) 
- and default value of error reduction parameter (erp) which has value of 0.2 in this context.
- \item[In elastic plastic case,]  value is set to zero if impulse would be larger than maximum impulse or
-spring simulation cannot be done in stable way.
- \item[In contact case,] value is zero if there is no penetration. For penetration cases it is 
-$\frac{-penetration\, erp}{timeStep}$. In contact cases default value for erp is 0.8.
+ \item[In fixed cases,] the value is about 12 times the actual position error. Factor 12 is based on the time step (60) 
+ and the default value of error reduction parameter (erp), which has a value of 0.2 in this context.
+ \item[In elastic plastic cases,]  the value is set to zero if the impulse would be larger the than maximum impulse or
+the spring simulation cannot be done in a stable way.
+ \item[In contact cases,] the value is zero if there is no penetration. For penetration cases it is 
+$\frac{-penetration\, erp}{timeStep}$. In contact cases the default value for erp is 0.8.
  \end{description}
 \item[rhs (c)] is calculated by velError jInv + posError jInv
 \item[jInv] is calculated using masses and inertias of connected bodies and constraint geometry. 
  \begin{description}
-\item[In constraint cases,] it is mass of body (6000).
-\item[In contact case,] it varies below mass of body.
+\item[In constraint cases,] it is the mass of the body (6000).
+\item[In contact cases,] it varies below the mass of the body.
 \end{description}
-\item[Impulse] is impulse applied to body during timestep.
+\item[Impulse] is impulse applied to the body during a timestep.
  \begin{description}
-\item[In constraint cases,] it is obtained from btJointFeedback structure.
-\item[In contact case,] it is obtained by summing applied impulses from active manifolds.
+\item[In constraint cases,] it is obtained from the btJointFeedback structure.
+\item[In contact cases,] it is obtained by summing the applied impulses from the active manifolds.
 \end{description}
 \item[erp] Error reduction parameter (0...1) is used to handle numerical issues e.q. body drifting. 
-Setting erp to 1 would in theory eliminate error in one step but in practice value of 0.2 - 0.8 is used in most cases.
+Setting erp to 1 would in theory eliminate error in one step but in practice a value of 0.2 - 0.8 is used in most cases.
 \end{description}
 \caption{Internal variables used in \bullet\ in constraint solving.}
 \label{fig:solVars}
@@ -177,21 +177,21 @@ as the number of contacts and the values at contact points differ.}
 \begin{figure}[htb!]
 \centering
 \input{figs/uc-fig.tikz}
-\caption{Graph for selected values for unconstrained case simulation without continuous collision detection.}
+\caption{Graph for selected values for the unconstrained case without continuous collision detection.}
 \label{fig:uc}
 \end{figure}
 
 
-Actual values for unconstrained case with continuous collision detection (ccd) using 1.5 
-as radius of ccd sphere and 0.001 as ccd motion threshold
-are shown in \ref{tab:freeBlockValuesWithCcd}. Collision is detected at time 0.550 s when
+Actual values for an unconstrained case with continuous collision detection (ccd) using 1.5 
+as the radius of the ccd sphere and 0.001 as the ccd motion threshold
+are shown in Table \ref{tab:freeBlockValuesWithCcd}. Collision is detected at time 0.550 s when
 {\it velError} is  3.5 (5.34+0.167)-0.033/0.0167 and
 {\it posError} is  0 as collision is detected before penetration. 
-It should be noted that in general ccd sphere should not extend actual body as 
-premature contacts are created if collision takes place in those regions.
+It should be noted that in general the ccd sphere should not extend the actual body as 
+premature contacts are created if collision takes place in regions where the ccd sphere extends out of the actual body.
 
 \begin {table}[htb!]
-\caption {Simulation values for unconstrained case with continuous collision detection. } 
+\caption {Simulation values for the unconstrained case with continuous collision detection. } 
 \label{tab:freeBlockValuesWithCcd} 
 \begin{center}
 \begin{tabular}{|l| l|l| l|l|l|l|l|}
@@ -210,12 +210,12 @@ premature contacts are created if collision takes place in those regions.
 \end{center}
 \end {table}
 
-Values for fixed constraint are shown in Table
-\ref{tab:fixedBlockValues}. Constraint is activated in second step and positional error is corrected
-about 20 \% in each step as requested by using erp value 0.2.
+Values for a fixed constraint are shown in Table
+\ref{tab:fixedBlockValues}. The constraint is activated in the second step and positional error is corrected
+about 20 \% in each step as requested by using an erp value of 0.2.
 
 \begin {table}[htb!]
-\caption {Constraint parameter values for fixed constraint} 
+\caption {Constraint parameter values for the fixed constraint} 
 \label{tab:fixedBlockValues} 
 \begin{center}
 \begin{tabular}{|l|l| l| l|l|l|l|}
@@ -237,11 +237,12 @@ about 20 \% in each step as requested by using erp value 0.2.
 There are currently two alternative six-dof-spring constraint implementations in \bullet\ and 
 in this work elastic-plastic versions of both of them are developed. 
 
-Table  \ref{tab:ep2Parameters} summarizes most significant parameters for this study.
-There are also e.g. parameters for controlling joint motors.
-Additional equation is created for each additional constraint. 
+Table  \ref{tab:ep2Parameters} the summarizes most significant parameters for this study.
+There are also other parameters, e.g. for controlling joint motors.
+An additional equation is created for each additional constraint. 
 Enabled springs and motors add one row and
-limits add one if upper and lower are same and two if both upper and lower limits are defined.
+limits add one if the upper and lower limits are the same and two if both the 
+upper and the lower limits are defined.
 
 \begin {table}[htb!]
 \caption {Selected constraint parameters for elastic-plastic constraint 2}
@@ -277,10 +278,10 @@ currentLimit & describes state of constraint \newline
 \end {table}
 
 
-Values for elastic-plastic case are shown in Tables \ref{tab:epBlockValues}.
-Body drops freely during first simulation step and 
-gains enough kinetic energy so that higher impulses are needed in few following steps.
-This causes plastic strain during next three steps.
+Values for an elastic-plastic case are shown in Table \ref{tab:epBlockValues}.
+The body drops freely during first simulation step and 
+gains enough kinetic energy so that higher impulses are needed in the following steps.
+This causes plastic strain during the next three steps.
 
 \begin {table}[htb!]
 \caption {Constraint parameter values for elastic-plastic constraint} 
@@ -303,19 +304,19 @@ This causes plastic strain during next three steps.
 \end{center}
 \end {table}
 
-Six-dof-spring constraint 2 has optional feature to avoid unstability by automatically softening constraint
-spring. Feature is activated if current timeStep is overly large for spring-mass system simulation.
-The feature is trigged based on the equation below 
+Six-dof-spring constraint 2 has an optional feature to avoid unstability by automatically softening the constraint
+spring. The feature is activated if the current timeStep is overly large for the spring-mass system simulation.
+The feature is triggered based on the equation below 
 \begin{equation} \label{eq:frequencyLimited}
-\sqrt{ k /  m_{min}} dt > 0.25 
+\sqrt{ k /  m_{min}} dt > 0.25, 
 \end{equation}
-where $k$ is elastic spring stiffness between bodies,
-$m_{min}$ is smaller of connected masses or inertias and $dt$ is integration timestep.
+where $k$ is the elastic spring stiffness between the bodies,
+$m_{min}$ is the smaller of the connected masses or inertias and $dt$ is the integration timestep.
 
-If this feature is active for elastic-plastic constraint 2 constraint  
-it does not report positional error but it allows full plastic capacity to be used for correcting
-velocity based error instead of force provided by spring.
-In this scenario body behaves as depicted in Table \ref{tab:ep2BlockValues} i.e. it does not move at all.
+If this feature is active for elastic-plastic constraint 2   
+it does not report positional error but  allows full plastic capacity to be used for correcting
+the velocity based error instead of the force provided by the spring.
+In this scenario the body behaves as depicted in Table \ref{tab:ep2BlockValues}, i.e., it does not move at all.
 
 \begin {table}[htb!]
 \caption {Constraint parameter values for elastic-plastic constraint 2} 
@@ -335,38 +336,40 @@ In this scenario body behaves as depicted in Table \ref{tab:ep2BlockValues} i.e.
 \end {table}
 
 \subsection{Charpy impact test}
-In a second numerical example, simulation of Charpy impact test is
-used to benchmark approach in more complicated scenario. 
-Material is steel and density is 7800 $\frac{kg}{m^{3}}$. Young’s modulus is 200 GPa.
-Specimen dimensions are 10x10x55 mm with 2 mm notch in middle which is taken into account in calculations.
+In a second numerical example, simulation of a Charpy impact test is
+used to benchmark the approach in a more complicated scenario. 
+The material is steel and density is 7800 $\frac{kg}{m^{3}}$. Young’s modulus is 200 GPa.
+Specimen dimensions are 10x10x55 mm with a 2 mm notch in the middle which is taken into account in the calculations.
 Support anvils initially have 40 mm open space between them and their width is 40 mm. 
-Hammer is 0.5 m wide and 0.25 m high, thickness is 0.02 m and mass is 19.5 kg.
-Hammer has 40 mm draft.
-If specimen bends about 1.9 radians (108 degrees) it will go between anvils.
-Expected energy loss is product of plastic moment of section, hinge angle needed for specimen to go through supports and 
-yield stress of specimen. For hinge angle of 1.9 radians and yield stress of 400 MPa expected energy 
+The hammer is 0.5 m wide and 0.25 m high, thickness is 0.02 m and mass is 19.5 kg.
+The hammer has 40 mm draft.
+If the specimen bends about 1.9 radians (108 degrees) it can go between the anvils.
+The expected energy loss is the product of the plastic moment of section, 
+hinge angle needed for the specimen to go through the supports and 
+the yield stress of the specimen. For hinge angle of 1.9 radians and yield stress of 400 MPa, expected energy 
 loss is 122 J.
 
-Usually \bullet\ simulations are done using fixed time step of 1/60 s i.e. 16.67 ms. 
+\bullet\ simulations are usually done using a fixed time step of 1/60 s, i.e., 16.67 ms. 
 For this case that is too large. 
-Default time step was selected to be 5 ms outside impact time and 0.1 ms during impact. 
-Automatic time stepping routine changes timestep so that at angles higher than 0.2 5 ms time step is
-used and adjusts it linearly to selected time step between angles of 0.2 and 0.05.
+The default time step was selected to be 5 ms outside impact  and 0.1 ms during impact. 
+An automatic time stepping routine changes the timestep so that at angles higher than 0.2 radians 5 ms time step is
+used and adjusts it linearly to a selected time step between the angles of 0.2 and 0.05 radians.
 
-Figure \ref{fig:charpy-series} shows three detailed pictures from simulation.
-Left picture shows early phase of simulation. In middle picture hammer has not yet collided with specimen.
-In right picture specimen is bending.
+Figure \ref{fig:charpy-series} shows three detailed pictures from the simulation.
+The left picture shows early phase of simulation. 
+In the middle picture the hammer has not yet collided with the specimen.
+In the right picture the specimen is bending.
 
 \begin{figure}[htb!]
 \centering
 \includegraphics[height=3cm]{figs/article-charpy-1}
 \includegraphics[height=3cm]{figs/article-charpy-2}
 \includegraphics[height=3cm]{figs/article-charpy-3}
-\caption{Detailed pictures from simulation of Charpy impact test}
+\caption{Detailed pictures from simulation of a Charpy impact test}
 \label{fig:charpy-series}
 \end{figure}
 
-Table \ref{tab:ep2ts} shows energy loss for few timesteps as example to demonstrate sensitivity of solution
+Table \ref{tab:ep2ts} shows energy loss for a few timesteps to demonstrate the sensitivity of the solution
 using  elastic-plastic constraint 2.
 
 \begin {table}[htb!]
@@ -383,7 +386,7 @@ using  elastic-plastic constraint 2.
 \end{center}
 \end {table}
 
-Figure \ref{fig:charpy} shows overview from simulation as specimen is going between supports.
+Figure \ref{fig:charpy} shows an overview from simulation as the specimen passes between the supports.
 
 \begin{figure}[htb!]
 \centering
@@ -395,17 +398,17 @@ Figure \ref{fig:charpy} shows overview from simulation as specimen is going betw
 
 
 \subsection{Demolisher}
-Third numerical examples introduces a demolisher.
-Demolisher is collection of possible scenarios that can be added to games to provide ductile joints between
+The third numerical example introduces the demolisher.
+The demolisher is a collection of possible scenarios that can be added to games to provide ductile joints between
 rigid bodies.  Rigid concrete bodies are connected by steel enforcement.
 Concrete density is 2000 $\frac{kg}{m^3}$ and steel density is 7800 $\frac{kg}{m^3}$. 
 Steel is assumed to handle load. Yield stress of steel is 200 MPa.
 Gravity is 10  $\frac{m}{s^2}$. Simulation step is $\frac{1}{60} $ s and 10 
-iterations are done for single step. Multiple simulation steps are done for each render if needed.
+iterations are done for a single step. Multiple simulation steps are done for each render if needed.
 
-Simulation can be done in real time on modest hardware, e.g. 
+The simulation can be done in real time on modest hardware, e.g. 
 on laptop having 2.0 GHz Intel i3 CPU with integrated graphics. 
-Figure \ref{fig:demolisher} shows three screenshots from simulation.
+Figure \ref{fig:demolisher} shows three screenshots from the simulation.
 
 \begin{figure}[htb!]
 \centering
@@ -416,12 +419,13 @@ Figure \ref{fig:demolisher} shows three screenshots from simulation.
 \label{fig:demolisher}
 \end{figure}
 
-Vehicle is modelled as single box btRaycastVehicle with four driving wheels. Wheels are rendered for visual feedback.
-In left picture, initial state is shown. Gate in front is modelled to be so slender that it has visible elastic deflection.
-Gate support is modelled as heavy box.
-Bridge has rigid ramps and supports at both ends.
-Gravity is applied gradually to avoid collapse of bridge at start of simulation.
-In middle picture,  bridge is shown in state where car has driven once over bridge without stopping and
+The vehicle is modelled as a single box btRaycastVehicle with four driving wheels. Wheels are rendered for visual feedback.
+In the left picture, the initial state is shown. 
+The gate in front is modelled to be so slender that it has visible elastic deflection.
+The gate support is modelled as a heavy box.
+The bridge has rigid ramps and supports at both ends.
+Gravity is applied gradually to avoid collapse of bridge at the start of the simulation.
+In the middle picture, the bridge is shown in a state where a car has driven once over the bridge without stopping and
 other bodies have taken light damage.
-In right picture, two joints have been broken and bridge has fallen from support due to bending.
+In the right picture, two joints have been broken and the bridge has fallen from teh support due to bending.
 
