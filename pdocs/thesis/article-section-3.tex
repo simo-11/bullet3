@@ -6,7 +6,7 @@ In this section, changes to the constraint formulation are exemplified with some
 of non constrained, rigid and
 elastic-plastic examples using numerical values.
 
-\begin{figure}[htb!]
+\begin{figure}
 \centering
 \begin{tikzpicture}
 \coordinate (O) at (0,0,0);
@@ -101,7 +101,7 @@ area of steel enforcement and time step (1330).
 Method btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup
 in \bullet\ is used to get values for the internal variables described in Figure \ref{fig:solVars}. 
 
-\begin{figure}[htb!]
+\begin{figure}
 \begin{description}
 \item[velError] is calculated using velocities and external impulses of the connected bodies.  
  \begin{description}
@@ -146,7 +146,7 @@ Penetration is detected at time 0.567 s when
 After a few steps the location and position stabilize although internally calculation is needed for each time step
 until a body is deactivated.
 
-\begin {table}[htb!]
+\begin {table}
 \caption {Simulation values for the unconstrained case without continuous collision detection. 
 Typical values are shown for internal contact values
 as the number of contacts and the values at contact points differ.} 
@@ -174,8 +174,7 @@ as the number of contacts and the values at contact points differ.}
 \end {table}
 
 
-\begin{figure}[htb!]
-\centering
+\begin{figure}
 \input{figs/uc-fig.tikz}
 \caption{Graph for selected values for the unconstrained case without continuous collision detection.}
 \label{fig:uc}
@@ -190,7 +189,7 @@ are shown in Table \ref{tab:freeBlockValuesWithCcd}. Collision is detected at ti
 It should be noted that in general the ccd sphere should not extend the actual body as 
 premature contacts are created if collision takes place in regions where the ccd sphere extends out of the actual body.
 
-\begin {table}[htb!]
+\begin {table}
 \caption {Simulation values for the unconstrained case with continuous collision detection. } 
 \label{tab:freeBlockValuesWithCcd} 
 \begin{center}
@@ -214,7 +213,7 @@ Values for a fixed constraint are shown in Table
 \ref{tab:fixedBlockValues}. The constraint is activated in the second step and positional error is corrected
 about 20 \% in each step as requested by using an erp value of 0.2.
 
-\begin {table}[htb!]
+\begin{table}
 \caption {Constraint parameter values for the fixed constraint} 
 \label{tab:fixedBlockValues} 
 \begin{center}
@@ -244,7 +243,7 @@ Enabled springs and motors add one row and
 limits add one if the upper and lower limits are the same and two if both the 
 upper and the lower limits are defined.
 
-\begin {table}[htb!]
+\begin{table}
 \caption {Selected constraint parameters for elastic-plastic constraint 2}
 \label{tab:ep2Parameters} 
 \begin{center}
@@ -283,7 +282,7 @@ The body drops freely during first simulation step and
 gains enough kinetic energy so that higher impulses are needed in the following steps.
 This causes plastic strain during the next three steps.
 
-\begin {table}[htb!]
+\begin{table}
 \caption {Constraint parameter values for elastic-plastic constraint} 
 \label{tab:epBlockValues} 
 \begin{center}
@@ -318,7 +317,7 @@ it does not report positional error but  allows full plastic capacity to be used
 the velocity based error instead of the force provided by the spring.
 In this scenario the body behaves as depicted in Table \ref{tab:ep2BlockValues}, i.e., it does not move at all.
 
-\begin {table}[htb!]
+\begin{table}
 \caption {Constraint parameter values for elastic-plastic constraint 2} 
 \label{tab:ep2BlockValues} 
 \begin{center}
@@ -360,19 +359,19 @@ The left picture shows early phase of simulation.
 In the middle picture the hammer has not yet collided with the specimen.
 In the right picture the specimen is bending.
 
-\begin{figure}[htb!]
+\begin{figure*}
 \centering
 \includegraphics[height=3cm]{figs/article-charpy-1}
 \includegraphics[height=3cm]{figs/article-charpy-2}
 \includegraphics[height=3cm]{figs/article-charpy-3}
 \caption{Detailed pictures from simulation of a Charpy impact test}
 \label{fig:charpy-series}
-\end{figure}
+\end{figure*}
 
 Table \ref{tab:ep2ts} shows energy loss for a few timesteps to demonstrate the sensitivity of the solution
 using  elastic-plastic constraint 2.
 
-\begin {table}[htb!]
+\begin {table}
 \caption {Energy loss for few timesteps}
 \label{tab:ep2ts} 
 \begin{center}
@@ -388,9 +387,9 @@ using  elastic-plastic constraint 2.
 
 Figure \ref{fig:charpy} shows an overview from simulation as the specimen passes between the supports.
 
-\begin{figure}[htb!]
+\begin{figure}
 \centering
-\includegraphics[height=8cm]{figs/article-charpy}
+\includegraphics[height=4.5cm]{figs/article-charpy}
 \caption{Overview of simulation of Charpy impact test}
 \label{fig:charpy}
 \end{figure}
@@ -410,14 +409,14 @@ The simulation can be done in real time on modest hardware, e.g.
 on laptop having 2.0 GHz Intel i3 CPU with integrated graphics. 
 Figure \ref{fig:demolisher} shows three screenshots from the simulation.
 
-\begin{figure}[htb!]
+\begin{figure*}
 \centering
 \includegraphics[height=5cm]{figs/demolisher-pre}
 \includegraphics[height=5cm]{figs/demolisher-wip}
 \includegraphics[height=5cm]{figs/demolisher-done}
 \caption{Simulation of Demolisher scenario}
 \label{fig:demolisher}
-\end{figure}
+\end{figure*}
 
 The vehicle is modelled as a single box btRaycastVehicle with four driving wheels. Wheels are rendered for visual feedback.
 In the left picture, the initial state is shown. 

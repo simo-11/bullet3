@@ -8,19 +8,19 @@ Velocity-based formulation of constraint based rigid body simulation
 is  commonly used by physics based game
 developers and film production teams.
 %\citet[p.~45]{erleben.thesis} 
-\citet{erleben.thesis} 
+\cite{erleben.thesis} 
 provides reasoning and theoretical details for the popularity of 
 velocity-based formulation in constraint-based rigid body simulation instead of accelaration based. 
 The main reason is that collision handling can be done without the use of additional procedures.
 
 Work presented by  
-\citet{erleben.thesis} provides the basis for the velocity-based formulation discussed in this work.
+\cite{erleben.thesis} provides the basis for the velocity-based formulation discussed in this work.
 %\citet[p.~45-50]{erleben.thesis}.
 % pdf page 64
 In the following section, these formulations will be clarified by a simple example using \bullet\ implementation.
 
 Impulse $\vec{J}$
-in the time interval $\Delta t $ can be written as
+in the time interval $\Delta t $ can be written as:
 \begin{equation} \label{eq:impulseIntegral}
 \vec{J} = \int_{0}^{\Delta t} \vec{f}_{true}(t) dt,
 \end{equation}
@@ -85,10 +85,8 @@ $\vec{r}_i$  =  orientation of body $i$
 \end{figure}
 
 % pdf page 33, notation in typical ODEs
-\begin {table}[htb!]
-\caption {Nomenclature for equations of motion}
-\label{tab:eom}
-\begin{center}
+\begin{table}
+\tbl{Nomenclature for equations of motion}{
 \begin{tabular}{|l| l|}
 \hline
 {\bf Symbol} & {\bf Description} \\  \hline
@@ -147,13 +145,13 @@ $
 $I_i$ & inertia tensor for body $i$  \\ \hline
 $C$ & contact condition matrix  $ C \in \mathbb{R}^{6n \times 3K}$ \\ \hline
 $N$ & contact normal matrix  $ N \in \mathbb{R}^{3K \times K}$ \\ \hline
-\end {tabular}
-\end{center}
-\end {table}
+\end {tabular}}
+\label{tab:eom}
+\end{table}
 
 Friction in contacts and joint constraints can be handled in a unified way by refactoring
 equation \ref{eq:eomV} as,  
-\citet{erleben.thesis}
+\cite{erleben.thesis}
 %\citet[p.~66-67]{erleben.thesis}
 \begin{equation} \label{eq:eomV2}
 \vec{u}^{\, t+\Delta t} = \vec{u}^{\, t}+\Delta t M^{-1}(
@@ -161,14 +159,14 @@ equation \ref{eq:eomV} as,
 + J_{joint}^T \vec{\lambda}_{joint}
 + \vec{f}_{ext}),
 \end{equation}
-where Jacobian terms $J_{contact}^T$ for joints are 
+where Jacobian terms $J_{joint}^T$ for joints are 
 derived by taking time derivatives of the kinematic constraints.
 
 Symbols used in Equation \ref{eq:eomV2} are summarized in Table
 \ref{tab:eom-g} and Figure \ref{fig:eom-joint}.
 Figure \ref{fig:eom-joint} presents terms needed for joint processing.
 
-\begin{figure}[htb!]
+\begin{figure}
 \centering
 \begin{tikzpicture}
 \coordinate (O1) at(1,1);
@@ -195,7 +193,7 @@ In Figure \ref{fig:eom-joint}, $\vec{r}_{anc}^{\,i}$ is used to define at which 
 joint constraint is applied.
 
 % pdf page 33, notation in typical ODEs
-\begin {table}[htb!]
+\begin{table}
 \caption {Additional terms  for generalized equations of motion}
 \label{tab:eom-g}
 \begin{center}
@@ -212,7 +210,7 @@ $\lambda_{joint}$ & vector of lagrange multipliers for joints  \\ \hline
 
 Constraint processing in \bullet\ is based on ODE, \cite{ode}.
 Joints are also discussed in detail in  
-\citet{erleben.thesis}.
+\cite{erleben.thesis}.
 %\citet[p.~60-90]{erleben.thesis}.
 Equations \ref{eq:constraintEquation}, \ref{eq:lambdaLow} and
 \ref{eq:lambdaHigh} 
@@ -239,7 +237,7 @@ In the following section, these equations will be explained by a simple example.
 The main parameters  and corresponding fields in \bullet\  
 are given in Table \ref{tab:constraintParameters}.
 
-\begin {table}[htb!]
+\begin {table}
 \caption {Constraint parameters}
 \label{tab:constraintParameters} 
 \begin{center}
@@ -265,7 +263,7 @@ based on needed features.
 Often,  finite element method is used.
 In most cases, a static solution with an assumption of linear strain-displacement relation
 using displacement based boundary conditions is used.
-\citet{bathe-1975} provides a description for handling of various nonlinearities.
+\cite{bathe-1975} provides a description for handling of various nonlinearities.
 In large displacement analysis, formulation may be based on updated formulation (Eulerian) or
 Lagrangian formulation where initial configuration is used.
 Further enhancements are material nonlinearity and dynamic analysis.
@@ -279,7 +277,7 @@ by splitting the rigid body
 to multiple bodies that are connected by energy absorbing joints.
 A typical engineering stress-strain curve of ductile steel is shown in Figure \ref{fig:sscurve}.
 
-\begin{figure}[htb!]
+\begin{figure}
 \centering
 \begin{tikzpicture}
 \coordinate (Y) at (1,4);
@@ -298,7 +296,7 @@ A typical engineering stress-strain curve of ductile steel is shown in Figure \r
 
 In Figure \ref{fig:sscurve}, $\sigma$ is stress, $E$ is Youngs modulus and $f_y$ is yield stress.
 Engineering stress and strain mean that original dimensions are used in stress calculation,
-\citet{dowling}.
+\cite{dowling}.
 %\citet[p.~108]{dowling}.
 The stress-strain curve is not drawn to scale as elastic strain could not be seen as it is typically 
 0.001 to 0.005 and fracture strain can be 100 times larger.
@@ -313,7 +311,7 @@ of bodies is not updated during analysis and thus engineering stress-strain prop
 
 In this work, strain hardening is taken into account by assuming that plastic volume in bending
 expands, 
-\citet{dowling}.
+\cite{dowling}.
 %\citet[p.~672]{dowling}.
 Material that starts to yield first is hardened and as a result of which yielding moves.
 
@@ -328,7 +326,7 @@ The difference between the elastic and plastic section modulus is depicted in Fi
 \draw (2,0) -- (2,5) ;
 \draw (1.5,0) -- (S); 
 \node[above] at (S) [align=center] {\large{$\sigma<f_y$}};
-\node[anchor=west] at (-2,3) {
+\node[anchor=west] at (3,3) {
 \begin{tabular}{l}
 Under elastic load\\
 stress increases\\
@@ -411,7 +409,7 @@ If the von Mises yield criterion is used 0.5 is replaced by 0.58 ($1/\sqrt{3}$),
 These are not exact values in a multiaxial stress state but they
 should be acceptable in most gaming scenarios.
 
-\begin {table}[htb!]
+\begin {table}
 \caption {Maximum forces and moments for 
 rectangular section with width $b$ and height $h$ using constant yield stress $f_y$}
 \label{tab:maxForces} 
@@ -438,12 +436,13 @@ multiplying it with the yield shear stress e.g. using Octave, \cite{octave}.
 An example of calculation of the maximum moment  around $\vec{r}_{anc}^{\,i} $
 is shown in Figure \ref{fig:octave-mp}
 
-\begin{figure}[htb!]
+\begin{figure}
 \centering
 \lstset{language=octave}
 \begin{lstlisting}
 b=0.01; h=0.01; fy=200e6;
-wpy=fy/2*dblquad(@(x,z) sqrt(x.*x+z.*z),-b/2,b/2,-h/2,h/2)
+wpy=fy/2*dblquad(@(x,z)...
+ sqrt(x.*x+z.*z),-b/2,b/2,-h/2,h/2)
 38.2
 \end{lstlisting}
 

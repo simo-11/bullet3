@@ -4,29 +4,23 @@
 \def\bullet{Bullet Physics}
 \def\demolisher{DemolisherDemo}
 \def\charpy{CharpyDemo}
-\def\myvolume{VV}
-\def\mynumber{N}
-\def\myyear{YYYY}
-\def\mymonth{Month}
-\def\myaan{XXX}
-\def\mydoi{XXXXXXX.YYYYYYY}
 
 \documentclass{acmtog}
-\acmVolume{\myvolume}
-\acmNumber{\mynumber}
-\acmYear{\myyear}
-\acmMonth{\mymon}
-\acmArticleNum{\myaan}  
-\acmdoi{10.1145/\mydoi}
+\acmVolume{VV}
+\acmNumber{N}
+\acmYear{201Y}
+\acmMonth{Month}
+\acmArticleNum{AN}  
+\acmdoi{10.1145/xxx.yy}
 
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 %\usepackage{natbib}
 %\usepackage{lastpage}   % page count
-%\usepackage{amsmath}
+\usepackage{amsmath}
 \usepackage{listings}
 % \usepackage{mathdots}  % improved \ddots and \iidots
-%\usepackage{amssymb}
+\usepackage{amssymb}
 %\usepackage[english]{babel}
 %\usepackage[intoc]{nomencl} % including table of content
 %\usepackage{ifthen}
@@ -37,13 +31,11 @@
 \usepackage{tikz}
 \usetikzlibrary{arrows}
 \usetikzlibrary{arrows.meta}
-\usepackage{caption}
+%\usepackage{caption}
 \usepackage{varwidth}
 \usepackage{enumitem} % 
 \begin{document}
-
-\title{\mytitle}
-markboth{S. Nikula et al.}{\mytitle}
+\markboth{S. Nikula et al.}{\mytitle}
 
 \title{\mytitle}
 
@@ -55,9 +47,9 @@ markboth{S. Nikula et al.}{\mytitle}
 
 \keywords{Modeling, Animation, Deformation, Elasticity, Plasticity, Dynamics, Simulation}
 
-\acmformat{Nikula, S., Mikkola, A., Björk, T.,  G. V. G. \myyear. 
-\mytitle.  {ACM Trans. Graph.} \myvolume, \mynumber, Article \myaan (\mymon \myyear), # pages.\newline  DOI $=$
-10.1145/\mydoi\newline http://doi.acm.org/10.1145/\mydoi}
+\acmformat{Nikula, S., Mikkola, A., Björk, T.,  G. V. G. 201x. 
+\mytitle.  {ACM Trans. Graph.} VV, NN, Article AN (Mon 201x), nb pages.\newline  DOI $=$
+10.1145/xx.yy\newline http://doi.acm.org/10.1145/XXXXXXX.YYYYYYY}
 
 \maketitle
 
@@ -66,10 +58,10 @@ markboth{S. Nikula et al.}{\mytitle}
 Authors' addresses: Simo.Nikula@gmail.com
 \end{bottomstuff}
 
-\include{article-introduction}
-\include{article-section-2}
-\include{article-section-3}
-\include{article-conclusion}
+\input{article-introduction}
+\input{article-section-2}
+\input{article-section-3}
+\input{article-conclusion}
 
 \bibliographystyle{acmtog}
 \bibliography{ref}
