@@ -27,7 +27,7 @@ in the time interval $\Delta t $ can be written as:
 where $\vec{f}_{true}(t)$ is force.
 
 Using Newton's second law of motion $\vec{F}=m\vec{a}$ ,
-$\vec{v}^{\Delta t}$ can be solved as
+$\vec{v}^{\Delta t}$ can be solved for the velocity as:
 \begin{equation} \label{eq:impulseIntegraWithNewton}
 \int_{0}^{\Delta t} m \frac{d\vec{v}}{dt}dt= \int_{0}^{\Delta t} \vec{f}_{true}(t)
 \end{equation}
@@ -161,10 +161,10 @@ equation \ref{eq:eomV} as,
 \end{equation}
 where Jacobian terms $J_{joint}^T$ for joints are 
 derived by taking time derivatives of the kinematic constraints.
-
 Symbols used in Equation \ref{eq:eomV2} are summarized in Table
-\ref{tab:eom-g} and Figure \ref{fig:eom-joint}.
-Figure \ref{fig:eom-joint} presents terms needed for joint processing.
+\ref{tab:eom-g} and Figure \ref{fig:eom-joint},
+where $\vec{r}_{anc}^{\,i}$ is used to define at which point
+joint constraint is applied.
 
 \begin{figure}
 \centering
@@ -189,14 +189,10 @@ $\vec{r}_i$  =  orientation of body $i$
 \label{fig:eom-joint}
 \end{figure}
 
-In Figure \ref{fig:eom-joint}, $\vec{r}_{anc}^{\,i}$ is used to define at which point
-joint constraint is applied.
 
 % pdf page 33, notation in typical ODEs
 \begin{table}
-\caption {Additional terms  for generalized equations of motion}
-\label{tab:eom-g}
-\begin{center}
+\tbl{Additional terms  for generalized equations of motion}{
 \begin{tabular}{|l| l|}
 \hline
 {\bf Symbol} & {\bf Description} \\  \hline
@@ -204,8 +200,8 @@ $J_{contact}$ & Jacobian matrix for contacts  \\ \hline
 $\lambda_{contact}$ & vector of lagrange multipliers for contacts  \\ \hline
 $J_{joint}$ & Jacobian matrix for joints  \\ \hline
 $\lambda_{joint}$ & vector of lagrange multipliers for joints  \\ \hline
-\end {tabular}
-\end{center}
+\end {tabular}}
+\label{tab:eom-g}
 \end {table}
 
 Constraint processing in \bullet\ is based on ODE, \cite{ode}.
@@ -238,9 +234,7 @@ The main parameters  and corresponding fields in \bullet\
 are given in Table \ref{tab:constraintParameters}.
 
 \begin {table}
-\caption {Constraint parameters}
-\label{tab:constraintParameters} 
-\begin{center}
+\tbl {Constraint parameters}{
 \begin{tabular}{|c| l| l|}
 \hline
 {\bf Parameter} & {\bf Description} & {\bf btConstraintInfo2 pointer}\\  \hline
@@ -253,10 +247,9 @@ $C$  & constraint force mixing & cfm \\  \hline
 $\vec{\lambda}$ & constraint force &  \\ \hline
 $\vec{l}$ & low limit for constraint force & m\_lowerLimit \\ \hline
 $\vec{h}$ & high limit for constraint force & m\_upperLimit \\ \hline
-\end {tabular}
-\end{center}
+\end {tabular}}
+\label{tab:constraintParameters} 
 \end {table}
-
 
 In structural analysis, a formulation and associated numerical solution procedure are selected 
 based on needed features.
@@ -281,9 +274,9 @@ A typical engineering stress-strain curve of ductile steel is shown in Figure \r
 \centering
 \begin{tikzpicture}
 \coordinate (Y) at (1,4);
-\draw[->] (0,0) -- (10,0) node[right] {\large{$\epsilon$}};
-\draw[->] (0,0) -- (0,6) node[above] {\large{$\sigma$}};
-\draw(0,0) -- (Y) -- (2,4) .. controls (7,6) .. (10,5);
+\draw[->] (0,0) -- (6,0) node[right] {\large{$\epsilon$}};
+\draw[->] (0,0) -- (0,5) node[above] {\large{$\sigma$}};
+\draw(0,0) -- (Y) -- (2,4) .. controls (5,5) .. (6,4);
 \draw[dashed](0,4) -- (Y);
 \node at (-0.2,4) [align=right] {$f_y$};
 \draw(0.25,1) -- (0.5,1) -- (0.5,2);
@@ -367,37 +360,37 @@ in Equations \ref{eq:lambdaLow} and
 \ref{eq:lambdaHigh} using plastic capacities, which are defined below.
 
 Maximum force acting in a direction of $\vec{r}_{anc}^{\,i} $
-is product of area and yield stress as follows
+is product of area and yield stress as follows:
 
 \begin{equation} \label{eq:fN}
-N_{max}= \int_A f_y
+N_{max}= \int_A f_y.
 \end{equation}
 
 Maximum forces acting perpendicular to $\vec{r}_{anc}^{\,i} $
-are a product of area and shear yield stress $\tau_y$ as follows
+are a product of area and shear yield stress $\tau_y$ as follows:
 \begin{equation} \label{eq:fQ}
-Q_{max}= \int_A \tau_y
+Q_{max}= \int_A \tau_y.
 \end{equation}
 
 Maximum moments acting around the axis perpendicular to $\vec{r}_{anc}^{\,i} $
 are integrals of the perpdendicular distance 
 and yield stress $f_y$ as given for the moment around the $x$-axis 
-and moment around the $z$-axis, respectively.
+and moment around the $z$-axis, respectively:
 
 \begin{equation} \label{eq:Mx}
-M_{max}^x= \int_A z f_y
+M_{max}^x= \int_A z f_y,
 \end{equation}
 
 \begin{equation} \label{eq:Mz}
-M_{max}^z= \int_A x f_y
+M_{max}^z= \int_A x f_y.
 \end{equation}
 
 Maximum moment around $\vec{r}_{anc}^{\,i} $
 is an integral of distance $d$ from the joint point
-and shear yield stress $\tau_y$ as 
+and shear yield stress $\tau_y$ as: 
 
 \begin{equation} \label{eq:My}
-M_{max}^y= \int_A d \tau_y
+M_{max}^y= \int_A d \tau_y.
 \end{equation}
 
 Maximum forces and moments for a
@@ -410,10 +403,8 @@ These are not exact values in a multiaxial stress state but they
 should be acceptable in most gaming scenarios.
 
 \begin {table}
-\caption {Maximum forces and moments for 
-rectangular section with width $b$ and height $h$ using constant yield stress $f_y$}
-\label{tab:maxForces} 
-\begin{center}
+\tbl {Maximum forces and moments for 
+rectangular section with width $b$ and height $h$ using constant yield stress $f_y$}{
 \begin{tabular}{| c| c|}
 \hline
 {\bf Direction} & {\bf Maximum value}  \\ \hline
@@ -422,8 +413,8 @@ maximum normal force & $b\, h\, f_y$  \\ \hline
 maximum bending moment in direction of $h$& $0.25\, b\, h^2 \, f_y$  \\ \hline
 maximum bending moment in direction of $b$ & $0.25\, b^2\, h\, f_y$  \\ \hline
 maximum torque & $ \approx 0.19\, b\, h\, \frac{b\, + h}{2} f_y$  \\ \hline
-\end{tabular}
-\end{center}
+\end{tabular}}
+\label{tab:maxForces} 
 \end {table}
 
 For torque there is a closed form solution only for
@@ -434,7 +425,7 @@ Better approximation for any given $b$ and $h$ can be obtained
 by integrating distance from the center of the joint over cross section and
 multiplying it with the yield shear stress e.g. using Octave, \cite{octave}.
 An example of calculation of the maximum moment  around $\vec{r}_{anc}^{\,i} $
-is shown in Figure \ref{fig:octave-mp}
+is shown in Figure \ref{fig:octave-mp}.
 
 \begin{figure}
 \centering

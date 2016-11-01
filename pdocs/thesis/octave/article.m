@@ -21,7 +21,6 @@ uc=[
 0.817 ,  -1.499 ,0,0,0,0, -0.08 , 700   ;
 0.917 ,  -1.500 ,0,0,0,0, -0.001 , 1000   ;
 ];
-
 subplot(2,2,1)
 plot(uc(:,1),uc(:,2),"color","black");
 title("Location");
@@ -34,4 +33,4 @@ title("Velocity");
 subplot(2,2,4)
 plot(uc(:,1),uc(:,3),"color","black");
 title("velError");
-%print -dtikz "-S600,400" "uc-fig"
+print -dtikz "-S300,200" "uc-fig"

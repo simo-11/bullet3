@@ -146,12 +146,10 @@ Penetration is detected at time 0.567 s when
 After a few steps the location and position stabilize although internally calculation is needed for each time step
 until a body is deactivated.
 
-\begin {table}
-\caption {Simulation values for the unconstrained case without continuous collision detection. 
+\begin {table*}
+\tbl {Simulation values for the unconstrained case without continuous collision detection. 
 Typical values are shown for internal contact values
-as the number of contacts and the values at contact points differ.} 
-\label{tab:freeBlockValues} 
-\begin{center}
+as the number of contacts and the values at contact points differ.} {
 \begin{tabular}{|l| l|l| l|l|l|l|l|}
 \hline
 {\bf Time} & 
@@ -169,14 +167,15 @@ as the number of contacts and the values at contact points differ.}
 0.717 &  -1.497 &0.004-0.08  &-0.0003-0.001 &0-0.01 & 10-400 & -0.01 & 400 \\  \hline
 0.817 &  -1.499 & & & & & -0.08 & 700 \\  \hline
 0.917 &  -1.500 & & & & & -0.001 & 1000 \\  \hline
-\end {tabular}
-\end{center}
-\end {table}
+\end {tabular}}
+\label{tab:freeBlockValues} 
+\end {table*}
 
 
 \begin{figure}
 \input{figs/uc-fig.tikz}
-\caption{Graph for selected values for the unconstrained case without continuous collision detection.}
+\caption{Graph for location, velocity, positional error and velocity error
+for the unconstrained case without continuous collision detection.}
 \label{fig:uc}
 \end{figure}
 
@@ -185,28 +184,28 @@ Actual values for an unconstrained case with continuous collision detection (ccd
 as the radius of the ccd sphere and 0.001 as the ccd motion threshold
 are shown in Table \ref{tab:freeBlockValuesWithCcd}. Collision is detected at time 0.550 s when
 {\it velError} is  3.5 (5.34+0.167)-0.033/0.0167 and
-{\it posError} is  0 as collision is detected before penetration. 
+{\it posError} is  zero all the time as collision is detected before penetration. 
 It should be noted that in general the ccd sphere should not extend the actual body as 
 premature contacts are created if collision takes place in regions where the ccd sphere extends out of the actual body.
 
 \begin {table}
-\caption {Simulation values for the unconstrained case with continuous collision detection. } 
-\label{tab:freeBlockValuesWithCcd} 
-\begin{center}
+\tbl {Simulation values for the unconstrained case with continuous collision detection.}{ 
 \begin{tabular}{|l| l|l| l|l|l|l|l|}
 \hline
 {\bf Time} & 
 {\bf Location} &
-{\it velError} & {\it penetration} & {\it posError} & {\it rhs} &
+{\it velError} & {\it pene-} & {\it rhs} &
 {\bf Velocity} & 
-{\bf Impulse} \\  \hline
-0.017 &  -0.003 & & & &  &-0.17 & 0 \\  \hline
-0.550 &  -1.500 & 3.5 & 0.033 & 0 & 21000& -2 & 21000 \\  \hline
-0.567 &  -1.500 & 2.17 & 0 & 0  &  8100 & 0.01 & 13000 \\  \hline
-0.583 &  -1.500 & 0.15 & 0 & 0 & 600  & 0 & 937 \\  \hline
-0.600 &  -1.500 & 0.17 & 0 & 0 & 600  & 0 & 1040 \\  \hline
-\end {tabular}
-\end{center}
+{\bf Impulse} \\ 
+ &  & & {\it tration} &  &
+ &  \\ 
+ \hline
+0.017 &  -0.003 & & &  &-0.17 & 0 \\  \hline
+0.550 &  -1.500 & 3.5 & 0.033 & 21000& -2 & 21000 \\  \hline
+0.567 &  -1.500 & 2.17 & 0 &  8100 & 0.01 & 13000 \\  \hline
+0.583 &  -1.500 & 0.15 & 0 & 600  & 0 & 937 \\  \hline
+0.600 &  -1.500 & 0.17 & 0 & 600  & 0 & 1040 \\  \hline
+\end {tabular}}
 \end {table}
 
 Values for a fixed constraint are shown in Table
@@ -214,9 +213,7 @@ Values for a fixed constraint are shown in Table
 about 20 \% in each step as requested by using an erp value of 0.2.
 
 \begin{table}
-\caption {Constraint parameter values for the fixed constraint} 
-\label{tab:fixedBlockValues} 
-\begin{center}
+\tbl {Constraint parameter values for the fixed constraint} {
 \begin{tabular}{|l|l| l| l|l|l|l|}
 \hline
 {\bf Time} & 
@@ -229,8 +226,8 @@ about 20 \% in each step as requested by using an erp value of 0.2.
 0.050 & -0.0018 & -0.13 & -0.027 & -960 & 0.027 & 960 \\  \hline
 0.067 & -0.0014 &-0.14 & -0.021 & -970 & 0.021 & 970 \\  \hline
 0.35... & 0 &-0.17 & $\approx$ 0 & -1000 &0.0 & 1000 \\  \hline
-\end {tabular}
-\end{center}
+\end {tabular}}
+\label{tab:fixedBlockValues} 
 \end {table}
 
 There are currently two alternative six-dof-spring constraint implementations in \bullet\ and 
@@ -244,10 +241,8 @@ limits add one if the upper and lower limits are the same and two if both the
 upper and the lower limits are defined.
 
 \begin{table}
-\caption {Selected constraint parameters for elastic-plastic constraint 2}
-\label{tab:ep2Parameters} 
-\begin{center}
-\begin{tabular}{|l|p{10cm}|}
+\tbl {Selected constraint parameters for elastic-plastic constraint 2}{
+\begin{tabular}{|l|p{5cm}|}
 \hline
 {\bf Parameter} & 
 {\bf Description} 
@@ -271,36 +266,38 @@ currentLimit & describes state of constraint \newline
  3: loLimit=hiLimit \newline 
  4: current value is between loLimit and HiLimit
  \\ \hline
-
-\end {tabular}
-\end{center}
+\end {tabular}}
+\label{tab:ep2Parameters} 
 \end {table}
 
 
 Values for an elastic-plastic case are shown in Table \ref{tab:epBlockValues}.
 The body drops freely during first simulation step and 
 gains enough kinetic energy so that higher impulses are needed in the following steps.
-This causes plastic strain during the next three steps.
+This causes plastic strain during the next three steps. 
+Positional error is reported as zero at start of simulation because force exceeds
+maximum force.  At later phases positional error is not reported to avoid instability.
 
 \begin{table}
-\caption {Constraint parameter values for elastic-plastic constraint} 
-\label{tab:epBlockValues} 
-\begin{center}
+\tbl{Constraint parameter values for elastic-plastic constraint}{ 
 \begin{tabular}{|l|l| l| l|l|l|l|l|}
 \hline
 {\bf Time} & 
 {\bf Location} &
-{\it velError} & {\it posError} & {\it rhs} &
+{\it velError} & 
+{\it rhs} &
 {\it velocity} & 
 {\bf Impulse} & 
-{\bf Plastic strain} \\  \hline
-0.017 & -0.0028 &-0.17 & 0 & -1000 & -0.17 & 0 & 0 \\  \hline
-0.033 & -0.0046 &-0.33 & 0 & -2000 & -0.11 &  1330 & 0.001 \\  \hline
-0.050 & -0.0056 &-0.28 & 0 & -1670 & -0.056 &  1330 & 0.003 \\  \hline
-0.067 & -0.0056 &-0.22 & 0 & -1340 &  -0.001&  1330 & 0.004\\  \hline
-0.083... & -0.0056  & -0.17 & 0 & -1000 &  0.0&  1000 & 0.004\\  \hline
-\end {tabular}
-\end{center}
+{\bf Plastic } \\ 
+& & & & & &{\bf strain}\\
+\hline
+0.017 & -0.0028 &-0.17 & -1000 & -0.17 & 0 & 0 \\  \hline
+0.033 & -0.0046 &-0.33 & -2000 & -0.11 &  1330 & 0.001 \\  \hline
+0.050 & -0.0056 &-0.28 & -1670 & -0.056 &  1330 & 0.003 \\  \hline
+0.067 & -0.0056 &-0.22 & -1340 &  -0.001&  1330 & 0.004\\  \hline
+0.083... & -0.0056  & -0.17 & -1000 &  0.0&  1000 & 0.004\\  \hline
+\end {tabular}}
+\label{tab:epBlockValues} 
 \end {table}
 
 Six-dof-spring constraint 2 has an optional feature to avoid unstability by automatically softening the constraint
@@ -318,20 +315,18 @@ the velocity based error instead of the force provided by the spring.
 In this scenario the body behaves as depicted in Table \ref{tab:ep2BlockValues}, i.e., it does not move at all.
 
 \begin{table}
-\caption {Constraint parameter values for elastic-plastic constraint 2} 
-\label{tab:ep2BlockValues} 
-\begin{center}
-\begin{tabular}{|l|l| l| l|l|l|l|l|}
+\tbl {Constraint parameter values for elastic-plastic constraint 2} {
+\begin{tabular}{|l| l| l|l|l|l|}
 \hline
-{\bf Time} & 
 {\bf Location} &
-{\it velError} & {\it posError} & {\it rhs} &
-{\bf Velocity} & 
+{\it velError} &  {\it rhs} &
 {\bf Impulse} & 
-{\bf Plastic strain} \\  \hline
-0.017... &  0 & -0.17  & 0 & -1000 & 0       & 1000 & 0 \\  \hline
-\end {tabular}
-\end{center}
+{\bf Plastic } \\ 
+ & & & &{\bf strain}\\
+\hline
+ 0 & -0.17  & -1000  & 1000 & 0 \\  \hline
+\end {tabular}}
+\label{tab:ep2BlockValues} 
 \end {table}
 
 \subsection{Charpy impact test}
@@ -355,34 +350,33 @@ An automatic time stepping routine changes the timestep so that at angles higher
 used and adjusts it linearly to a selected time step between the angles of 0.2 and 0.05 radians.
 
 Figure \ref{fig:charpy-series} shows three detailed pictures from the simulation.
-The left picture shows early phase of simulation. 
-In the middle picture the hammer has not yet collided with the specimen.
-In the right picture the specimen is bending.
+The first picture shows early phase of simulation. 
+In the second picture the hammer has not yet collided with the specimen.
+In the last picture the specimen is bending. 
+After few more time steps specimen goes between anvils in one peace.
+If maximum rotation is set lower than 1.9 radians, joint is deactivated.
 
-\begin{figure*}
-\centering
-\includegraphics[height=3cm]{figs/article-charpy-1}
-\includegraphics[height=3cm]{figs/article-charpy-2}
-\includegraphics[height=3cm]{figs/article-charpy-3}
+\begin{figure}
+\includegraphics[height=2.3cm]{figs/article-charpy-1}
+\includegraphics[height=2.3cm]{figs/article-charpy-2}
+\includegraphics[width=8.65cm]{figs/article-charpy-3}
 \caption{Detailed pictures from simulation of a Charpy impact test}
 \label{fig:charpy-series}
-\end{figure*}
+\end{figure}
 
 Table \ref{tab:ep2ts} shows energy loss for a few timesteps to demonstrate the sensitivity of the solution
 using  elastic-plastic constraint 2.
 
 \begin {table}
-\caption {Energy loss for few timesteps}
-\label{tab:ep2ts} 
-\begin{center}
+\tbl {Energy loss for few timesteps}{
 \begin{tabular}{| c| c|l|}
 \hline
 {\bf Timestep[ms]} & {\bf Energy loss [J]} & {\bf Notes} \\ \hline
  0.2 &  170 & specimen penetrates hammer  \\ \hline
  0.1 &  120 & \\ \hline
  0.05 &  150 & \\ \hline
-\end {tabular}
-\end{center}
+\end {tabular}}
+\label{tab:ep2ts} 
 \end {table}
 
 Figure \ref{fig:charpy} shows an overview from simulation as the specimen passes between the supports.
@@ -393,7 +387,6 @@ Figure \ref{fig:charpy} shows an overview from simulation as the specimen passes
 \caption{Overview of simulation of Charpy impact test}
 \label{fig:charpy}
 \end{figure}
-
 
 
 \subsection{Demolisher}
@@ -409,14 +402,14 @@ The simulation can be done in real time on modest hardware, e.g.
 on laptop having 2.0 GHz Intel i3 CPU with integrated graphics. 
 Figure \ref{fig:demolisher} shows three screenshots from the simulation.
 
-\begin{figure*}
+\begin{figure}
 \centering
-\includegraphics[height=5cm]{figs/demolisher-pre}
-\includegraphics[height=5cm]{figs/demolisher-wip}
-\includegraphics[height=5cm]{figs/demolisher-done}
+\includegraphics[width=8.65cm]{figs/demolisher-pre}
+\includegraphics[height=4.3cm]{figs/demolisher-wip}
+\includegraphics[height=4.3cm]{figs/demolisher-done}
 \caption{Simulation of Demolisher scenario}
 \label{fig:demolisher}
-\end{figure*}
+\end{figure}
 
 The vehicle is modelled as a single box btRaycastVehicle with four driving wheels. Wheels are rendered for visual feedback.
 In the left picture, the initial state is shown. 
