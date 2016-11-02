@@ -1,6 +1,7 @@
 % !TeX root = article.tex
 \begin{abstract}
-We introduce efficient method to simulate ductile fracture in existing physics engines.
+We introduce simple and efficient method to simulate ductile fracture in existing physics engines.
+Method is based on common technique of splitting bodies to multiple pieces.
 \end{abstract}
 
 \section{Introduction}
@@ -25,10 +26,14 @@ Plasticity is not typically taken into account in gaming solutions and
 destruction of various bodies often takes place based on collision or impulse exceeding predefined limit.
 Nevertheless, breaking of steel or reinforced concrete structures using this approach 
 is not appropriate if the simulation is to look realistic. Theory for handling of plasticity 
-has been presented already in \cite{cg1988}. \cite{muller2005meshless} 
+has been presented already in \cite{cg1988}. 
+\cite{Jones:2016:EPD} provides extensive listing of related work during past decades.
+\cite{muller2005meshless} 
 present a method for modeling and animating of elastic and plastic bodies in real time using 
 point based animation. This approach has not been widely used in computer games.  
 One major issue is collision handling of deformable bodies.
+Recently there has been multiple studies which have same target of bringing plasticity 
+into main stream games as this work, \cite{Jones:2016:EPD,Patkar:2015:EDB,Budsberg:2014:EPD}.
 
 This study will introduce an approach to account for plastic deformation in game applications.   
 In the introduced method, plastic deformation takes place if the force or moment exceeds a predefined 
