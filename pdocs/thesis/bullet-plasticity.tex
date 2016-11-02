@@ -1,18 +1,18 @@
-\section{Simulation of Charpy impact test using \bullet}
+\section{Simulation of Charpy impact test using \cbullet}
 \label{sec:bullet-charpy}
 
 In following sections various methods for handling plasticity are described.
 As physics engines have not been traditional area of research for plasticity, 
 well known Charpy impact test was selected to be used as primary scenario
-although it is against first two tips in \bullet Manual.
+although it is against first two tips in \cbullet Manual.
 
 \begin{itemize}
 \item Avoid small and large collision shapes
 \item Avoid large mass ratios
 \end{itemize}
 
-\subsection{Introduction to constraint processing in \bullet}
-Constraint processing in \bullet is based on ODE, \cite{ode}.
+\subsection{Introduction to constraint processing in \cbullet}
+Constraint processing in \cbullet is based on ODE, \cite{ode}.
 Mathematical background and detailed examples are available by \cite{ode.joints}.
 Equations \ref{eq:constraintEquation}, \ref{eq:lambdaLow} and
 \ref{eq:lambdaHigh} 
@@ -30,7 +30,7 @@ J_1 v_1 + \Omega_1 \omega_1 + J_2 v_2 + \Omega_2 \omega_2 = c + C \lambda
 \lambda \leq h
 \end{equation}
 
-Main parameters  and corresponding fields in \bullet\  
+Main parameters  and corresponding fields in \cbullet\  
  are described in table \ref{tab:constraintParameters}.
 
 \begin {table}[htb!]
@@ -89,7 +89,7 @@ Energy for whole system is calculated so that potential energy and kinetic energ
 When hammer is resting in low position, energy is 64 J. 
 
 \subsubsection{Breaking of constraints between bodies}
-For standard \bullet constraints breakingImpulseThreshold (BITh) can be defined. If impulse is larger than set limit constraint is activated. 
+For standard \cbullet constraints breakingImpulseThreshold (BITh) can be defined. If impulse is larger than set limit constraint is activated. 
 This allows breaking to be simulated with fast calculation. 
 This method is too simplified for ductile material and developing more precise and realistic methods is main objective of this work.  
 
@@ -118,7 +118,7 @@ $W=bh^2/4$ where h=b-0.002m and yield stress is used instead of Young’s modulu
 
 \subsection{Spring2Constraint}
 This basically same as SpringConstraint but uses newer btGeneric6DofSpring2Constraint which has recently appeared in
-\bullet. 
+\cbullet. 
 Automatic stiffness limitation helps to avoid instability but may make constraint too soft.
 
 \subsection{Hinge constraint with motors}
@@ -175,7 +175,7 @@ In bt6DofElasticPlastic2Constraint plasticity code is activated if frequency is 
 If plasticity is activated due to large spring force or due to high frequency forces constraint error is 
 calculated in similar way as for case where upper limit equals lower limit, (m\_currentLimit==3).
 
-\section{Charpy impact test results using \bullet}
+\section{Charpy impact test results using \cbullet}
 \label{sec:bullet-charpy-results}
 Results are sensitive and they were obtained in February 2016 using following processes
 \begin{itemize}

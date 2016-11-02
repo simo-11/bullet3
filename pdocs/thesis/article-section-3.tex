@@ -99,7 +99,7 @@ For the elastic-plastic case maximum impulse is set to the product of the yield 
 area of steel enforcement and time step (1330).
 
 Method btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup
-in \bullet\ is used to get values for the internal variables described in Figure \ref{fig:solVars}. 
+in \cbullet\ is used to get values for the internal variables described in Figure \ref{fig:solVars}. 
 
 \begin{figure}
 \begin{description}
@@ -133,7 +133,7 @@ $\frac{-penetration\, erp}{timeStep}$. In contact cases the default value for er
 \item[erp] Error reduction parameter (0...1) is used to handle numerical issues e.q. body drifting. 
 Setting erp to 1 would in theory eliminate error in one step but in practice a value of 0.2 - 0.8 is used in most cases.
 \end{description}
-\caption{Internal variables used in \bullet\ in constraint solving.}
+\caption{Internal variables used in \cbullet\ in constraint solving.}
 \label{fig:solVars}
 \end{figure}
 
@@ -230,7 +230,7 @@ about 20 \% in each step as requested by using an erp value of 0.2.
 \label{tab:fixedBlockValues} 
 \end {table}
 
-There are currently two alternative six-dof-spring constraint implementations in \bullet\ and 
+There are currently two alternative six-dof-spring constraint implementations in \cbullet\ and 
 in this work elastic-plastic versions of both of them are developed. 
 
 Table  \ref{tab:ep2Parameters} the summarizes most significant parameters for this study.
@@ -343,7 +343,7 @@ hinge angle needed for the specimen to go through the supports and
 the yield stress of the specimen. For hinge angle of 1.9 radians and yield stress of 400 MPa, expected energy 
 loss is 122 J.
 
-\bullet\ simulations are usually done using a fixed time step of 1/60 s, i.e., 16.67 ms. 
+\cbullet\ simulations are usually done using a fixed time step of 1/60 s, i.e., 16.67 ms. 
 For this case that is too large. 
 The default time step was selected to be 5 ms outside impact  and 0.1 ms during impact. 
 An automatic time stepping routine changes the timestep so that at angles higher than 0.2 radians 5 ms time step is

@@ -17,7 +17,7 @@ Work presented by
 \cite{erleben.thesis} provides the basis for the velocity-based formulation discussed in this work.
 %\citet[p.~45-50]{erleben.thesis}.
 % pdf page 64
-In the following section, these formulations will be clarified by a simple example using \bullet\ implementation.
+In the following section, these formulations will be clarified by a simple example using \cbullet\ implementation.
 
 Impulse $\vec{J}$
 in the time interval $\Delta t $ can be written as:
@@ -204,7 +204,7 @@ $\lambda_{joint}$ & vector of lagrange multipliers for joints  \\ \hline
 \label{tab:eom-g}
 \end {table}
 
-Constraint processing in \bullet\ is based on ODE, \cite{ode}.
+Constraint processing in \cbullet\ is based on ODE, \cite{ode}.
 Joints are also discussed in detail in  
 \cite{erleben.thesis}.
 %\citet[p.~60-90]{erleben.thesis}.
@@ -230,7 +230,7 @@ J_2 \vec{v}_2 + \Omega_2 \vec{\omega}_2 = \vec{c} + C \vec{\lambda}
 \end{equation}
 
 In the following section, these equations will be explained by a simple example.
-The main parameters  and corresponding fields in \bullet\  
+The main parameters  and corresponding fields in \cbullet\  
 are given in Table \ref{tab:constraintParameters}.
 
 \begin {table}
@@ -446,7 +446,7 @@ The basic idea introduced in this study can be tested with any framework having 
 This can be done by setting the target velocity of the motor to zero and limiting 
 the maximum motor impulse to plastic moment multiplied by a timestep.
 
-Further enhancements were created and tested by forking \bullet\ source code
+Further enhancements were created and tested by forking \cbullet\ source code
 and adding new constraints, \cite{pbullet}.
 Instructions for using  windows executable and  source code are available, \cite{bp}.
 

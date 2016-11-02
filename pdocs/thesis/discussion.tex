@@ -4,7 +4,7 @@
 \label{subsec:futureWork}
 
 \subsubsection{Implementation using GPU}
-\bullet\ can already utilize GPU for many operations. 
+\cbullet\ can already utilize GPU for many operations. 
 Analysis on possible issues in used interfaces should be done before integrations.
 
 \subsubsection{Acceptance to current physics engines}
@@ -17,7 +17,7 @@ implementation possible.
 \item possibility to update constraints after each simulation step
 \end{itemize}
 
-Current implementation is done based on \bullet\ but it still needs refactoring and testing before it can be 
+Current implementation is done based on \cbullet\ but it still needs refactoring and testing before it can be 
 accepted to main stream. Interfaces should be reafctored so that handling of additional features like large 
 displacements and material nonlinearity can be implemented without further changes.
 
@@ -27,7 +27,7 @@ large displacements can also take place due to rigid body motion and should be t
 
 Update of constraints can be done in  many ways but using callbacks allows clean integration i.e. no changes
 to solver core are needed.
-In \bullet\ there are already three per step callbacks. 
+In \cbullet\ there are already three per step callbacks. 
 
 \begin{itemize}
 \item updateActions
