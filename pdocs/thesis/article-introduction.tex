@@ -1,7 +1,10 @@
 % !TeX root = article.tex
 \begin{abstract}
 We introduce simple and efficient method to simulate ductile fracture in existing physics engines.
-Method is based on common technique of splitting bodies to multiple pieces.
+Method is based on common technique of splitting bodies to multiple pieces and joining them with constraints.
+Constraint behaviour is modelled using body dimensions and material parameters.
+Sample program with full source code is made available to allow developers already using \cbullet\
+to add plasticity into their simulations with minimal effort.
 \end{abstract}
 
 \section{Introduction}
@@ -33,7 +36,10 @@ present a method for modeling and animating of elastic and plastic bodies in rea
 point based animation. This approach has not been widely used in computer games.  
 One major issue is collision handling of deformable bodies.
 Recently there has been multiple studies which have same target of bringing plasticity 
-into main stream games as this work, \cite{Jones:2016:EPD,Patkar:2015:EDB,Budsberg:2014:EPD}.
+into wider usage, \cite{Jones:2016:EPD,Patkar:2015:EDB,Budsberg:2014:EPD}.
+Suggested methods seem best suited for film production and possible also for high end games.
+Methodology presented in this study does not require significant software development efforts from
+game vendors and is thus easily adoptable. 
 
 This study will introduce an approach to account for plastic deformation in game applications.   
 In the introduced method, plastic deformation takes place if the force or moment exceeds a predefined 
