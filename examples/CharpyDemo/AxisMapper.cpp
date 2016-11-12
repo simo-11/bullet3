@@ -66,10 +66,11 @@ void AxisMapper::initMaxForce(){
 	btScalar w0(m_fy*h*b);
 	btScalar w1(m_fy*b*h*h / 4);
 	btScalar w2(m_fy*b*b*h / 4);
+	btScalar wr(0.19*m_fy*b*h*(b+h)/2);
 	m_maxForce[0] = w0;
 	m_maxForce[1] = w0/2;
 	m_maxForce[2] = w0/2;
-	m_maxForce[3] = w1;
+	m_maxForce[3] = wr;
 	m_maxForce[4] = w1;
 	m_maxForce[5] = w2;
 	maxForceDone = true;
