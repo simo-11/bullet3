@@ -876,6 +876,9 @@ public:
 		case Spring:
 		case Impulse:
 		case Spring2:
+			if (constraintType == Spring2){
+				addLimitIfNeeded();
+			}
 		case SingleDof:
 			addBlockSteelScale();
 			break;
@@ -992,7 +995,7 @@ public:
 		m_dynamicsWorld->addConstraint(sc, disableCollisionsBetweenLinkedBodies);
 		for (int i = 0; i < 6; i++){
 			sc->enableSpring(i, true);
-			sc->setStiffness(i, axisMapper->getStiffness(i));
+			sc->setStiffness(i, axisMapper->getStiffness(i), limitIfNeeded);
 			sc->setDamping(i, damping2);
 		}
 		sc->setEquilibriumPoint(1, getEquilibriumPoint());
@@ -1287,13 +1290,13 @@ public:
 			tsZRLocation = new TimeSeriesCanvas
 				(app->m_2dCanvasInterface, tsWidth, tsHeight, "Z rotation");
 		}
-		tsZRLocation->setupTimeSeries(3.2, intFreq, 0);
+		tsZRLocation->setupTimeSeries(0.3, intFreq, 0);
 		tsZRLocation->addDataSource("", 255, 0, 0);
 		if (0 == tsZRVelocity){
 			tsZRVelocity = new TimeSeriesCanvas
 				(app->m_2dCanvasInterface, tsWidth, tsHeight, "Z angular velocity [1/s]");
 		}
-		tsZRVelocity->setupTimeSeries(2, intFreq, 0);
+		tsZRVelocity->setupTimeSeries(1, intFreq, 0);
 		tsZRVelocity->addDataSource("", 0, 255, 0);
 		btScalar maxMoment = axisMapper->getMaxForce(5);
 		if (0 == tsZMoment){
