@@ -482,8 +482,9 @@ public:
 	TimeSeriesCanvas *tsYLocation=0, *tsYVelocity=0, *tsYForce=0;
 	TimeSeriesCanvas *tsZRLocation = 0, *tsZRVelocity = 0, *tsZMoment = 0, *tsXForce=0;
 	TimeSeriesCanvas *tsVelError = 0,*tsPosError=0;
+	int maxErrorIndex = 0;
 #ifdef CDBG_CALLBACK
-#define C_ERROR_SIZE 6
+#define C_ERROR_SIZE 9
 	float velError[C_ERROR_SIZE];
 	float posError[C_ERROR_SIZE];
 #endif
@@ -1144,6 +1145,40 @@ public:
 				q.z(),
 				q.w());
 			infoMsg(buf);
+			sprintf_s(buf, B_LEN * 2, "velError[0-2]={%8.3g, %8.3g, %8.3g}",
+				velError[0],
+				velError[1],
+				velError[2]);
+			infoMsg(buf);
+			sprintf_s(buf, B_LEN * 2, "velError[3-5]={%8.3g, %8.3g, %8.3g}",
+				velError[3],
+				velError[4],
+				velError[5]);
+			infoMsg(buf);
+			if (maxErrorIndex > 5){
+				sprintf_s(buf, B_LEN * 2, "velError[6-8]={%8.3g, %8.3g, %8.3g}",
+					velError[6],
+					velError[7],
+					velError[8]);
+				infoMsg(buf);
+			}
+			sprintf_s(buf, B_LEN * 2, "posError[0-2]={%8.3g, %8.3g, %8.3g}",
+				posError[0],
+				posError[1],
+				posError[2]);
+			infoMsg(buf);
+			sprintf_s(buf, B_LEN * 2, "posError[3-5]={%8.3g, %8.3g, %8.3g}",
+				posError[3],
+				posError[4],
+				posError[5]);
+			infoMsg(buf);
+			if (maxErrorIndex > 5){
+				sprintf_s(buf, B_LEN * 2, "posError[6-8]={%8.3g, %8.3g, %8.3g}",
+					posError[6],
+					posError[7],
+					posError[8]);
+				infoMsg(buf);
+			}
 			btScalar yaw, pitch, roll;
 			tr.getBasis().getEulerYPR(yaw, pitch, roll);
 			sprintf_s(buf, B_LEN * 2, "yaw=%8.3g pitch=%8.3g roll=%8.3g",
@@ -1396,7 +1431,7 @@ public:
 		if (0==m_constraint){
 			return;
 		}
-		const char *label[] = {"0","1","2","3","4","5"};
+		const char *label[] = {"0","1","2","3","4","5","6","7","8"};
 		int tsWidth = 300, tsHeight = 300;
 		CommonGraphicsApp * app = PlasticityExampleBrowser::getApp();
 		if (0 == tsVelError){
@@ -1431,8 +1466,6 @@ public:
 			if (btFabs(posError[i])>0.01*currentMaxPosError){
 				tsPosError->insertDataAtCurrentTime(posError[i], i, errorScaled);
 			}
-			velError[i] = 0;
-			posError[i] = 0;
 		}
 		tsVelError->nextTick();
 		tsPosError->nextTick();
@@ -1443,7 +1476,7 @@ public:
 		if (tsVelError){
 			delete tsVelError;
 			tsVelError = 0;
-			errorScaled = true;
+			errorScaled = false;
 		}
 		if (tsPosError){
 			delete tsPosError;
@@ -1780,6 +1813,7 @@ BlockDemo::~BlockDemo()
 void BlockDemo::initPhysics()
 {	
 	hasFullGravity = false;
+	maxErrorIndex = 0;
 	if (maxStepCount != LONG_MAX){
 		// Single step is active
 		maxStepCount = 1;
@@ -2178,7 +2212,13 @@ btSolverConstraint* solverConstraint
 	if (i != 0){
 		return;
 	}
+	btAssert(j<C_ERROR_SIZE);
+	if (demo->maxErrorIndex < j){
+		demo->maxErrorIndex = j;
+	}
 	if (velocityError == 0 && positionalError == 0){
+		demo->velError[j] = 0;
+		demo->posError[j] = 0;
 		return;
 	}
 	btScalar jInv = solverConstraint->m_jacDiagABInv;
