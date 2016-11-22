@@ -999,6 +999,8 @@ public:
 			sc->setStiffness(i, axisMapper->getStiffness(i), limitIfNeeded);
 			sc->setDamping(i, damping2);
 		}
+		sc->setLinearLowerLimit(btVector3(1, 1, 1));
+		sc->setLinearUpperLimit(btVector3(-1, -1, -1));
 		sc->setEquilibriumPoint(1, getEquilibriumPoint());
 		return sc;
 	}
