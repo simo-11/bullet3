@@ -48,10 +48,12 @@ Recently there has been multiple studies which have same target of bringing plas
 into wider usage.
 \cite{Jones:2016:EPD} introduces an plasticity model which
 maps impulses computed by rigid body solved to local example-based deformations.
-\cite{Patkar:2015:EDB} presents a method for denting and bending of rigid bodies
-
-\cite{Budsberg:2014:EPD}
-Suggested methods are best suited for film production and high end games.
+\cite{Patkar:2015:EDB} presents methods for denting and bending of rigid bodies.
+Denting is simulated by creating surface on the target body based on the projectile body
+and bending is modelled by augmenting each rigid body with an articulated skeleton.
+\cite{Budsberg:2014:EPD} presents a method of simulating flexible materials so
+that rigid body fragments are connected by ball and socket joints and plasticity is
+modelled by updating constraint parameters after elastic limit has been passed.
 
 This study will introduce an approach to account for plastic deformation in game applications.   
 Presented methodology does not require significant software development efforts from
@@ -70,8 +72,8 @@ predefined material based limit. The elastic part of deformation is modelled by 
 a spring based on modification of an existing constraint in \cbullet.
 
 The approach presented in this work can be used in the gaming industry to provide more realistic 
-simulations without significant extra work. For gaming purposes, the presented method works 
-best in scenarios where the connected parts are heavy. This allows a normal 
+simulations. For gaming purposes, the presented method works 
+best in scenarios where the connected parts are heavy as this allows a normal 
 integration timestep to be used without stability issues. 
 This methodological approach enbles established structural analysis
 methods to be combined with modern simulation frameworks.

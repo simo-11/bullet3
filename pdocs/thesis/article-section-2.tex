@@ -50,12 +50,16 @@ for velocities respectively as follows:
 
 The symbols used in Equations \ref{eq:eomL} and \ref{eq:eomV}
 are summarized in Table \ref{tab:eom}.
-Figure \ref{fig:eom-contact} describes the collision of two bodies, $B_1$ and $B_2$
-where $\vec{r}_i$ is orientation of body $i$,
-$\vec{p}_k $ is orientation of contact point $k$,
-$\vec{r}_{ik} $ is a vector  between the center of gravity of body $i$ and contact point $k$, 
+Figure \ref{fig:eom-contact} describes the collision of two
+bodies, rectangular body $B_1$ and triangular body $B_2$
+where $\vec{r}_i$ is position of body $i$,
+$\vec{p}_k $ is position of contact point $k$,
+$\vec{r}_{ik} $ is a vector between the center of gravity of body $i$ and contact point $k$, 
 and
 $\vec{n}_{k}$ is the contact normal for contact point $k$.
+It is common convention that the contact normal points
+from the body with the smallest index to the body with the largest index, \cite{erleben.thesis}.
+In case of point or edge contacts, averaging the normals of neighboring polygons can be used, \cite{Hahn:1998}.
 
 \begin{figure}[tb!]
 \centering
@@ -74,9 +78,9 @@ $\vec{n}_{k}$ is the contact normal for contact point $k$.
 \draw[-{Stealth[length=3mm]}] (O2) -- (C) node[anchor=south east] {$\vec{r}_{21}$};
 \draw[-latex,thick] (C) -- ++(0,1.4) node[anchor=west] {$\vec{n}_{1}$};
 \node[anchor=west] at (4.5,4.5) {
-$\vec{r}_i$  =  orientation of body $i$
+$\vec{r}_i$  =  position of body $i$
 };
-\node[anchor=west] at (4.5,4) {$\vec{p}_k $ = orientation of contact point $k$};
+\node[anchor=west] at (4.5,4) {$\vec{p}_k $ = position of contact point $k$};
 \node[anchor=west] at (4.5,3.5) {$\vec{r}_{ik} $ = $\vec{p}_k - \vec{r}_i $};
 \node[anchor=west] at (4.5,3) {$\vec{n}_{k} $ = normal for contact point $k$};
 \end{tikzpicture}
@@ -164,7 +168,7 @@ derived by taking time derivatives of the kinematic constraints.
 Symbols used in Equation \ref{eq:eomV2} are summarized in Table
 \ref{tab:eom-g} and Figure \ref{fig:eom-joint},
 where $\vec{r}_{anc}^{\,i}$ is used to define at which point
-joint constraint is applied.
+joint constraint is applied relative to body $i$.
 
 \begin{figure}
 \centering
@@ -181,7 +185,7 @@ joint constraint is applied.
 \draw[-{Stealth[length=3mm]}] (O1) -- (C) node[anchor=north east] {$\vec{r}_{anc}^{\,1}$};
 \draw[-{Stealth[length=3mm]}] (O2) -- (C) node[anchor=south east] {$\vec{r}_{anc}^{\,2}$};
 \node[anchor=west] at (4.5,3.5) {
-$\vec{r}_i$  =  orientation of body $i$ 
+$\vec{r}_i$  =  position of body $i$ 
 };
 \node[anchor=west] at (4.5,3) {$\vec{r}_{anc}^{\,i} $ = body frame vector $i$};
 \end{tikzpicture}
