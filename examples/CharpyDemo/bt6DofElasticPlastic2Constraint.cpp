@@ -1269,6 +1269,29 @@ btScalar bt6DofElasticPlastic2Constraint::getMaxRatio(){
 int bt6DofElasticPlastic2Constraint::getMaxRatioDof(){
 	return m_maxRatioDof;
 }
+
+btScalar bt6DofElasticPlastic2Constraint::getMaxAbsForce(btJointFeedback& forces, int i){
+	btScalar a = btFabs(forces.m_appliedForceBodyA[i]);
+	btScalar b = btFabs(forces.m_appliedForceBodyB[i]);
+	if (a > b){
+		return a;
+	}
+	else{
+		return b;
+	}
+}
+
+btScalar bt6DofElasticPlastic2Constraint::getMaxAbsMoment(btJointFeedback& forces, int i){
+	btScalar a = btFabs(forces.m_appliedTorqueBodyA[i]);
+	btScalar b = btFabs(forces.m_appliedTorqueBodyB[i]);
+	if (a > b){
+		return a;
+	}
+	else{
+		return b;
+	}
+}
+
 void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 	BT_PROFILE("updatePlasticity");
 	if (!isEnabled()){
@@ -1283,14 +1306,13 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 		{
 			btScalar currPos = m_calculatedLinearDiff[i];
 			btScalar delta = currPos - m_linearLimits.m_equilibriumPoint[i];
-			btScalar force = forces.m_appliedForceBodyA[i];
-			btScalar absForce = btFabs(force);
+			btScalar absForce = getMaxAbsForce(forces, i);
 			btScalar ratio = absForce / m_maxForce[i];
 			if (ratio > m_maxRatio){
 				m_maxRatio = ratio;
 				m_maxRatioDof = i;
 			}
-			if (absForce>=m_maxForce[i]){
+			if (ratio>0.99999){
 				btScalar elasticPart = m_maxForce[i] / m_linearLimits.m_springStiffness[i];
 				btScalar newVal = currPos;
 				if (btFabs(elasticPart)<btFabs(currPos)){
@@ -1319,14 +1341,13 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 		{
 			btScalar currPos = m_calculatedAxisAngleDiff[i];
 			btScalar delta = currPos - m_angularLimits[i].m_equilibriumPoint;
-			btScalar force = forces.m_appliedTorqueBodyA[i];
-			btScalar absForce = btFabs(force);
+			btScalar absForce = getMaxAbsMoment(forces,i);
 			btScalar ratio = absForce / m_maxForce[i+3];
 			if (ratio > m_maxRatio){
 				m_maxRatio = ratio;
 				m_maxRatioDof = i+3;
 			}
-			if (absForce>m_maxForce[i + 3]){
+			if (ratio>0.99999){
 				btScalar elasticPart = m_maxForce[i + 3] / m_angularLimits[i].m_springStiffness;
 				btScalar newVal = currPos;
 				if (btFabs(elasticPart)<btFabs(currPos)){

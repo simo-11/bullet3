@@ -329,6 +329,9 @@ public:
 			myJointFeedback = 0;
 		}
 	}
+	/** select larger one */
+	static btScalar getMaxAbsMoment(btJointFeedback& forces, int index);
+	static btScalar getMaxAbsForce(btJointFeedback& forces, int index);
 	// bcc
 };
 

@@ -265,10 +265,10 @@ public:
 		if (m_constraint){
 			switch (orientationType){
 			case X:
-				c_force = jf.m_appliedTorqueBodyB[2];
+				c_force = bt6DofElasticPlastic2Constraint::getMaxAbsMoment(jf,2);
 				break;
 			case Y:
-				c_force = jf.m_appliedForceBodyB[1];
+				c_force = bt6DofElasticPlastic2Constraint::getMaxAbsForce(jf,1);
 				break;
 			}
 			c_impulse = btFabs(c_force*m_fixedTimeStep);
@@ -1031,11 +1031,18 @@ public:
 		return sc;
 	}
 	btTypedConstraint* addElasticPlastic2Constraint(btRigidBody* rb, btVector3& cpos){
+		btTransform trA;
+		trA.setIdentity();
+		trA.setOrigin(rb->getCenterOfMassPosition() + cpos);
+		btCollisionShape* fixedShape = new btSphereShape(lsz / 10);
+		m_collisionShapes.push_back(fixedShape);
+		btRigidBody* rbA = localCreateRigidBody(0, trA, fixedShape);
 		btTransform tr;
 		tr.setIdentity();
 		tr.setOrigin(cpos);
+		trA.setIdentity();
 		bt6DofElasticPlastic2Constraint *sc =
-			new bt6DofElasticPlastic2Constraint(*rb,tr);
+			new bt6DofElasticPlastic2Constraint(*rbA,*rb,trA,tr);
 		sc->setUserConstraintType(BPT_EP2);
 		sc->setMaxPlasticRotation(maxPlasticRotation);
 		sc->setMaxPlasticStrain(maxPlasticStrain);
@@ -1259,7 +1266,14 @@ public:
 				maxImpulse = m_constraint->getBreakingImpulseThreshold();
 				break;
 			default:
-				maxImpulse = m_fixedTimeStep*axisMapper->getMaxForce(1);
+				switch (orientationType){
+				case X:
+					maxImpulse = m_fixedTimeStep*axisMapper->getMaxForce(5);
+					break;
+				case Y:
+					maxImpulse = m_fixedTimeStep*axisMapper->getMaxForce(1);
+					break;
+				}
 				break;
 			}
 			switch (constraintType){
