@@ -106,7 +106,7 @@ public:
 	btScalar maxPlasticStrain;
 	bool disableCollisionsBetweenLinkedBodies = true;
 	bool dumpPng = false;
-	bool useCcd, limitIfNeeded;
+	bool useCcd, limitIfNeeded, useTs;
 	int shootCount = 0;
 	btScalar ammoVelocity;
 	void shoot();
@@ -295,15 +295,17 @@ public:
 				break;
 			}
 		}
-		switch (orientationType){
-		case X:
-			updateXTimeSeries();
-			break;
-		case Y:
-			updateYTimeSeries();
-			break;
+		if (useTs){
+			switch (orientationType){
+			case X:
+				updateXTimeSeries();
+				break;
+			case Y:
+				updateYTimeSeries();
+				break;
+			}
+			updateErrorTimeSeries();
 		}
-		updateErrorTimeSeries();
 	}
 	void resetView(){
 		c_impulse = 0;
@@ -469,6 +471,7 @@ public:
 	void setLogDir(Gwen::Controls::Base* control);
 	void setDumpPng(Gwen::Controls::Base* control);
 	void setUseCcd(Gwen::Controls::Base* control);
+	void setUseTs(Gwen::Controls::Base* control);
 	void setLimitIfNeeded(Gwen::Controls::Base* control);
 	Gwen::Controls::Base* pPage;
 	Gwen::Controls::Button* pauseButton, *singleStepButton;
@@ -566,6 +569,11 @@ public:
 		addCheckBox("useCcd", 
 			"Use continous collision detection",
 			useCcd, &BlockDemo::setUseCcd);
+	}
+	void addUseTs(){
+		addCheckBox("useTs",
+			"plot time seriers",
+			useTs, &BlockDemo::setUseTs);
 	}
 	void addLimitIfNeeded(){
 		addCheckBox("limitIfNeeded", 
@@ -902,6 +910,7 @@ public:
 		if (useCcd){
 			addCcdValues();
 		}
+		addUseTs();
 		addLogDir();
 		addPauseSimulationButton();
 		addSingleStepButton();
@@ -1605,6 +1614,12 @@ void BlockDemo::setUseCcd(Gwen::Controls::Base* control){
 	demo->useCcd = cb->IsChecked();
 	restartHandler(control);
 }
+void BlockDemo::setUseTs(Gwen::Controls::Base* control){
+	Gwen::Controls::CheckBox* cb =
+		static_cast<Gwen::Controls::CheckBox*>(control);
+	demo->useTs = cb->IsChecked();
+	restartHandler(control);
+}
 void BlockDemo::setLimitIfNeeded(Gwen::Controls::Base* control){
 	Gwen::Controls::CheckBox* cb =
 		static_cast<Gwen::Controls::CheckBox*>(control);
@@ -1691,7 +1706,7 @@ void BlockDemo::reinit(){
 	case X:
 		lsx = 6;
 		lsy = 1;
-		blockSteelScale = 0.004;
+		blockSteelScale = 0.006;
 		break;
 	case Y:
 		lsx = 1;
@@ -1711,6 +1726,7 @@ void BlockDemo::reinit(){
 	frequencyRatio = 10;
 	resetClocks();
 	useCcd = false;
+	useTs = false;
 	limitIfNeeded = true;
 	ammoVelocity = 300;
 	ammoCcdMotionThreshold=minDist/2;
@@ -1880,17 +1896,19 @@ void BlockDemo::initPhysics()
 	}
 	resetDemo();
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
-	switch (orientationType){
-	case X:
-		addXTimeSeries();
-		break;
-	case Y:
-		addYTimeSeries();
-		break;
-	default:
-		assert(0); // Add if new orientation is added
+	if (useTs){
+		switch (orientationType){
+		case X:
+			addXTimeSeries();
+			break;
+		case Y:
+			addYTimeSeries();
+			break;
+		default:
+			assert(0); // Add if new orientation is added
+		}
+		addErrorTimeSeries();
 	}
-	addErrorTimeSeries();
 }
 
 void BlockDemo::physicsDebugDraw(int debugFlags)

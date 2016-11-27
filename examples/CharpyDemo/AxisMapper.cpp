@@ -48,8 +48,8 @@ void AxisMapper::initStiffness(){
 	m_stiffness[1] = k0/2;
 	m_stiffness[2] = k0/2;
 	m_stiffness[3] = k0;
-	m_stiffness[4] = k1;
-	m_stiffness[5] = k2;
+	m_stiffness[4] = k2;
+	m_stiffness[5] = k1;
 	stiffnessDone = true;
 }
 btScalar AxisMapper::getStiffness(int index){
@@ -71,8 +71,8 @@ void AxisMapper::initMaxForce(){
 	m_maxForce[1] = w0/2;
 	m_maxForce[2] = w0/2;
 	m_maxForce[3] = wr;
-	m_maxForce[4] = w1;
-	m_maxForce[5] = w2;
+	m_maxForce[4] = w2;
+	m_maxForce[5] = w1;
 	maxForceDone = true;
 }
 
