@@ -40,14 +40,13 @@ void AxisMapper::initStiffness(){
 	btScalar h = m_h;
 	btScalar b = m_b;
 	btScalar k0(m_E*h*b / len);
-	// I=bh^3/12, k for end moment with fixed end is EI/l
-	btScalar im(m_E/ len / 12);
-	btScalar k1(h*h*h*b*im);
-	btScalar k2(h*b*b*b*im);
+	btScalar k1(m_E*b*h*h/6);
+	btScalar k2(m_E*b*b*h / 6);
+	btScalar wr(0.208*m_E/2.6*b*h*(b + h) / 2); // Check this
 	m_stiffness[0] = k0;
 	m_stiffness[1] = k0/2;
 	m_stiffness[2] = k0/2;
-	m_stiffness[3] = k0;
+	m_stiffness[3] = wr;
 	m_stiffness[4] = k2;
 	m_stiffness[5] = k1;
 	stiffnessDone = true;

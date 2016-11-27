@@ -190,10 +190,10 @@ very stiff constraints cause instability",
 ",
 	PlateDemoCreateFunc, 400306202),
 	ExampleEntry(1, "Plate:ElasticPlastic",
-	"ElasticPlastic constraints which break based on work",
+	"ElasticPlastic2 constraints which break based on work",
 	PlateDemoCreateFunc, 3),
 	ExampleEntry(1, "ep-10-3-3-5",
-	"ElasticPlastic constraint, \
+	"ElasticPlastic2 constraint, \
 10 mm thick, \
 3 m width, \
 3x3 objects, \
@@ -201,7 +201,7 @@ very stiff constraints cause instability",
 ",
 	PlateDemoCreateFunc, 50303103),
 	ExampleEntry(1, "ep-10-3-6-5",
-	"ElasticPlastic constraint, \
+	"ElasticPlastic2 constraint, \
 10 mm thick, \
 3 m width, \
 6x6 objects, \
@@ -209,7 +209,7 @@ very stiff constraints cause instability",
 ",
 	PlateDemoCreateFunc, 50603103),
 	ExampleEntry(1, "ep-10-3-3-10",
-	"ElasticPlastic constraint, \
+	"ElasticPlastic2 constraint, \
 10 mm thick, \
 3 m width, \
 3x3 objects, \
@@ -217,7 +217,7 @@ very stiff constraints cause instability",
 ",
 	PlateDemoCreateFunc, 100303103),
 	ExampleEntry(1, "ep-10-3-6-10",
-	"ElasticPlastic constraint, \
+	"ElasticPlastic2 constraint, \
 10 mm thick, \
 3 m width, \
 6x6 objects, \
@@ -225,7 +225,7 @@ very stiff constraints cause instability",
 	",
 	PlateDemoCreateFunc, 100603103),
 	ExampleEntry(1, "ep-20-6-3-40",
-	"ElasticPlastic constraint, \
+	"ElasticPlastic2 constraint, \
 20 mm thick, \
 6 m width, \
 3x3 objects, \
@@ -233,7 +233,7 @@ very stiff constraints cause instability",
 ",
 	PlateDemoCreateFunc, 400306203),
 	ExampleEntry(1, "ep-20-6-6-40",
-	"ElasticPlastic constraint, \
+	"ElasticPlastic2 constraint, \
 20 mm thick, \
 6 m width, \
 6x6 objects, \
