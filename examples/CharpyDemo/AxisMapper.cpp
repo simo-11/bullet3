@@ -44,8 +44,8 @@ void AxisMapper::initStiffness(){
 	btScalar k2(m_E*b*b*h / 6);
 	btScalar wr(0.208*m_E/2.6*b*h*(b + h) / 2); // Check this
 	m_stiffness[0] = k0;
-	m_stiffness[1] = k0/2;
-	m_stiffness[2] = k0/2;
+	m_stiffness[1] = k0/2.6;
+	m_stiffness[2] = k0/2.6;
 	m_stiffness[3] = wr;
 	m_stiffness[4] = k2;
 	m_stiffness[5] = k1;

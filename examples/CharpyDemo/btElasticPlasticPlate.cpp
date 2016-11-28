@@ -41,31 +41,29 @@ void btElasticPlasticPlate::initStiffnesses
 (btScalar* v, btScalar l, btScalar b, btScalar t){
 	btScalar E(m_material->getE());
 	btScalar G(m_material->getG());
-	btScalar A(b*t);
-	btScalar I1(b*t*t*t / 12);
-	btScalar I2(t*b*b*b / 12);
-	btScalar It(b*t*t*t/7);
-	btScalar k0(E*A/l);
-	btScalar k1(12 * E*I1 / l / l / l);
-	btScalar k2(12 * E*I2 / l / l/ l);
-	v[0] = k0;
-	v[1] = k1;
-	v[2] = k2;
-	v[3] = G*It / l;
-	v[4] = 3 * E*I1 / l;
-	v[5] = 3 * E*I2 / l;
+	btScalar k0(E*t*b / l);
+	btScalar k1(E*l*t*t / 6);
+	btScalar k2(E*b*t*t / 6);
+	btScalar wr(G*t*b*l); 
+	v[0] = btScalar(E*t*b/l);
+	v[1] = btScalar(G*t*l/b);
+	v[2] = btScalar(G*l*b/t);
+	v[3] = k1;
+	v[4] = wr;
+	v[5] = k2;
 }
 
 void btElasticPlasticPlate::initMaxForces
 (btScalar* v, btScalar l, btScalar b, btScalar t){
 	btScalar fy = m_material->getFy();
 	btScalar w1 = fy*b*t*t / 4;
-	btScalar w2(fy*b*b*t / 4);
+	btScalar w2(fy*l*t*t / 4);
+	btScalar wr(fy/2*t*b*l);
 	v[0] = fy*b*t;
 	v[1] = v[0]/2;
-	v[2] = v[0] / 2;
+	v[2] = v[0]/2;
 	v[3] = w1;
-	v[4] = w1;
+	v[4] = wr;
 	v[5] = w2;
 }
 
@@ -95,16 +93,6 @@ void btElasticPlasticPlate::initMaxForces(){
 void btElasticPlasticPlate::updateConstraint(btCollisionWorld* dw,
 	bt6DofElasticPlastic2Constraint &constraint, btScalar step) {
 	BT_PROFILE("updateConstraint");
-	btRigidBody& rbA = constraint.getRigidBodyA();
-	btRigidBody& rbB = constraint.getRigidBodyB();
-	btVector3 pA = rbA.getCenterOfMassPosition();
-	btVector3 pB = rbB.getCenterOfMassPosition();
-	btQuaternion qA = rbA.getCenterOfMassTransform().getRotation();
-	btQuaternion qB = rbB.getCenterOfMassTransform().getRotation();
-	btBoxShape* sA = static_cast<btBoxShape*>(rbA.getCollisionShape());
-	btBoxShape* sB = static_cast<btBoxShape*>(rbB.getCollisionShape());
-	// figure out local coordinate system (lcs)
-	// transform to world coordinate system
 	for (int i = 0; i < 6; i++){
 		btScalar stiffness = m_stiffnessL[i];
 		btScalar maxForce = m_maxForceL[i];
