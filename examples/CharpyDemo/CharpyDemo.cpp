@@ -1244,12 +1244,12 @@ public:
 			}
 			break;
 		case 7:
-			for (int i = 0; i < mode6Hinge.size(); i++){
+			for (int i = 0; i < mode7c.size(); i++){
 				mode7c[i]->scalePlasticity(scale);
 			}
 			break;
 		case 8:
-			for (int i = 0; i < mode6Hinge.size(); i++){
+			for (int i = 0; i < mode8c.size(); i++){
 				mode8c[i]->scalePlasticity(scale);
 			}
 			break;
@@ -2465,6 +2465,9 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 	bool handled = BulletKeyToGwen::keyboardCallback(canvas, key, bDown);
 	if (handled){
 		return true;
+	}
+	if (!bDown){
+		return false;
 	}
 	/// no actions for modifiers
 	switch (key){
