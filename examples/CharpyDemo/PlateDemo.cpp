@@ -106,12 +106,13 @@ public:
 	int initialNumIterations = 10;
 	int numIterations = initialNumIterations;
 	btScalar initialFixedTimeStep = 1. / 60 , m_fixedTimeStep;
+	int maxSimSubSteps;
 	bool moveLoad;
 	btScalar loadMass, loadRaise, loadRaiseX, loadRaiseZ;
 	btScalar maxPlasticRotation;
 	btScalar maxPlasticStrain;
 	long stepCount, maxStepCount, syncedStep;
-	btScalar stepTime;
+	btScalar stepTime, targetTime;
 	bool gameBindings, pauseOnBreak;
 	bool solidPlate = true;
 	bool disableCollisionsBetweenLinkedBodies = true;
@@ -282,6 +283,7 @@ public:
 		return std::string(buffer);
 	}
 	void setWheelFriction(Gwen::Controls::Base* control);
+	void setMaxSimSubSteps(Gwen::Controls::Base* control);
 	void setCx(Gwen::Controls::Base* control);
 	void setCy(Gwen::Controls::Base* control);
 	void setCz(Gwen::Controls::Base* control);
@@ -434,6 +436,15 @@ public:
 		gc->SetText(text);
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setCz);
+	}
+	void addMaxSimSubSteps(){
+		addLabel("maxSimSubSteps");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		gc->SetToolTip("Maximum number of simulations steps for one render");
+		std::string text = std::to_string(maxSimSubSteps);
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setMaxSimSubSteps);
 	}
 	void addLsx(){
 		addLabel("lsx");
@@ -657,6 +668,7 @@ public:
 		addDumpPng();
 		addLogDir();
 		addNumIterations();
+		addMaxSimSubSteps();
 		addFixedTimeStep();
 		addPauseSimulationButton();
 		addSingleStepButton();
@@ -773,6 +785,19 @@ public:
 			(loadRaiseX, getLoadRaiseY(), loadRaiseZ));
 		return tr;
 	}
+	boolean noActive(){
+		int i;
+		for (i = m_dynamicsWorld->getNumCollisionObjects() - 1; i >= 0; i--)
+		{
+			btCollisionObject* obj = m_dynamicsWorld->getCollisionObjectArray()[i];
+			btRigidBody* body = btRigidBody::upcast(obj);
+			if (body && body->getActivationState()==ACTIVE_TAG)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
 	boolean isLoadDown(){
 		int activationState=m_loadBody->getActivationState();
 		if (activationState == ACTIVE_TAG){
@@ -780,11 +805,11 @@ public:
 		}
 		btScalar y = m_loadBody->getCenterOfMassPosition().y();
 		btScalar speed2 = m_loadBody->getLinearVelocity().length2();
-		if (y < -5 && speed2<1e-6){
-			return true;
+		if (y > -5 || speed2 > 1e-6){
+			m_loadBody->activate();
+			return false;
 		}
-		m_loadBody->activate();
-		return false;
+		return noActive();
 	}
 	void raiseLoadAction(){
 		btVector3 zero(0, 0, 0);
@@ -1099,6 +1124,7 @@ void PlateDemo::reinit(){
 		density = 2000;
 	}
 	maxStepCount = LONG_MAX;
+	maxSimSubSteps = 100;
 }
 void PlateDemo::resetHandler(Gwen::Controls::Base* control){
 	demo->reinit();
@@ -1220,7 +1246,7 @@ void PlateDemo::initPhysics()
 	m_guiHelper->setUpAxis(upAxis);
 	btScalar xm(0.4*lsx);
 	btScalar zm(0.4*lsz);
-	btVector3 groundExtents(lsx+4, 0.5, lsz+4);
+	btVector3 groundExtents(2*lsx+4, 0.5, 2*lsz+4);
 	btCollisionShape* groundShape = new btBoxShape(groundExtents);
 	m_collisionShapes.push_back(groundShape);
 	btVector3 supportExtentsX(0.5*lsx, supportThickness/2, 0.1*lsz);
@@ -1394,9 +1420,16 @@ void PlateDemo::stepSimulation(float deltaTime)
 	}
 	if (m_dynamicsWorld)
 	{
-		int maxSimSubSteps =  10;
 		btScalar timeStep = (btScalar)deltaTime;
-		stepCount += m_dynamicsWorld->stepSimulation(timeStep, maxSimSubSteps, m_fixedTimeStep);
+		if (stepCount + (deltaTime / m_fixedTimeStep) >= maxStepCount){
+			timeStep = m_fixedTimeStep;
+		}
+		else if (maxSimSubSteps*m_fixedTimeStep<deltaTime){
+			timeStep = maxSimSubSteps*m_fixedTimeStep;
+		}
+		targetTime = stepTime + timeStep;
+		stepCount += m_dynamicsWorld->stepSimulation
+			(timeStep, maxSimSubSteps, m_fixedTimeStep);
 		if (stepCount > maxStepCount || isLoadDown()){
 			PlasticityExampleBrowser::setPauseSimulation(true);
 		}
@@ -1633,6 +1666,9 @@ void PlateDemo::specialKeyboard(int key, int x, int y)
 {
 }
 
+void PlateDemo::setMaxSimSubSteps(Gwen::Controls::Base* control){
+	setInt(control, &(demo->maxSimSubSteps));
+}
 
 
 btRigidBody* PlateDemo::localCreateRigidBody(btScalar mass, 
