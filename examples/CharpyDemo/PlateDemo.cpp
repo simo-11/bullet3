@@ -302,6 +302,7 @@ public:
 	void setDefaultBreakingForce(Gwen::Controls::Base* control);
 	void setMaxEngineForce(Gwen::Controls::Base* control);
 	void setMaxPlasticStrain(Gwen::Controls::Base* control);
+	void setDownScaleRamp(Gwen::Controls::Base* control);
 	void setMaxPlasticRotation(Gwen::Controls::Base* control);
 	void setGameBindings(Gwen::Controls::Base* control);
 	void setPauseOnBreak(Gwen::Controls::Base* control);
@@ -522,6 +523,15 @@ public:
 		place(gc);
 		gc->onReturnPressed.Add(pPage, &PlateDemo::setMaxPlasticStrain);
 	}
+	void addDownScaleRamp(){
+		addLabel("downScaleRamp");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		std::string text = uif(bt6DofElasticPlastic2Constraint::downScaleRamp, "%.2f");
+		gc->SetToolTip("plasticity down scale ramp, 1-0.3");
+		gc->SetText(text);
+		place(gc);
+		gc->onReturnPressed.Add(pPage, &PlateDemo::setDownScaleRamp);
+	}
 	void addMaxPlasticRotation(){
 		addLabel("maxPlasticRotation");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
@@ -651,12 +661,13 @@ public:
 		switch (constraintType){
 		case Impulse:
 			// addBreakingImpulseThreshold();
-			addCollisionBetweenLinkedBodies();
+			//addCollisionBetweenLinkedBodies();
 			break;
 		case ElasticPlastic:
 			//addMaxPlasticRotation();
 			addMaxPlasticStrain();
-			addCollisionBetweenLinkedBodies();
+			addDownScaleRamp();
+			//addCollisionBetweenLinkedBodies();
 			break;
 		}
 		addLoadMass();
@@ -1087,6 +1098,10 @@ void PlateDemo::setMaxPlasticStrain(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->maxPlasticStrain));
 	restartHandler(control);
 }
+void PlateDemo::setDownScaleRamp(Gwen::Controls::Base* control){
+	setScalar(control, &(bt6DofElasticPlastic2Constraint::downScaleRamp));
+	restartHandler(control);
+}
 void PlateDemo::setMaxPlasticRotation(Gwen::Controls::Base* control){
 	setScalar(control, &(demo->maxPlasticRotation));
 	restartHandler(control);
@@ -1125,6 +1140,7 @@ void PlateDemo::reinit(){
 	}
 	maxStepCount = LONG_MAX;
 	maxSimSubSteps = 100;
+	bt6DofElasticPlastic2Constraint::downScaleRamp = 1;
 }
 void PlateDemo::resetHandler(Gwen::Controls::Base* control){
 	demo->reinit();

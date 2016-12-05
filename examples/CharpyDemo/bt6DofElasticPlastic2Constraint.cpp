@@ -1331,10 +1331,6 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 			}
 		}
 	}
-	if (m_currentPlasticStrain > m_maxPlasticStrain){
-		setEnabled(false);
-		return;
-	}
 	for (i = 0; i < 3; i++)
 	{
 		if (m_angularLimits[i].m_enableSpring)
@@ -1366,9 +1362,30 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 			}
 		}
 	}
-	if (m_currentPlasticRotation > m_maxPlasticRotation){
+	downScale();
+}
+/**
+1 means that constraint is broken when maximum plastic rotation or strain is exceeded
+0.5 means that maximum forces are scaled down between max and twice the max strain
+0 means that constraint is never broken and maximum forces remain same
+*/
+btScalar bt6DofElasticPlastic2Constraint::downScaleRamp(1.);
+/**
+Scales maximum forces down so that
+elastic energy can consumed before breaking of constraint
+*/
+void bt6DofElasticPlastic2Constraint::downScale(){
+	btScalar maxCurrent = btMax(m_currentPlasticRotation/m_maxPlasticRotation,
+		m_currentPlasticStrain/m_maxPlasticStrain);
+	btScalar scale = 1 - maxCurrent*downScaleRamp;
+	if (scale <= 0){
 		setEnabled(false);
+		return;
 	}
+	for (int i = 0; i < 6; i++){
+		m_maxForce[i] *= scale / factorForDownScale;
+	}
+	factorForDownScale = scale;
 }
 void bt6DofElasticPlastic2Constraint::debugDraw(btIDebugDraw* debugDrawer)
 {

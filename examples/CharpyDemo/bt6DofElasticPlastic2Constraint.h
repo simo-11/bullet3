@@ -332,6 +332,9 @@ public:
 	/** select larger one */
 	static btScalar getMaxAbsMoment(btJointFeedback& forces, int index);
 	static btScalar getMaxAbsForce(btJointFeedback& forces, int index);
+	btScalar factorForDownScale=btScalar(1);
+	void downScale();
+	static btScalar downScaleRamp;
 	// bcc
 };
 
