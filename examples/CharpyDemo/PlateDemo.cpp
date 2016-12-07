@@ -1446,7 +1446,7 @@ void PlateDemo::stepSimulation(float deltaTime)
 		targetTime = stepTime + timeStep;
 		stepCount += m_dynamicsWorld->stepSimulation
 			(timeStep, maxSimSubSteps, m_fixedTimeStep);
-		if (stepCount > maxStepCount || isLoadDown()){
+		if (stepCount >= maxStepCount || isLoadDown()){
 			PlasticityExampleBrowser::setPauseSimulation(true);
 		}
 		stepTime += timeStep;
