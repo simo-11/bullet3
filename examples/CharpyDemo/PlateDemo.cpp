@@ -935,6 +935,26 @@ public:
 		}
 		previousNumConstraints = numConstraints;
 	}
+	void disableFlyingBodies(){
+		btScalar limit = (15 + thickness*max(lsx, lsz));
+		limit *= limit;
+		for (int i = m_dynamicsWorld->getNumCollisionObjects() - 1; i >= 0; i--)
+		{
+			btCollisionObject* obj = m_dynamicsWorld->getCollisionObjectArray()[i];
+			btRigidBody* body = btRigidBody::upcast(obj);
+			if (body && body->getMotionState())
+			{
+				btMotionState *ms=body->getMotionState();
+				btTransform tr;
+				ms->getWorldTransform(tr);
+				btVector3 v=tr.getOrigin();
+				btScalar d2=v.length2();
+				if (d2 > limit){
+					body->setActivationState(DISABLE_SIMULATION);
+				}
+			}
+		}
+	}
 };
 PlateDemo *demo = 0;
 
@@ -1417,6 +1437,7 @@ void PlateDemo::physicsDebugDraw(int debugFlags)
 
 void PlateDemo::renderScene()
 {	
+	disableFlyingBodies();
 	if (stepCount > syncedStep){
 		BT_PROFILE("m_guiHelper::syncPhysicsToGraphics");
 		m_guiHelper->syncPhysicsToGraphics(m_dynamicsWorld);
