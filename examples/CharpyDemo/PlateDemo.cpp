@@ -1143,7 +1143,7 @@ void PlateDemo::reinit(){
 	bt6DofElasticPlastic2Constraint::downScaleRamp = 1;
 }
 void PlateDemo::resetHandler(Gwen::Controls::Base* control){
-	demo->reinit();
+	demo->initOptions();
 	restartHandler(control);
 }
 
