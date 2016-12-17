@@ -1966,9 +1966,9 @@ void DemolisherDemo::initPhysics()
 	gateLsz = 0.2*lsz;
 	b3Printf("gateLsx=%.1f, gateLsy=%.1f, gateLsz=%.1f",
 		gateLsx, gateLsy, gateLsz);
-	rodLsx = 0.01*lsx;
+	rodLsx = 0.03*lsx;
 	rodLsy = bridgeSupportY;
-	rodLsz = 0.1*lsz;
+	rodLsz = 0.3*lsz;
 	b3Printf("rodLsx=%.1f, rodLsy=%.1f, rodLsz=%.1f",
 		rodLsx, rodLsy, rodLsz);
 	int upAxis = 1;

@@ -466,7 +466,8 @@ public:
 				break;
 			case 6: // big and soft
 				hammerDraft = btScalar(0);
-				fy = btScalar(15e3);
+				fy = btScalar(20e3);
+				E = btScalar(20e6);
 				w = 0.2;
 				h = 0.2;
 				l = 0.4;
@@ -714,7 +715,7 @@ public:
 	void addE(){
 		addLabel("E [GPa]");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = uif(E / 1e9,"%.0f");
+		string text = uif(E / 1e9,"%.3f");
 		gc->SetText(text);
 		gc->SetToolTip("Young's modulus");
 		gc->SetPos(gxi, gy);

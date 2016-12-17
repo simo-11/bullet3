@@ -1472,9 +1472,7 @@ public:
 		currentMaxPosError = maxPosError;
 		tsPosError->setupTimeSeries(getScale(maxPosError), intFreq, 0);
 		for (int i = 0; i < C_ERROR_SIZE; i++){
-			velError[i] = 0;
-			posError[i] = 0;
-			unsigned char r=getR(i), g=getG(i), b=getB(i);
+			unsigned char r = getR(i), g = getG(i), b = getB(i);
 			tsVelError->addDataSource(label[i], r, g, b);
 			tsPosError->addDataSource(label[i], r, g, b);
 		}
@@ -1484,6 +1482,9 @@ public:
 	}
 	void updateErrorTimeSeries(){
 #ifdef CDBG_CALLBACK
+		if (!tsVelError || !tsPosError){
+			return;
+		}
 		for (int i = 0; i < C_ERROR_SIZE; i++){
 			if (btFabs(velError[i])>0.01*currentMaxVelError){
 				tsVelError->insertDataAtCurrentTime(velError[i], i, errorScaled);
@@ -2043,6 +2044,10 @@ void BlockDemo::resetDemo()
 {
 	clas = 0;
 	clai = 0;
+	for (int i = 0; i < C_ERROR_SIZE; i++){
+		velError[i] = 0;
+		posError[i] = 0;
+	}
 }
 
 
