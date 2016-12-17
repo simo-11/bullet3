@@ -848,11 +848,24 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			srow += info->rowskip;
 			++count;
 		} else{ // useBcc
+			/**
+			buddha springs are explained in
+			http://box2d.org/files/GDC2011/GDC2011_Catto_Erin_Soft_Constraints.pdf
+			Using them properly should make (at least simple) constraints
+			unconditionally stable but in this case
+			either implementation is not correct or theory is not valid
+			*/
+			bool useBuddha = false;
 			btScalar error = limot->m_currentPosition - limot->m_equilibriumPoint;
 			calculateJacobi(limot,transA,transB,info,srow,ax1,rotational,rotAllowed);
 			btScalar kd = limot->m_springDamping;
 			btScalar ks = limot->m_springStiffness;
-			btScalar cfm = BT_ZERO;
+			btScalar cfm = BT_ZERO; // gamma in buddha
+			btScalar erp = limot->m_stopERP; // beta in buddha
+			if (useBuddha){
+				cfm = BT_ONE / (kd+dt*ks);
+				erp = (dt*ks) / (kd + dt*ks);
+			}
 			// bcc
 			bool usePlasticity=false;
 			bool frequencyLimited = false;
@@ -931,7 +944,7 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 				minf = -maxImpulse;
 				maxf = maxImpulse;
 				if (frequencyLimited){
-					f = info->fps*limot->m_stopERP*error;
+					f = info->fps*erp*error;
 				}
 				else{
 					f = 0;
