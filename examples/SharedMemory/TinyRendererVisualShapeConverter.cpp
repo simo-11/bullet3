@@ -33,7 +33,8 @@ subject to the following restrictions:
 #include <fstream>
 #include "../Importers/ImportURDFDemo/UrdfParser.h"
 #include "../SharedMemory/SharedMemoryPublic.h"//for b3VisualShapeData
-
+#include "../TinyRenderer/model.h"
+#include "../ThirdPartyLibs/stb_image/stb_image.h"
 
 enum MyFileType
 {
@@ -68,18 +69,37 @@ struct TinyRendererVisualShapeConverterInternalData
 	int m_swWidth;
 	int m_swHeight;
 	TGAImage m_rgbColorBuffer;
+    b3AlignedObjectArray<MyTexture2> m_textures;
 	b3AlignedObjectArray<float> m_depthBuffer;
+    b3AlignedObjectArray<float> m_shadowBuffer;
 	b3AlignedObjectArray<int> m_segmentationMaskBuffer;
-	
+	btVector3 m_lightDirection;
+	bool m_hasLightDirection;
+    btVector3 m_lightColor;
+    bool m_hasLightColor;
+    float m_lightDistance;
+    bool m_hasLightDistance;
+    float m_lightAmbientCoeff;
+    bool m_hasLightAmbientCoeff;
+    float m_lightDiffuseCoeff;
+    bool m_hasLightDiffuseCoeff;
+    float m_lightSpecularCoeff;
+    bool m_hasLightSpecularCoeff;
+    bool m_hasShadow;
 	SimpleCamera m_camera;
+	
 	
 	TinyRendererVisualShapeConverterInternalData()
 	:m_upAxis(2),
 	m_swWidth(START_WIDTH),
 	m_swHeight(START_HEIGHT),
-	m_rgbColorBuffer(START_WIDTH,START_HEIGHT,TGAImage::RGB)
+	m_rgbColorBuffer(START_WIDTH,START_HEIGHT,TGAImage::RGB),
+	m_hasLightDirection(false),
+    m_hasLightColor(false),
+    m_hasShadow(false)
 	{
 	    m_depthBuffer.resize(m_swWidth*m_swHeight);
+        m_shadowBuffer.resize(m_swWidth*m_swHeight);
 	    m_segmentationMaskBuffer.resize(m_swWidth*m_swHeight,-1);
 	}
 	
@@ -105,8 +125,46 @@ TinyRendererVisualShapeConverter::~TinyRendererVisualShapeConverter()
 	delete m_data;
 }
 	
+void TinyRendererVisualShapeConverter::setLightDirection(float x, float y, float z)
+{
+	m_data->m_lightDirection.setValue(x, y, z);
+	m_data->m_hasLightDirection = true;
+}
 
+void TinyRendererVisualShapeConverter::setLightColor(float x, float y, float z)
+{
+    m_data->m_lightColor.setValue(x, y, z);
+    m_data->m_hasLightColor = true;
+}
 
+void TinyRendererVisualShapeConverter::setLightDistance(float dist)
+{
+    m_data->m_lightDistance = dist;
+    m_data->m_hasLightDistance = true;
+}
+
+void TinyRendererVisualShapeConverter::setShadow(bool hasShadow)
+{
+    m_data->m_hasShadow = hasShadow;
+}
+
+void TinyRendererVisualShapeConverter::setLightAmbientCoeff(float ambientCoeff)
+{
+    m_data->m_lightAmbientCoeff = ambientCoeff;
+    m_data->m_hasLightAmbientCoeff = true;
+}
+
+void TinyRendererVisualShapeConverter::setLightDiffuseCoeff(float diffuseCoeff)
+{
+    m_data->m_lightDiffuseCoeff = diffuseCoeff;
+    m_data->m_hasLightDiffuseCoeff = true;
+}
+
+void TinyRendererVisualShapeConverter::setLightSpecularCoeff(float specularCoeff)
+{
+    m_data->m_lightSpecularCoeff = specularCoeff;
+    m_data->m_hasLightSpecularCoeff = true;
+}
 
 void convertURDFToVisualShape(const UrdfVisual* visual, const char* urdfPathPrefix, const btTransform& visualTransform, btAlignedObjectArray<GLInstanceVertex>& verticesOut, btAlignedObjectArray<int>& indicesOut, btAlignedObjectArray<MyTexture2>& texturesOut, b3VisualShapeData& visualShapeOut)
 {
@@ -524,13 +582,17 @@ void TinyRendererVisualShapeConverter::convertVisualShapes(int linkIndex, const 
 			visualShape.m_localInertiaFrame[4] = localInertiaFrame.getRotation()[1];
 			visualShape.m_localInertiaFrame[5] = localInertiaFrame.getRotation()[2];
 			visualShape.m_localInertiaFrame[6] = localInertiaFrame.getRotation()[3];
-			
+            visualShape.m_rgbaColor[0] = rgbaColor[0];
+            visualShape.m_rgbaColor[1] = rgbaColor[1];
+            visualShape.m_rgbaColor[2] = rgbaColor[2];
+            visualShape.m_rgbaColor[3] = rgbaColor[3];
+            
 			convertURDFToVisualShape(&vis, pathPrefix, localInertiaFrame.inverse()*childTrans, vertices, indices,textures, visualShape);
 			m_data->m_visualShapes.push_back(visualShape);
 
             if (vertices.size() && indices.size())
             {
-                TinyRenderObjectData* tinyObj = new TinyRenderObjectData(m_data->m_rgbColorBuffer,m_data->m_depthBuffer, &m_data->m_segmentationMaskBuffer, bodyUniqueId);
+                TinyRenderObjectData* tinyObj = new TinyRenderObjectData(m_data->m_rgbColorBuffer,m_data->m_depthBuffer, &m_data->m_shadowBuffer, &m_data->m_segmentationMaskBuffer, bodyUniqueId);
 				unsigned char* textureImage=0;
 				int textureWidth=0;
 				int textureHeight=0;
@@ -636,6 +698,7 @@ void TinyRendererVisualShapeConverter::clearBuffers(TGAColor& clearColor)
         {
             m_data->m_rgbColorBuffer.set(x,y,clearColor);
             m_data->m_depthBuffer[x+y*m_data->m_swWidth] = -1e30f;
+            m_data->m_shadowBuffer[x+y*m_data->m_swWidth] = -1e30f;
             m_data->m_segmentationMaskBuffer[x+y*m_data->m_swWidth] = -1;
         }
     }
@@ -670,28 +733,110 @@ void TinyRendererVisualShapeConverter::render(const float viewMat[16], const flo
     
     
     btVector3 lightDirWorld(-5,200,-40);
-    switch (m_data->m_upAxis)
-    {
-    case 1:
-            lightDirWorld = btVector3(-50.f,100,30);
-        break;
-    case 2:
-            lightDirWorld = btVector3(-50.f,30,100);
-            break;
-    default:{}
-    };
+	if (m_data->m_hasLightDirection)
+	{
+		lightDirWorld = m_data->m_lightDirection;
+	}
+	else
+	{
+		switch (m_data->m_upAxis)
+		{
+		case 1:
+			lightDirWorld = btVector3(-50.f, 100, 30);
+			break;
+		case 2:
+			lightDirWorld = btVector3(-50.f, 30, 100);
+			break;
+		default: {}
+		};
+	}
     
     lightDirWorld.normalize();
     
-  //  printf("num m_swRenderInstances = %d\n", m_data->m_swRenderInstances.size());
-    for (int i=0;i<m_data->m_swRenderInstances.size();i++)
+    btVector3 lightColor(1.0,1.0,1.0);
+    if (m_data->m_hasLightColor)
     {
-        TinyRendererObjectArray** visualArrayPtr = m_data->m_swRenderInstances.getAtIndex(i);
+        lightColor = m_data->m_lightColor;
+    }
+    
+    float lightDistance = 2.0;
+    if (m_data->m_hasLightDistance)
+    {
+        lightDistance = m_data->m_lightDistance;
+    }
+    
+    float lightAmbientCoeff = 0.6;
+    if (m_data->m_hasLightAmbientCoeff)
+    {
+        lightAmbientCoeff = m_data->m_lightAmbientCoeff;
+    }
+    
+    float lightDiffuseCoeff = 0.35;
+    if (m_data->m_hasLightDiffuseCoeff)
+    {
+        lightDiffuseCoeff = m_data->m_lightDiffuseCoeff;
+    }
+    
+    float lightSpecularCoeff = 0.05;
+    if (m_data->m_hasLightSpecularCoeff)
+    {
+        lightSpecularCoeff = m_data->m_lightSpecularCoeff;
+    }
+    
+    if (m_data->m_hasShadow)
+    {
+        for (int n=0;n<m_data->m_swRenderInstances.size();n++)
+        {
+            TinyRendererObjectArray** visualArrayPtr = m_data->m_swRenderInstances.getAtIndex(n);
+            if (0==visualArrayPtr)
+                continue;//can this ever happen?
+            TinyRendererObjectArray* visualArray = *visualArrayPtr;
+            
+            btHashPtr colObjHash = m_data->m_swRenderInstances.getKeyAtIndex(n);
+            
+            
+            const btCollisionObject* colObj = (btCollisionObject*) colObjHash.getPointer();
+            
+            for (int v=0;v<visualArray->m_renderObjects.size();v++)
+            {
+                
+                TinyRenderObjectData* renderObj = visualArray->m_renderObjects[v];
+                
+                
+                //sync the object transform
+                const btTransform& tr = colObj->getWorldTransform();
+                tr.getOpenGLMatrix(modelMat);
+                
+                for (int i=0;i<4;i++)
+                {
+                    for (int j=0;j<4;j++)
+                    {
+                        
+                        renderObj->m_projectionMatrix[i][j] = projMat[i+4*j];
+                        renderObj->m_modelMatrix[i][j] = modelMat[i+4*j];
+                        renderObj->m_viewMatrix[i][j] = viewMat[i+4*j];
+                    }
+                }
+                renderObj->m_localScaling = colObj->getCollisionShape()->getLocalScaling();
+                renderObj->m_lightDirWorld = lightDirWorld;
+                renderObj->m_lightColor = lightColor;
+                renderObj->m_lightDistance = lightDistance;
+                renderObj->m_lightAmbientCoeff = lightAmbientCoeff;
+                renderObj->m_lightDiffuseCoeff = lightDiffuseCoeff;
+                renderObj->m_lightSpecularCoeff = lightSpecularCoeff;
+                TinyRenderer::renderObjectDepth(*renderObj);
+            }
+        }
+    }
+
+    for (int n=0;n<m_data->m_swRenderInstances.size();n++)
+    {
+        TinyRendererObjectArray** visualArrayPtr = m_data->m_swRenderInstances.getAtIndex(n);
         if (0==visualArrayPtr)
             continue;//can this ever happen?
         TinyRendererObjectArray* visualArray = *visualArrayPtr;
-
-        btHashPtr colObjHash = m_data->m_swRenderInstances.getKeyAtIndex(i);
+        
+        btHashPtr colObjHash = m_data->m_swRenderInstances.getKeyAtIndex(n);
         
         
         const btCollisionObject* colObj = (btCollisionObject*) colObjHash.getPointer();
@@ -701,11 +846,11 @@ void TinyRendererVisualShapeConverter::render(const float viewMat[16], const flo
             
             TinyRenderObjectData* renderObj = visualArray->m_renderObjects[v];
             
-        
+            
             //sync the object transform
             const btTransform& tr = colObj->getWorldTransform();
             tr.getOpenGLMatrix(modelMat);
-    
+            
             for (int i=0;i<4;i++)
             {
                 for (int j=0;j<4;j++)
@@ -714,10 +859,15 @@ void TinyRendererVisualShapeConverter::render(const float viewMat[16], const flo
                     renderObj->m_projectionMatrix[i][j] = projMat[i+4*j];
                     renderObj->m_modelMatrix[i][j] = modelMat[i+4*j];
                     renderObj->m_viewMatrix[i][j] = viewMat[i+4*j];
-                    renderObj->m_localScaling = colObj->getCollisionShape()->getLocalScaling();
-                    renderObj->m_lightDirWorld = lightDirWorld;
                 }
             }
+            renderObj->m_localScaling = colObj->getCollisionShape()->getLocalScaling();
+            renderObj->m_lightDirWorld = lightDirWorld;
+            renderObj->m_lightColor = lightColor;
+            renderObj->m_lightDistance = lightDistance;
+            renderObj->m_lightAmbientCoeff = lightAmbientCoeff;
+            renderObj->m_lightDiffuseCoeff = lightDiffuseCoeff;
+            renderObj->m_lightSpecularCoeff = lightSpecularCoeff;
             TinyRenderer::renderObject(*renderObj);
         }
     }
@@ -736,6 +886,7 @@ void TinyRendererVisualShapeConverter::render(const float viewMat[16], const flo
 			for (int i=0;i<m_data->m_swWidth;i++)
 			{
 				btSwap(m_data->m_depthBuffer[l1+i],m_data->m_depthBuffer[l2+i]);
+                btSwap(m_data->m_shadowBuffer[l1+i],m_data->m_shadowBuffer[l2+i]);
 				btSwap(m_data->m_segmentationMaskBuffer[l1+i],m_data->m_segmentationMaskBuffer[l2+i]);
 			}
 		}
@@ -755,6 +906,7 @@ void TinyRendererVisualShapeConverter::setWidthAndHeight(int width, int height)
 	m_data->m_swHeight = height;
 
 	m_data->m_depthBuffer.resize(m_data->m_swWidth*m_data->m_swHeight);
+    m_data->m_shadowBuffer.resize(m_data->m_swWidth*m_data->m_swHeight);
 	m_data->m_segmentationMaskBuffer.resize(m_data->m_swWidth*m_data->m_swHeight);
 	m_data->m_rgbColorBuffer = TGAImage(width, height, TGAImage::RGB);
 	
@@ -827,3 +979,56 @@ void TinyRendererVisualShapeConverter::resetAll()
 	m_data->m_swRenderInstances.clear();
 }
 
+void TinyRendererVisualShapeConverter::activateShapeTexture(int shapeUniqueId, int textureUniqueId)
+{
+    btAssert(textureUniqueId < m_data->m_textures.size());
+    TinyRendererObjectArray** ptrptr = m_data->m_swRenderInstances.getAtIndex(shapeUniqueId);
+    if (ptrptr && *ptrptr)
+    {
+        TinyRendererObjectArray* ptr = *ptrptr;
+        ptr->m_renderObjects[0]->m_model->setDiffuseTextureFromData(m_data->m_textures[textureUniqueId].textureData,m_data->m_textures[textureUniqueId].m_width,m_data->m_textures[textureUniqueId].m_height);
+    }
+}
+
+void TinyRendererVisualShapeConverter::activateShapeTexture(int objectUniqueId, int jointIndex, int shapeIndex, int textureUniqueId)
+{
+    int start = -1;
+    for (int i = 0; i < m_data->m_visualShapes.size(); i++)
+    {
+        if (m_data->m_visualShapes[i].m_objectUniqueId == objectUniqueId && m_data->m_visualShapes[i].m_linkIndex == jointIndex)
+        {
+            start = i;
+            break;
+        }
+    }
+    
+    if (start >= 0)
+    {
+        if (start + shapeIndex < m_data->m_visualShapes.size())
+        {
+            activateShapeTexture(start + shapeIndex, textureUniqueId);
+        }
+    }
+}
+
+int TinyRendererVisualShapeConverter::registerTexture(unsigned char* texels, int width, int height)
+{
+    MyTexture2 texData;
+    texData.m_width = width;
+    texData.m_height = height;
+    texData.textureData = texels;
+    m_data->m_textures.push_back(texData);
+    return m_data->m_textures.size()-1;
+}
+
+int TinyRendererVisualShapeConverter::loadTextureFile(const char* filename)
+{
+    int width,height,n;
+    unsigned char* image=0;
+    image = stbi_load(filename, &width, &height, &n, 3);
+    if (image && (width>=0) && (height>=0))
+    {
+        return registerTexture(image, width, height);
+    }
+    return -1;
+}

@@ -29,7 +29,7 @@ struct btCollisionAlgorithmCreateFunc;
 class btDefaultCollisionConfiguration;
 class NNWalker;
 
-#include "../CommonInterfaces/CommonTimeWarpBase.h"
+#include "NN3DWalkersTimeWarpBase.h"
 #include "../CommonInterfaces/CommonParameterInterface.h"
 
 #include "../Utils/b3ReferenceFrameHelper.hpp"
@@ -99,7 +99,7 @@ static btScalar gParallelEvaluations = 10.0f;
 
 void* GROUND_ID = (void*)1;
 
-class NN3DWalkersExample : public CommonTimeWarpBase
+class NN3DWalkersExample : public NN3DWalkersTimeWarpBase
 {
 	btScalar m_Time;
 	btScalar m_SpeedupTimestamp;
@@ -115,7 +115,7 @@ class NN3DWalkersExample : public CommonTimeWarpBase
 
 public:
 	NN3DWalkersExample(struct GUIHelperInterface* helper)
-	:CommonTimeWarpBase(helper),
+	:NN3DWalkersTimeWarpBase(helper),
 	 m_Time(0),
 	 m_SpeedupTimestamp(0),
 	 m_motorStrength(0.5f),
@@ -552,10 +552,6 @@ struct WalkerFilterCallback : public btOverlapFilterCallback
 	}
 };
 
-void floorNNSliderValue(float notUsed) {
-	gParallelEvaluations = floor(gParallelEvaluations);
-}
-
 void NN3DWalkersExample::initPhysics()
 {
 
@@ -657,8 +653,7 @@ void NN3DWalkersExample::initPhysics()
 		SliderParams slider("Parallel evaluations", &gParallelEvaluations);
 		slider.m_minVal = 1;
 		slider.m_maxVal = NUM_WALKERS;
-		slider.m_clampToNotches = false;
-		slider.m_callback = floorNNSliderValue; // hack to get integer values
+        slider.m_clampToIntegers = true;
 		m_guiHelper->getParameterInterface()->registerSliderFloatParameter(
 			slider);
 	}
@@ -771,7 +766,7 @@ bool NN3DWalkersExample::keyboardCallback(int key, int state)
 		break;
 	}
 
-	return CommonTimeWarpBase::keyboardCallback(key,state);
+	return NN3DWalkersTimeWarpBase::keyboardCallback(key,state);
 }
 
 void NN3DWalkersExample::exitPhysics()
@@ -1035,6 +1030,7 @@ void NN3DWalkersExample::drawMarkings() {
 }
 
 void NN3DWalkersExample::printWalkerConfigs(){
+#if 0
 	char configString[25 + NUM_WALKERS*BODYPART_COUNT*JOINT_COUNT*(3+15+1) + NUM_WALKERS*4 + 1]; // 15 precision + [],\n
 	char* runner = configString;
 	sprintf(runner,"Population configuration:");
@@ -1058,4 +1054,5 @@ void NN3DWalkersExample::printWalkerConfigs(){
 	}
 	runner[0] = '\0';
 	b3Printf(configString);
+#endif
 }
