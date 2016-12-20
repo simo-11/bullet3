@@ -1395,6 +1395,9 @@ void bt6DofElasticPlastic2Constraint::downScale(){
 		setEnabled(false);
 		return;
 	}
+	if (downScaleRamp >= 1.){
+		return;
+	}
 	for (int i = 0; i < 6; i++){
 		m_maxForce[i] *= scale / factorForDownScale;
 	}
