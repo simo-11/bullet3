@@ -17,7 +17,7 @@
 #endif //_WIN32
 #endif//__APPLE__
 #include "../ThirdPartyLibs/Gwen/Renderers/OpenGL_DebugFont.h"
-
+#include "LinearMath/btThreads.h"
 #include "Bullet3Common/b3Vector3.h"
 #include "assert.h"
 #include <stdio.h>
@@ -39,6 +39,49 @@
 #include "PlasticityStatistics.h"
 #include <time.h>
 #include "LinearMath/btIDebugDraw.h"
+#include "Bullet3Common/b3HashMap.h"
+
+struct GL3TexLoader : public MyTextureLoader
+{
+	b3HashMap<b3HashString, GLint> m_hashMap;
+
+	virtual void LoadTexture(Gwen::Texture* pTexture)
+	{
+		Gwen::String namestr = pTexture->name.Get();
+		const char* n = namestr.c_str();
+		GLint* texIdPtr = m_hashMap[n];
+		if (texIdPtr)
+		{
+			pTexture->m_intData = *texIdPtr;
+		}
+	}
+	virtual void FreeTexture(Gwen::Texture* pTexture)
+	{
+	}
+};
+
+struct PlasticityExampleBrowserInternalData
+{
+	Gwen::Renderer::Base* m_gwenRenderer;
+	CommonGraphicsApp* m_app;
+	MyProfileWindow* m_profWindow;
+	btAlignedObjectArray<Gwen::Controls::TreeNode*> m_nodes;
+	GwenUserInterface* m_gui;
+	GL3TexLoader* m_myTexLoader;
+	struct MyMenuItemHander* m_handler2;
+	btAlignedObjectArray<MyMenuItemHander*> m_handlers;
+
+	PlasticityExampleBrowserInternalData()
+		: m_gwenRenderer(0),
+		m_app(0),
+		m_gui(0),
+		m_myTexLoader(0),
+		m_handler2(0)
+	{
+
+	}
+};
+
 
 static CommonGraphicsApp* s_app=0;
 CommonGraphicsApp* PlasticityExampleBrowser::getApp(){
@@ -61,8 +104,8 @@ static MyProfileWindow* s_profWindow =0;
 static PlasticityStatistics* s_pStatWindow = 0;
 
 #define DEMO_SELECTION_COMBOBOX 13
-const char* startFileName = "bulletDemo.txt";
-
+const char* startFileName = "0_PBulletDemo.txt";
+char staticPngFileName[1024];
 static GwenUserInterface* gui  = 0;
 GwenUserInterface* PlasticityExampleBrowser::getGui(){
 	return gui;
@@ -71,7 +114,9 @@ static int sCurrentDemoIndex = -1;
 static int sCurrentHightlighted = 0;
 static CommonExampleInterface* sCurrentDemo = 0;
 static b3AlignedObjectArray<const char*> allNames;
-
+static float gFixedTimeStep = 0;
+bool gAllowRetina = true;
+bool gDisableDemoSelection = false;
 static class PlasticityExampleEntries* gAllExamples=0;
 bool sUseOpenGL2 = false;
 bool drawGUI=true;
@@ -82,8 +127,10 @@ extern bool useShadowMap;
 static bool visualWireframe=false;
 static bool renderVisualGeometry=true;
 static bool renderGrid = true;
+static bool renderGui = true;
 int gDebugDrawFlags = 0;
 static bool pauseSimulation=false;
+static bool singleStepSimulation = false;
 bool PlasticityExampleBrowser::getPauseSimulation(){
 	return pauseSimulation;
 }
@@ -104,6 +151,190 @@ int gGpuArraySizeZ=15;
 //#include <float.h>
 //unsigned int fp_control_state = _controlfp(_EM_INEXACT, _MCW_EM);
 
+struct btTiming
+{
+	const char* m_name;
+	int m_threadId;
+	unsigned long long int m_usStartTime;
+	unsigned long long int m_usEndTime;
+};
+
+FILE* gTimingFile = 0;
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS
+#endif //__STDC_FORMAT_MACROS
+#include <inttypes.h>
+#define BT_TIMING_CAPACITY 16*65536
+static bool m_firstTiming = true;
+
+
+struct btTimings
+{
+	btTimings()
+		:m_numTimings(0),
+		m_activeBuffer(0)
+	{
+
+	}
+	void flush()
+	{
+		for (int i = 0; i<m_numTimings; i++)
+		{
+			const char* name = m_timings[m_activeBuffer][i].m_name;
+			int threadId = m_timings[m_activeBuffer][i].m_threadId;
+			unsigned long long int startTime = m_timings[m_activeBuffer][i].m_usStartTime;
+			unsigned long long int endTime = m_timings[m_activeBuffer][i].m_usEndTime;
+
+			if (!m_firstTiming)
+			{
+				fprintf(gTimingFile, ",\n");
+			}
+
+			m_firstTiming = false;
+
+			unsigned long long int startTimeDiv1000 = startTime / 1000;
+			unsigned long long int endTimeDiv1000 = endTime / 1000;
+
+			if (startTime>endTime)
+			{
+				endTime = startTime;
+			}
+			unsigned int startTimeRem1000 = startTime % 1000;
+			unsigned int endTimeRem1000 = endTime % 1000;
+
+			char startTimeRem1000Str[16];
+			char endTimeRem1000Str[16];
+
+			if (startTimeRem1000<10)
+			{
+				sprintf(startTimeRem1000Str, "00%d", startTimeRem1000);
+			}
+			else
+			{
+				if (startTimeRem1000<100)
+				{
+					sprintf(startTimeRem1000Str, "0%d", startTimeRem1000);
+				}
+				else
+				{
+					sprintf(startTimeRem1000Str, "%d", startTimeRem1000);
+				}
+			}
+
+			if (endTimeRem1000<10)
+			{
+				sprintf(endTimeRem1000Str, "00%d", endTimeRem1000);
+			}
+			else
+			{
+				if (endTimeRem1000<100)
+				{
+					sprintf(endTimeRem1000Str, "0%d", endTimeRem1000);
+				}
+				else
+				{
+					sprintf(endTimeRem1000Str, "%d", endTimeRem1000);
+				}
+			}
+
+			char newname[1024];
+			static int counter2 = 0;
+
+			sprintf(newname, "%s%d", name, counter2++);
+			fprintf(gTimingFile, "{\"cat\":\"timing\",\"pid\":1,\"tid\":%d,\"ts\":%" PRIu64 ".%s ,\"ph\":\"B\",\"name\":\"%s\",\"args\":{}},\n",
+				threadId, startTimeDiv1000, startTimeRem1000Str, newname);
+			fprintf(gTimingFile, "{\"cat\":\"timing\",\"pid\":1,\"tid\":%d,\"ts\":%" PRIu64 ".%s ,\"ph\":\"E\",\"name\":\"%s\",\"args\":{}}",
+				threadId, endTimeDiv1000, endTimeRem1000Str, newname);
+
+		}
+		m_numTimings = 0;
+
+	}
+
+	void addTiming(const char* name, int threadId, unsigned long long int startTime, unsigned long long int endTime)
+	{
+		if (m_numTimings >= BT_TIMING_CAPACITY)
+		{
+			return;
+		}
+
+		if (m_timings[0].size() == 0)
+		{
+			m_timings[0].resize(BT_TIMING_CAPACITY);
+		}
+
+		int slot = m_numTimings++;
+
+		m_timings[m_activeBuffer][slot].m_name = name;
+		m_timings[m_activeBuffer][slot].m_threadId = threadId;
+		m_timings[m_activeBuffer][slot].m_usStartTime = startTime;
+		m_timings[m_activeBuffer][slot].m_usEndTime = endTime;
+	}
+
+
+	int m_numTimings;
+	int m_activeBuffer;
+	btAlignedObjectArray<btTiming> m_timings[1];
+};
+
+btTimings gTimings[BT_MAX_THREAD_COUNT];
+
+btClock clk;
+
+#define MAX_NESTING 1024
+
+bool gProfileDisabled = true;
+int gStackDepths[BT_MAX_THREAD_COUNT] = { 0 };
+const char* gFuncNames[BT_MAX_THREAD_COUNT][MAX_NESTING];
+unsigned long long int gStartTimes[BT_MAX_THREAD_COUNT][MAX_NESTING];
+
+void MyDummyEnterProfileZoneFunc(const char* msg)
+{
+}
+
+void MyDummyLeaveProfileZoneFunc()
+{
+}
+
+void MyEnterProfileZoneFunc(const char* msg)
+{
+	if (gProfileDisabled)
+		return;
+	int threadId = btGetCurrentThreadIndex();
+
+	if (gStackDepths[threadId] >= MAX_NESTING)
+	{
+		btAssert(0);
+		return;
+	}
+	gFuncNames[threadId][gStackDepths[threadId]] = msg;
+	gStartTimes[threadId][gStackDepths[threadId]] = clk.getTimeNanoseconds();
+	if (gStartTimes[threadId][gStackDepths[threadId]] <= gStartTimes[threadId][gStackDepths[threadId] - 1])
+	{
+		gStartTimes[threadId][gStackDepths[threadId]] = 1 + gStartTimes[threadId][gStackDepths[threadId] - 1];
+	}
+	gStackDepths[threadId]++;
+}
+void MyLeaveProfileZoneFunc()
+{
+	if (gProfileDisabled)
+		return;
+
+	int threadId = btGetCurrentThreadIndex();
+
+	if (gStackDepths[threadId] <= 0)
+	{
+		return;
+	}
+
+	gStackDepths[threadId]--;
+
+	const char* name = gFuncNames[threadId][gStackDepths[threadId]];
+	unsigned long long int startTime = gStartTimes[threadId][gStackDepths[threadId]];
+
+	unsigned long long int endTime = clk.getTimeNanoseconds();
+	gTimings[threadId].addTiming(name, threadId, startTime, endTime);
+}
 
 
 
@@ -177,12 +408,59 @@ void MyKeyboardCallback(int key, int state)
 	if (key=='g' && state)
 	{
 		renderGrid = !renderGrid;
+		renderGui = !renderGui;
 	}
 
 
 	if (key=='i' && state)
 	{
 		pauseSimulation = !pauseSimulation;
+	}
+	if (key == 'o' && state)
+	{
+		singleStepSimulation = true;
+	}
+
+	if (key == 'p')
+	{
+		if (state)
+		{
+			m_firstTiming = true;
+			gProfileDisabled = false;//true;
+			b3SetCustomEnterProfileZoneFunc(MyEnterProfileZoneFunc);
+			b3SetCustomLeaveProfileZoneFunc(MyLeaveProfileZoneFunc);
+
+			//also for Bullet 2.x API
+			btSetCustomEnterProfileZoneFunc(MyEnterProfileZoneFunc);
+			btSetCustomLeaveProfileZoneFunc(MyLeaveProfileZoneFunc);
+		}
+		else
+		{
+
+			b3SetCustomEnterProfileZoneFunc(MyDummyEnterProfileZoneFunc);
+			b3SetCustomLeaveProfileZoneFunc(MyDummyLeaveProfileZoneFunc);
+			//also for Bullet 2.x API
+			btSetCustomEnterProfileZoneFunc(MyDummyEnterProfileZoneFunc);
+			btSetCustomLeaveProfileZoneFunc(MyDummyLeaveProfileZoneFunc);
+			char fileName[1024];
+			static int fileCounter = 0;
+			sprintf(fileName, "timings_%d.json", fileCounter++);
+			gTimingFile = fopen(fileName, "w");
+			fprintf(gTimingFile, "{\"traceEvents\":[\n");
+			//dump the content to file
+			for (int i = 0; i<BT_MAX_THREAD_COUNT; i++)
+			{
+				if (gTimings[i].m_numTimings)
+				{
+					printf("Writing %d timings for thread %d\n", gTimings[i].m_numTimings, i);
+					gTimings[i].flush();
+				}
+			}
+			fprintf(gTimingFile, "\n],\n\"displayTimeUnit\": \"ns\"}");
+			fclose(gTimingFile);
+			gTimingFile = 0;
+
+		}
 	}
 #ifndef NO_OPENGL3
 	if (key=='s' && state)
@@ -332,11 +610,12 @@ void	MyComboBoxCallback(int comboId, const char* item)
 
 }
 
-
+//in case of multi-threading, don't submit messages while the GUI is rendering (causing crashes)
+static bool gBlockGuiMessages = false;
 void MyGuiPrintf(const char* msg)
 {
 	printf("b3Printf: %s\n",msg);
-	if (gui)
+	if (!gDisableDemoSelection && !gBlockGuiMessages)
 	{
 		gui->textOutput(msg);
 		gui->forceUpdateScrollBars();
@@ -452,25 +731,6 @@ struct MyMenuItemHander :public Gwen::Event::Handler
 };
 #include "Bullet3Common/b3HashMap.h"
 
-struct GL3TexLoader : public MyTextureLoader
-{
-	b3HashMap<b3HashString,GLint> m_hashMap;
-	
-	virtual void LoadTexture( Gwen::Texture* pTexture )
-	{
-		Gwen::String namestr = pTexture->name.Get();
-		const char* n = namestr.c_str();
-		GLint* texIdPtr = m_hashMap[n];
-		if (texIdPtr)
-		{
-			pTexture->m_intData = *texIdPtr;
-		}
-	}
-	virtual void FreeTexture( Gwen::Texture* pTexture )
-	{
-	}
-};
-
 void quitCallback()
 {
    
@@ -584,14 +844,38 @@ struct QuickCanvas : public Common2dCanvasInterface
 
 PlasticityExampleBrowser::PlasticityExampleBrowser(class PlasticityExampleEntries* examples)
 {
+	m_internalData = new PlasticityExampleBrowserInternalData;
 	gAllExamples = examples;
 }
 
 PlasticityExampleBrowser::~PlasticityExampleBrowser()
 {
     deleteDemo();
-	gAllExamples = 0;
 	destroyPlasticityWindow(s_pStatWindow);
+	for (int i = 0; i < m_internalData->m_nodes.size(); i++)
+	{
+		delete m_internalData->m_nodes[i];
+	}
+	delete m_internalData->m_handler2;
+	for (int i = 0; i < m_internalData->m_handlers.size(); i++)
+	{
+		delete m_internalData->m_handlers[i];
+	}
+	m_internalData->m_handlers.clear();
+	m_internalData->m_nodes.clear();
+	delete s_parameterInterface;
+	s_parameterInterface = 0;
+	delete s_app->m_2dCanvasInterface;
+	s_app->m_2dCanvasInterface = 0;
+
+	m_internalData->m_gui->exit();
+	delete m_internalData->m_gui;
+	delete m_internalData->m_gwenRenderer;
+	delete m_internalData->m_myTexLoader;
+	delete m_internalData->m_app;
+	s_app = 0;
+	delete m_internalData;
+	gAllExamples = 0;
 }
 
 bool PlasticityExampleBrowser::init(int argc, char* argv[])
@@ -613,7 +897,7 @@ bool PlasticityExampleBrowser::init(int argc, char* argv[])
 #endif
 #define BLEN 256
 	char buf[BLEN];
-	sprintf_s(buf, BLEN, "0.9.4.1 - %d-%02d-%02d - %s",
+	sprintf_s(buf, BLEN, "0.9.5-alpha - %d-%02d-%02d - %s",
 		tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
 		btScalarType);
 #if defined (_DEBUG) || defined (DEBUG)
@@ -630,6 +914,7 @@ bool PlasticityExampleBrowser::init(int argc, char* argv[])
         s_app = simpleApp;
     }
 #endif
+	m_internalData->m_app = s_app;
     char* gVideoFileName = 0;
     args.GetCmdLineArgument("mp4",gVideoFileName);
    #ifndef NO_OPENGL3 
@@ -659,9 +944,8 @@ bool PlasticityExampleBrowser::init(int argc, char* argv[])
     assert(glGetError()==GL_NO_ERROR);
 	
 
-	gui = new GwenUserInterface;
 	GL3TexLoader* myTexLoader = new GL3TexLoader;
-    
+	m_internalData->m_myTexLoader = myTexLoader;
     Gwen::Renderer::Base* gwenRenderer = 0;
     if (sUseOpenGL2 )
     {
@@ -675,11 +959,15 @@ bool PlasticityExampleBrowser::init(int argc, char* argv[])
     }
 #endif
 	//
-
+	gui = new GwenUserInterface;
+	m_internalData->m_gui = gui;
 	gui->init(width,height,gwenRenderer,s_window->getRetinaScale());
 	Gwen::Controls::TreeControl* tree = gui->getInternalData()->m_explorerTreeCtrl;
 	s_pStatWindow = setupPlasticityWindow(gui->getInternalData());
 	plasticityStatisticsWindowSetVisible(s_pStatWindow, true);
+	s_profWindow = setupProfileWindow(gui->getInternalData());
+	m_internalData->m_profWindow = s_profWindow;
+	profileWindowSetVisible(s_profWindow, false);
 	gui->setFocus();
 
 	s_parameterInterface  = s_app->m_parameterInterface = new GwenParameterInterface(gui->getInternalData());
@@ -687,9 +975,9 @@ bool PlasticityExampleBrowser::init(int argc, char* argv[])
 	int numDemos = gAllExamples->getNumRegisteredExamples();
 	int selectedDemo = loadCurrentDemoEntry(startFileName);
 	Gwen::Controls::TreeNode* curNode = tree;
-	MyMenuItemHander* handler2 = new MyMenuItemHander(-1);
+	m_internalData->m_handler2 = new MyMenuItemHander(-1);
 
-	tree->onReturnKeyDown.Add(handler2, &MyMenuItemHander::onButtonD);
+	tree->onReturnKeyDown.Add(m_internalData->m_handler2, &MyMenuItemHander::onButtonD);
 	int firstAvailableDemoIndex=-1;
 	Gwen::Controls::TreeNode* firstNode=0;
 
@@ -715,6 +1003,7 @@ bool PlasticityExampleBrowser::init(int argc, char* argv[])
 			
 
 			MyMenuItemHander* handler = new MyMenuItemHander(d);
+			m_internalData->m_handlers.push_back(handler);
 			pNode->onNamePress.Add(handler, &MyMenuItemHander::onButtonA);
 			pNode->GetButton()->onDoubleClick.Add(handler, &MyMenuItemHander::onButtonB);
 			pNode->GetButton()->onDown.Add(handler, &MyMenuItemHander::onButtonC);
@@ -725,6 +1014,7 @@ bool PlasticityExampleBrowser::init(int argc, char* argv[])
 		 else
 		 {
 			 curNode = tree->AddNode(nodeUText);
+			 m_internalData->m_nodes.push_back(curNode);
 		 }
 	}
 
@@ -805,9 +1095,19 @@ void PlasticityExampleBrowser::update(float deltaTime)
 		
 		if (sCurrentDemo)
 		{
-			if (!pauseSimulation)
+			if (!pauseSimulation || singleStepSimulation)
 			{
-				sCurrentDemo->stepSimulation(deltaTime);//1./60.f);
+				B3_PROFILE("sCurrentDemo->stepSimulation");
+
+				if (gFixedTimeStep>0)
+				{
+
+					sCurrentDemo->stepSimulation(gFixedTimeStep);
+				}
+				else
+				{
+					sCurrentDemo->stepSimulation(deltaTime);//1./60.f);
+				}
 			}
 			else{
 #ifdef _WIN32
@@ -855,24 +1155,39 @@ p=% .1f, % .1f, % .1f",
 			}
 			
 		}
+		if (renderGui)
+		{
+			B3_PROFILE("renderGui");
+			if (!pauseSimulation || singleStepSimulation)
+			{
+				if (isProfileWindowVisible(s_profWindow))
+				{
+					processProfileData(s_profWindow, false);
+				}
+			}
 
-		{
-			BT_PROFILE("processPlasticityData");
-			processPlasticityData(s_pStatWindow, pauseSimulation);
+			{
+				BT_PROFILE("processPlasticityData");
+				processPlasticityData(s_pStatWindow, pauseSimulation);
+			}
+
+			if (sUseOpenGL2)
+			{
+
+				saveOpenGLState(s_instancingRenderer->getScreenWidth(), s_instancingRenderer->getScreenHeight());
+			}
+			if (m_internalData->m_gui)
+			{
+				gBlockGuiMessages = true;
+				m_internalData->m_gui->draw(s_instancingRenderer->getScreenWidth(), s_instancingRenderer->getScreenHeight());
+				gBlockGuiMessages = false;
+			}
+			if (sUseOpenGL2)
+			{
+				restoreOpenGLState();
+			}
 		}
-        if (sUseOpenGL2)
-		{
-					
-			saveOpenGLState(s_instancingRenderer->getScreenWidth(),s_instancingRenderer->getScreenHeight());
-		}
-		{
-			BT_PROFILE("Draw Gwen GUI");
-			gui->draw(s_instancingRenderer->getScreenWidth(),s_instancingRenderer->getScreenHeight());
-		}
-        if (sUseOpenGL2)
-        {
-            restoreOpenGLState();
-        }
+		singleStepSimulation = false;
         {
             BT_PROFILE("Sync Parameters");
             s_parameterInterface->syncParameters();
@@ -882,6 +1197,10 @@ p=% .1f, % .1f, % .1f",
             s_app->swapBuffer();
         }
 	
-		gui->forceUpdateScrollBars();
+		if (gui)
+		{
+			B3_PROFILE("forceUpdateScrollBars");
+			gui->forceUpdateScrollBars();
+		}
 
 }

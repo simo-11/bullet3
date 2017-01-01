@@ -10,6 +10,7 @@
 
 class PlasticityExampleBrowser : public ExampleBrowserInterface
 {
+	struct PlasticityExampleBrowserInternalData* m_internalData;
 public:
 
 	PlasticityExampleBrowser(class PlasticityExampleEntries* examples);
