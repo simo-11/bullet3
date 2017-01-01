@@ -39,7 +39,9 @@ int		gNumSplitImpulseRecoveries = 0;
 
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 
-#define CDBG_CALLBACK
+/**
+plasticity extensions debugging, defined in pbuild/premake4.lua
+*/
 #ifdef CDBG_CALLBACK
 extern int cdbgActive;
 extern void 

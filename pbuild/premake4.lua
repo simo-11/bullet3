@@ -22,13 +22,13 @@
 	configuration "Release"
 		flags { "Optimize", "EnableSSE2","StaticRuntime", "NoMinimalRebuild", "FloatFast"}
 	configuration "Debug"
-		defines {"_DEBUG=1"}
+		defines {"_DEBUG=1","CDBG_CALLBACK"}
 		flags { "Symbols", "StaticRuntime" , "NoMinimalRebuild", "NoEditAndContinue" ,"FloatFast"}
 	configuration "ReleaseDouble"
-		defines {"BT_USE_DOUBLE_PRECISION"}
+		defines {"BT_USE_DOUBLE_PRECISION","CDBG_CALLBACK"}
 		flags { "Optimize", "EnableSSE2","StaticRuntime", "NoMinimalRebuild", "FloatFast"}
 	configuration "DebugDouble"
-		defines {"_DEBUG=1","BT_USE_DOUBLE_PRECISION",
+		defines {"_DEBUG=1","BT_USE_DOUBLE_PRECISION","CDBG_CALLBACK",
 		"_CTR_SECURE_NO_WARNINGS","_CRT_SECURE_NO_DEPRECATE"}
 		flags { "Symbols", "StaticRuntime" , "NoMinimalRebuild", "NoEditAndContinue" ,"FloatFast"}
 
