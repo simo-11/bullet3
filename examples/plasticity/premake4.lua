@@ -39,6 +39,8 @@
 		"../ExampleBrowser/InProcessExampleBrowser.*",
 		"../ExampleBrowser/main.*",
 		"../RenderingExamples/TinyRenderer*",
+		"../RenderingExamples/TinyVrGui*",
+		"../RenderingExamples/DynamicTexturedCubeDemo*",
 		}
 		
 if os.is("Linux") then 

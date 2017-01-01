@@ -30,10 +30,14 @@ protected:
 
 
 
-	bool loadSdf(const char* fileName, char* bufferServerToClient, int bufferSizeInBytes, bool useMultiBody);
+	bool loadSdf(const char* fileName, char* bufferServerToClient, int bufferSizeInBytes, bool useMultiBody, int flags);
 
 	bool loadUrdf(const char* fileName, const class btVector3& pos, const class btQuaternion& orn,
 		bool useMultiBody, bool useFixedBase, int* bodyUniqueIdPtr, char* bufferServerToClient, int bufferSizeInBytes);
+
+	bool loadMjcf(const char* fileName, char* bufferServerToClient, int bufferSizeInBytes, bool useMultiBody, int flags);
+
+	bool processImportedObjects(const char* fileName, char* bufferServerToClient, int bufferSizeInBytes, bool useMultiBody, int flags, class URDFImporterInterface& u2b);
 
 	bool	supportsJointMotor(class btMultiBody* body, int linkIndex);
 
@@ -84,7 +88,7 @@ public:
 	void enableCommandLogging(bool enable, const char* fileName);
 	void replayFromLogFile(const char* fileName);
 	void replayLogCommand(char* bufferServerToClient, int bufferSizeInBytes );
-	void stepSimulationRealTime(double dtInSec);
+	void stepSimulationRealTime(double dtInSec,	const struct b3VRControllerEvent* vrEvents, int numVREvents);
 	void enableRealTimeSimulation(bool enableRealTimeSim);
 	void applyJointDamping(int bodyUniqueId);
 };
