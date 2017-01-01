@@ -429,12 +429,12 @@ public:
 		m_option = options.m_option;
 		initOptions();
 		initParameterUi();
+		m_guiHelper->resetCamera(0.5, -70, 15, 0, 0.2, 0.0);
 	}
 	void initOptions(){
 		int option = m_option;
 		reinit();
 		maxStepCount = LONG_MAX;
-		m_guiHelper->resetCamera(0.5, -70, 15,	0, 0.2, 0.0);
 		m_mode = option % 100;
 		option /= 100;
 		if (option%100>0){
@@ -479,6 +479,13 @@ public:
 				break;
 			case 7: // Integration instability
 				fy = btScalar(800e6);
+				break;
+			case 8: // elastic2 - unstable
+				h = 0.02;
+				w = 0.02;
+				setTimeStep = 0.0002;
+				maxSimSubSteps = 100;
+				break;
 			}
 		}
 
@@ -521,10 +528,7 @@ public:
 	void restartHandler(Gwen::Controls::Base* control){
 		restartRequested = true;
 	}
-	void resetHandler(Gwen::Controls::Base* control){
-		reinit();
-		restartHandler(control);
-	}
+	void resetHandler(Gwen::Controls::Base* control);
 	void setSCount(Gwen::Controls::Base* control){
 		setInt(control, &sCount);
 		restartHandler(control);
@@ -2712,6 +2716,10 @@ void	CharpyDemo::exitPhysics()
 	mode8c.clear();
 	tc.clear();
 	PlasticityData::setData(0);
+}
+void CharpyDemo::resetHandler(Gwen::Controls::Base* control){
+	charpyDemo->initOptions();
+	restartHandler(control);
 }
 CommonExampleInterface*    CharpyDemoCreateFunc(CommonExampleOptions& options)
 {
