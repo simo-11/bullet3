@@ -79,6 +79,29 @@ void bt6DofElasticPlastic2Constraint::resetIdCounter(){
 	idCounter = 0;
 }
 // bcc
+static bool monitorVelocityDirection=false;
+void bt6DofElasticPlastic2Constraint::setMonitorVelocityDirection(bool val){
+	monitorVelocityDirection = val;
+}
+bool bt6DofElasticPlastic2Constraint::getMonitorVelocityDirection(){
+	return monitorVelocityDirection;
+}
+
+bool bt6DofElasticPlastic2Constraint::isLimitNeeded(btScalar vel, int dof)
+{
+	if (dof < 0){
+		return false;
+	}
+	unsigned char val = velDir[dof] << 1;
+	if (vel >= 0){
+		val += 1;
+	}
+	velDir[dof] = val;
+	if (val == 0 || val == 255){
+		return false;
+	}
+	return true;
+}
 void bt6DofElasticPlastic2Constraint::initPlasticity()
 {
 	id = ++idCounter;
@@ -564,7 +587,7 @@ int bt6DofElasticPlastic2Constraint::setLinearLimits(btConstraintInfo2* info, in
 			{
 				rotAllowed = 0;
 			}
-			row += get_limit_motor_info2(&limot, transA,transB,linVelA,linVelB,angVelA,angVelB, info, row, axis, 0, rotAllowed, m_maxForce[i]);
+			row += get_limit_motor_info2(&limot, transA,transB,linVelA,linVelB,angVelA,angVelB, info, row, axis, 0, rotAllowed, m_maxForce[i],i);
 
 		}
 	}
@@ -614,7 +637,7 @@ int bt6DofElasticPlastic2Constraint::setAngularLimits(btConstraintInfo2 *info, i
 				m_angularLimits[i].m_motorERP = info->erp;
 			}
 			row += get_limit_motor_info2(&m_angularLimits[i],transA,transB,linVelA,linVelB,angVelA,angVelB, 
-				info,row,axis,1, false, m_maxForce[ii+3]);
+				info,row,axis,1, false, m_maxForce[ii+3],ii+3);
 		}
 	}
 
@@ -675,11 +698,11 @@ void bt6DofElasticPlastic2Constraint::calculateJacobi(btRotationalLimitMotor2 * 
 	}
 }
 
-// bcc maxForce added (SIMD_INFINITY replaced)
+// bcc maxForce and dof added (SIMD_INFINITY replaced) 
 int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 	btRotationalLimitMotor2 * limot,
 	const btTransform& transA,const btTransform& transB,const btVector3& linVelA,const btVector3& linVelB,const btVector3& angVelA,const btVector3& angVelB,
-	btConstraintInfo2 *info, int row, btVector3& ax1, int rotational,int rotAllowed, btScalar maxForce)
+	btConstraintInfo2 *info, int row, btVector3& ax1, int rotational,int rotAllowed, btScalar maxForce, int dof)
 {
 	BT_PROFILE("bt6DofElasticPlastic2Constraint::get_limit_motor_info2");
 	bool useBcc = true;
@@ -869,11 +892,17 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			// bcc
 			bool usePlasticity=false;
 			bool frequencyLimited = false;
+			btScalar vel = rotational ? angVelA.dot(ax1) - angVelB.dot(ax1) : linVelA.dot(ax1) - linVelB.dot(ax1);
 			btScalar m;
 			btScalar afdt;
 			btScalar f;
 			btScalar fs;
-			if (limot->m_springStiffnessLimited || limot->m_springDampingLimited)
+			if (monitorVelocityDirection){
+				if (isLimitNeeded(vel, dof)){
+					frequencyLimited = true;
+				}
+			}
+			if (!frequencyLimited && (limot->m_springStiffnessLimited || limot->m_springDampingLimited))
 			{
 				// bcc
 				btScalar mAI;
@@ -920,9 +949,7 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			// bcc
 			btScalar minf;
 			btScalar maxf;
-			btScalar vel;
 			btScalar fd;
-			vel = rotational ? angVelA.dot(ax1) - angVelB.dot(ax1) : linVelA.dot(ax1) - linVelB.dot(ax1);
 			fs = ks * error * dt;
 			fd = -kd * (vel)* (rotational ? -1 : 1) * dt;
 			f = (fs + fd);

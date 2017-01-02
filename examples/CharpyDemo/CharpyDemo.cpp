@@ -591,6 +591,12 @@ public:
 		limitIfNeeded = cb->IsChecked();
 		restartHandler(control);
 	}
+	void setMonitorVelocityDirection(Gwen::Controls::Base* control){
+		Gwen::Controls::CheckBox* cb =
+			static_cast<Gwen::Controls::CheckBox*>(control);
+		bt6DofElasticPlastic2Constraint::setMonitorVelocityDirection(cb->IsChecked());
+		restartHandler(control);
+	}
 	void setUseCcd(Gwen::Controls::Base* control){
 		Gwen::Controls::CheckBox* cb =
 			static_cast<Gwen::Controls::CheckBox*>(control);
@@ -845,6 +851,15 @@ public:
 		gy += gyInc;
 		gc->onCheckChanged.Add(pPage, &CharpyDemo::setLimitIfNeeded);
 	}
+	void addMonitorVelocity(){
+		Gwen::Controls::Label* label = addLabel("monitorVelocity");
+		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
+		gc->SetToolTip("Monitor velocity direction and limit positional error if needed");
+		gc->SetPos(gxi, gy);
+		gc->SetChecked(bt6DofElasticPlastic2Constraint::getMonitorVelocityDirection());
+		gy += gyInc;
+		gc->onCheckChanged.Add(pPage, &CharpyDemo::setMonitorVelocityDirection);
+	}
 	void addUseCcd(){
 		Gwen::Controls::Label* label = addLabel("useCcd");
 		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
@@ -957,6 +972,10 @@ public:
 		}
 		if (isLimitIfNeededUsed()){
 			addLimitIfNeeded();
+		}
+		switch (m_mode){
+		case 8:
+			addMonitorVelocity();
 		}
 		addUseCcd();
 		addTimeStep();

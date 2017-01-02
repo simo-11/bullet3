@@ -126,9 +126,9 @@ elastic deflection, l=4 m",
 	CharpyDemoCreateFunc, 102030208),
 	ExampleEntry(2, "elastic2 - unstable",
 	"4 objects using 6DofElasticPlastic2Constraint, \
-	SI solver, timestep=0.2, 100 subSteps\
-	no hammer, w=h=0.02 m\
-	elastic deflection, l=4 m",
+SI solver, timestep=0.2, 100 subSteps, \
+no hammer, w=h=0.02 m, \
+elastic deflection, l=4 m",
 	CharpyDemoCreateFunc, 802030208),
 	ExampleEntry(2, "cutting case",
 	"4 objects using 6DofElasticPlastic2Constraint, \

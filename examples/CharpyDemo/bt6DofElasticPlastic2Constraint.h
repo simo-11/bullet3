@@ -102,10 +102,10 @@ protected:
 	void testAngularLimitMotor(int axis_index);
 
 	void calculateJacobi(btRotationalLimitMotor2* limot, const btTransform& transA,const btTransform& transB, btConstraintInfo2* info, int srow, btVector3& ax1, int rotational, int rotAllowed);
-	// bcc maxForce added
+	// bcc maxForce and dof added
 	int get_limit_motor_info2(btRotationalLimitMotor2* limot,
 		const btTransform& transA,const btTransform& transB,const btVector3& linVelA,const btVector3& linVelB,const btVector3& angVelA,const btVector3& angVelB,
-		btConstraintInfo2* info, int row, btVector3& ax1, int rotational, int rotAllowed = false, btScalar maxForce=SIMD_INFINITY);
+		btConstraintInfo2* info, int row, btVector3& ax1, int rotational, int rotAllowed = false, btScalar maxForce=SIMD_INFINITY, int dof=-1);
 
 	static btScalar btGetMatrixElem(const btMatrix3x3& mat, int index);
 	static bool matrixToEulerXYZ(const btMatrix3x3& mat,btVector3& xyz);
@@ -282,11 +282,15 @@ public:
 	int id;
 	int getId(){ return id; }
 	btScalar	m_maxForce[6];
-	btScalar	m_fpsLimit[6];
 	btScalar    m_currentPlasticStrain;
 	btScalar    m_maxPlasticStrain;
 	btScalar    m_maxPlasticRotation = 3;
 	btScalar    m_currentPlasticRotation = 0;
+	/** store sign of velocity 1:>=0 0:<0 for recent steps */
+	unsigned char velDir[6];
+	static void setMonitorVelocityDirection(bool val);
+	static bool getMonitorVelocityDirection();
+	bool isLimitNeeded(btScalar vel, int dof);
 	btScalar m_maxRatio;
 	int m_maxRatioDof;
 	btJointFeedback* myJointFeedback=0;
