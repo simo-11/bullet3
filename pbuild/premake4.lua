@@ -87,5 +87,8 @@
 	include "../src/BulletDynamics"
 	include "../src/BulletCollision"
 	include "../src/LinearMath"
+	include "../test/gtest-1.7.0"
+	include "../test/plasticity"
+	
 
 

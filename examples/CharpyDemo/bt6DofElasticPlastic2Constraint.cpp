@@ -87,6 +87,7 @@ bool bt6DofElasticPlastic2Constraint::getMonitorVelocityDirection(){
 	return monitorVelocityDirection;
 }
 
+
 bool bt6DofElasticPlastic2Constraint::isLimitNeeded(btScalar vel, int dof)
 {
 	if (dof < 0){
@@ -97,7 +98,8 @@ bool bt6DofElasticPlastic2Constraint::isLimitNeeded(btScalar vel, int dof)
 		val += 1;
 	}
 	velDir[dof] = val;
-	if (val == 0 || val == 255){
+	int changeCount = PlasticityData::countChanges(val);
+	if (changeCount<2){
 		return false;
 	}
 	return true;

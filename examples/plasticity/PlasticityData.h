@@ -27,6 +27,8 @@ public:
 	static bool getLogData();
 	static char* getLogDataFilename();
 	static void log(btTypedConstraint::btConstraintInfo2 * data, int mode);
+	// common utils
+	static int countChanges(unsigned char byte);
 private:
 	string value="";
 };

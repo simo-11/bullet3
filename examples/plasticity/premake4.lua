@@ -39,7 +39,7 @@
 		"../ExampleBrowser/InProcessExampleBrowser.*",
 		"../ExampleBrowser/main.*",
 		"../RenderingExamples/TinyRenderer*",
-		"../RenderingExamples/TinyVrGui*",
+		"../RenderingExamples/TinyVRGui*",
 		"../RenderingExamples/DynamicTexturedCubeDemo*",
 		}
 		
