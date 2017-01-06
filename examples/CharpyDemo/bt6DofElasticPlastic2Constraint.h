@@ -60,6 +60,7 @@ class btDynamicsWorld;
 #define bt6DofElasticPlastic2ConstraintDataName	"bt6DofElasticPlastic2ConstraintData"
 #endif //BT_USE_DOUBLE_PRECISION
 
+
 ATTRIBUTE_ALIGNED16(class) bt6DofElasticPlastic2Constraint : 
 public btTypedConstraint, public btActionInterface, public btElasticPlasticConstraint
 {
@@ -288,6 +289,9 @@ public:
 	btScalar    m_currentPlasticRotation = 0;
 	/** store sign of velocity 1:>=0 0:<0 for recent steps */
 	unsigned char velDir[6];
+	LimitReason limitReason[6];
+	virtual LimitReason getLimitReason(int dof);
+	virtual void fillLimitReasons(char[6]);
 	static void setMonitorVelocityDirection(bool val);
 	static bool getMonitorVelocityDirection();
 	bool isLimitNeeded(btScalar vel, int dof);

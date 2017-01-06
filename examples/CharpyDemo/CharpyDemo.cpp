@@ -2120,10 +2120,40 @@ void CharpyDemo::showMessage()
 	}
 	pData.clear();
 	int ci = sCount - 1; // constraint index for e.g. feedback in the middle
-	char buf[B_LEN];
+	char buf[B_LEN*2];
 	sprintf_s(buf, B_LEN, "energy:max/current/loss %9.3g/%9.3g/%9.3g J", 
 		maxEnergy,energy,maxEnergy-energy);
 	infoMsg(buf);
+	btDiscreteDynamicsWorld *dw = m_dynamicsWorld;
+	bool headerDone = false;
+	int numConstraints = dw->getNumConstraints();
+	for (int i = 0; i < numConstraints; i++){
+		btTypedConstraint* sc = dw->getConstraint(i);
+		int type = sc->getUserConstraintType();
+		if (type != BPT_EP2 && type != BPT_EP){
+			continue;
+		}
+		if (!headerDone){
+			sprintf_s(buf, B_LEN, "%2s %8s %5s %5s %5s %5s %5s %6s",
+				"#", "max%", "m%dof", "mpr", "cpr", "mps", "cps", "reasons");
+			infoMsg(buf);
+			headerDone = true;
+		}
+		btElasticPlasticConstraint *epc =
+			dynamic_cast<btElasticPlasticConstraint*>(sc);
+		char reasons[7];
+		reasons[6] = '\0';
+		epc->fillLimitReasons(reasons);
+		btScalar mpr = epc->getMaxPlasticRotation(),
+			cpr = epc->getCurrentPlasticRotation(),
+			mps = epc->getMaxPlasticStrain(),
+			cps = epc->getCurrentPlasticStrain(),
+			maxr = epc->getMaxRatio();
+		int	maxrd = epc->getMaxRatioDof();
+		sprintf_s(buf, B_LEN * 2, "%2d %8.1f %5d %5.3f %5.3f %5.3f %5.3f %6s",
+			i, maxr * 100, maxrd, mpr, cpr, mps, cps, reasons);
+		infoMsg(buf);
+	}
 	addDisplacements(buf, getDisplacements());
 	infoMsg(buf);
 	if (specimenJointFeedback.size()>ci){

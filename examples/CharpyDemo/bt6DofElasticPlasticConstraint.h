@@ -73,6 +73,9 @@ protected:
 	btScalar    m_maxPlasticStrain;
 	btScalar    m_maxPlasticRotation = 3;
 	btScalar    m_currentPlasticRotation = 0;
+	LimitReason limitReason[6];
+	virtual LimitReason getLimitReason(int dof);
+	virtual void fillLimitReasons(char[6]);
 	btScalar m_maxRatio;
 	int m_maxRatioDof;
 	// bcc end of new fields for plasticity

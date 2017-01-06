@@ -43,8 +43,8 @@ void bt6DofElasticPlasticConstraint::resetIdCounter(){
 
 void bt6DofElasticPlasticConstraint::init()
 {
+	setUserConstraintType(btPlasticConstraintType::BPT_EP);
 	m_objectType = btPlasticConstraintType::BPT_EP;
-
 	for(int i = 0; i < 6; i++)
 	{
 		m_springEnabled[i] = false;
@@ -174,12 +174,14 @@ void bt6DofElasticPlasticConstraint::internalUpdateSprings(btConstraintInfo2* in
 			btScalar delta = currPos - m_equilibriumPoint[i];
 			// spring force is (delta * m_stiffness) according to Hooke's Law
 			btScalar force = delta * m_springStiffness[i];
+			limitReason[i] = None;
 			bool overMaxForce=false;
 			// bcc
 			if (btFabs(force)>=m_maxForce[i]){
 				maxForce = m_maxForce[i];
 				force = (delta > 0 ?  maxForce: -maxForce);
 				overMaxForce = true;
+				limitReason[i] = Force;
 			}
 			else{
 				maxForce = force;
@@ -192,6 +194,9 @@ void bt6DofElasticPlasticConstraint::internalUpdateSprings(btConstraintInfo2* in
 						btScalar(info->m_numIterations);
 				}
 				else{
+					if (!overMaxForce){
+						limitReason[i] = Stiffness;
+					}
 					velFactor = 0;
 				}
 			}
@@ -228,12 +233,14 @@ void bt6DofElasticPlasticConstraint::internalUpdateSprings(btConstraintInfo2* in
 			btScalar delta = currPos - eqPos;
 			// spring force is (-delta * m_stiffness) according to Hooke's Law
 			btScalar force = -delta * m_springStiffness[i+3];
+			limitReason[i+3] = None;
 			// bcc
 			bool overMaxForce = false;
 			if (btFabs(force) >= m_maxForce[i + 3]){
 				maxForce = m_maxForce[i+3];
 				force = (delta > 0 ? -maxForce : maxForce);
 				overMaxForce = true;
+				limitReason[i + 3] = Force;
 			}
 			else{
 				maxForce = force;
@@ -246,6 +253,9 @@ void bt6DofElasticPlasticConstraint::internalUpdateSprings(btConstraintInfo2* in
 						btScalar(info->m_numIterations);
 				}
 				else{
+					if (!overMaxForce){
+						limitReason[i+3] = Stiffness;
+					}
 					velFactor = 0;
 				}
 			}
@@ -452,3 +462,9 @@ void bt6DofElasticPlasticConstraint::debugDraw(btIDebugDraw* debugDrawer)
 		debugDrawer);
 }
 
+LimitReason bt6DofElasticPlasticConstraint::getLimitReason(int dof){
+	return limitReason[dof];
+}
+void bt6DofElasticPlasticConstraint::fillLimitReasons(char *buf){
+	btElasticPlasticConstraint::fillLimitReasons(buf, limitReason);
+}

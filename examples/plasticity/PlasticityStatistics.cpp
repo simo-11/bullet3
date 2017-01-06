@@ -34,7 +34,7 @@ public:
     : Gwen::Controls::WindowControl( pParent )
 	{
 		int w = 400;
-		int h = 400;
+		int h = 500;
 		SetTitle( L"Plasticity Statistics" );
 		SetSize( w, h );
 		this->SetPos(230,10);

@@ -108,6 +108,7 @@ void bt6DofElasticPlastic2Constraint::initPlasticity()
 {
 	id = ++idCounter;
 	m_objectType = btPlasticConstraintType::BPT_EP2;
+	setUserConstraintType(btPlasticConstraintType::BPT_EP2);
 	for (int i = 0; i < 6; i++)
 	{
 		m_maxForce[i] = btScalar(SIMD_INFINITY);
@@ -899,8 +900,10 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			btScalar afdt;
 			btScalar f;
 			btScalar fs;
+			limitReason[dof] = None;
 			if (monitorVelocityDirection){
 				if (isLimitNeeded(vel, dof)){
+					limitReason[dof] = Monitor;
 					frequencyLimited = true;
 				}
 			}
@@ -926,6 +929,7 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 					btScalar angularfreq = sqrt(ks / m);
 					afdt = angularfreq * dt;
 					if (0.25 < afdt){
+						limitReason[dof] = Stiffness;
 						if (maxForce < SIMD_INFINITY){
 							frequencyLimited = true;
 						}
@@ -939,6 +943,7 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 				{
 					btScalar kddt = kd*dt;
 					if (kddt > m){
+						limitReason[dof] = Damping;
 						if (maxForce < SIMD_INFINITY){
 							frequencyLimited = true;
 						}
@@ -956,6 +961,7 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			fd = -kd * (vel)* (rotational ? -1 : 1) * dt;
 			f = (fs + fd);
 			if (btFabs(f) > maxImpulse){
+				limitReason[dof] = Force;
 				usePlasticity = true;
 			}
 			else if(!frequencyLimited){
@@ -1439,6 +1445,10 @@ void bt6DofElasticPlastic2Constraint::debugDraw(btIDebugDraw* debugDrawer)
 		debugDrawer);
 }
 
+LimitReason bt6DofElasticPlastic2Constraint::getLimitReason(int dof){
+	return limitReason[dof];
+}
 
-
-
+void bt6DofElasticPlastic2Constraint::fillLimitReasons(char *buf){
+	btElasticPlasticConstraint::fillLimitReasons(buf, limitReason);
+}
