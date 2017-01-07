@@ -79,11 +79,11 @@ void bt6DofElasticPlastic2Constraint::resetIdCounter(){
 	idCounter = 0;
 }
 // bcc
-static bool monitorVelocityDirection=false;
-void bt6DofElasticPlastic2Constraint::setMonitorVelocityDirection(bool val){
+static int monitorVelocityDirection=0;
+void bt6DofElasticPlastic2Constraint::setMonitorVelocityDirection(int val){
 	monitorVelocityDirection = val;
 }
-bool bt6DofElasticPlastic2Constraint::getMonitorVelocityDirection(){
+int bt6DofElasticPlastic2Constraint::getMonitorVelocityDirection(){
 	return monitorVelocityDirection;
 }
 
@@ -93,13 +93,13 @@ bool bt6DofElasticPlastic2Constraint::isLimitNeeded(btScalar vel, int dof)
 	if (dof < 0){
 		return false;
 	}
-	unsigned char val = velDir[dof] << 1;
+	velDirType val = velDir[dof] << 1;
 	if (vel >= 0){
 		val += 1;
 	}
 	velDir[dof] = val;
-	int changeCount = PlasticityData::countChanges(val);
-	if (changeCount<2){
+	int changeCount = countChanges(val);
+	if (changeCount<=monitorVelocityDirection){
 		return false;
 	}
 	return true;
@@ -901,7 +901,7 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			btScalar f;
 			btScalar fs;
 			limitReason[dof] = None;
-			if (monitorVelocityDirection){
+			if (monitorVelocityDirection>0){
 				if (isLimitNeeded(vel, dof)){
 					limitReason[dof] = Monitor;
 					frequencyLimited = true;

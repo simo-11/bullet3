@@ -288,12 +288,12 @@ public:
 	btScalar    m_maxPlasticRotation = 3;
 	btScalar    m_currentPlasticRotation = 0;
 	/** store sign of velocity 1:>=0 0:<0 for recent steps */
-	unsigned char velDir[6];
+	velDirType velDir[6];
 	LimitReason limitReason[6];
 	virtual LimitReason getLimitReason(int dof);
 	virtual void fillLimitReasons(char[6]);
-	static void setMonitorVelocityDirection(bool val);
-	static bool getMonitorVelocityDirection();
+	static void setMonitorVelocityDirection(int val);
+	static int getMonitorVelocityDirection();
 	bool isLimitNeeded(btScalar vel, int dof);
 	btScalar m_maxRatio;
 	int m_maxRatioDof;

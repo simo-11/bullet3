@@ -15,3 +15,20 @@ void btElasticPlasticConstraint::fillLimitReasons(char buff[], LimitReason reaso
 		buff[i] = c;
 	}
 }
+/**
+Count how many times next bit is not same as previous
+*/
+int btElasticPlasticConstraint::countChanges(velDirType byte)
+{
+	int count = 0;
+	int bitCount = sizeof(velDirType) * 8 - 1;
+	for (int i = 0; i < bitCount; i++){
+		int last = byte & 1;
+		byte >>= 1;
+		int secondLast = byte & 1;
+		if (last != secondLast){
+			count++;
+		}
+	}
+	return count;
+}

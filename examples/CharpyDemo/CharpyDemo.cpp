@@ -592,9 +592,9 @@ public:
 		restartHandler(control);
 	}
 	void setMonitorVelocityDirection(Gwen::Controls::Base* control){
-		Gwen::Controls::CheckBox* cb =
-			static_cast<Gwen::Controls::CheckBox*>(control);
-		bt6DofElasticPlastic2Constraint::setMonitorVelocityDirection(cb->IsChecked());
+		int intValue = bt6DofElasticPlastic2Constraint::getMonitorVelocityDirection();
+		setInt(control, &intValue);
+		bt6DofElasticPlastic2Constraint::setMonitorVelocityDirection(intValue);
 		restartHandler(control);
 	}
 	void setUseCcd(Gwen::Controls::Base* control){
@@ -853,12 +853,14 @@ public:
 	}
 	void addMonitorVelocity(){
 		Gwen::Controls::Label* label = addLabel("monitorVelocity");
-		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
-		gc->SetToolTip("Monitor velocity direction and limit positional error if needed");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = std::to_string(bt6DofElasticPlastic2Constraint::getMonitorVelocityDirection());
+		gc->SetText(text);
+		gc->SetToolTip("Monitor velocity and lock elastic part if more direction changes take place");
 		gc->SetPos(gxi, gy);
-		gc->SetChecked(bt6DofElasticPlastic2Constraint::getMonitorVelocityDirection());
+		gc->SetWidth(wxi);
 		gy += gyInc;
-		gc->onCheckChanged.Add(pPage, &CharpyDemo::setMonitorVelocityDirection);
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setMonitorVelocityDirection);
 	}
 	void addUseCcd(){
 		Gwen::Controls::Label* label = addLabel("useCcd");

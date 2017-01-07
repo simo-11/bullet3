@@ -18,20 +18,21 @@ subject to the following restrictions:
 
 #include <gtest/gtest.h>
 
-#include "plasticity/PlasticityData.h"
+#include "CharpyDemo/btElasticPlasticConstraint.h"
 
 /** http://www.binaryhexconverter.com/binary-to-hex-converter */
-TEST(PlasticityData, countChanges) {
-	ASSERT_EQ(0, PlasticityData::countChanges(0x0));  // 00000000
-	ASSERT_EQ(0, PlasticityData::countChanges(0xff)); // 11111111
-	ASSERT_EQ(1, PlasticityData::countChanges(0xfe)); // 11111110
-	ASSERT_EQ(1, PlasticityData::countChanges(0xfc)); // 11111100
-	ASSERT_EQ(1, PlasticityData::countChanges(0xf0)); // 11110000
-	ASSERT_EQ(2, PlasticityData::countChanges(0xc7)); // 11000111
-	ASSERT_EQ(2, PlasticityData::countChanges(0x1e)); // 00011110
-	ASSERT_EQ(3, PlasticityData::countChanges(0x8e)); // 10001110
-	ASSERT_EQ(4, PlasticityData::countChanges(0x99)); // 10011001
-	ASSERT_EQ(7, PlasticityData::countChanges(0xaa)); // 10101010
+TEST(btElasticPlasticConstraint, countChanges) {
+	int extra = (sizeof(velDirType) > 1 ? 1 : 0);
+	ASSERT_EQ(0, btElasticPlasticConstraint::countChanges(0x0));  // 00000000
+	ASSERT_EQ(0+extra, btElasticPlasticConstraint::countChanges(0xff)); // 11111111
+	ASSERT_EQ(1 + extra, btElasticPlasticConstraint::countChanges(0xfe)); // 11111110
+	ASSERT_EQ(1 + extra, btElasticPlasticConstraint::countChanges(0xfc)); // 11111100
+	ASSERT_EQ(1 + extra, btElasticPlasticConstraint::countChanges(0xf0)); // 11110000
+	ASSERT_EQ(2 + extra, btElasticPlasticConstraint::countChanges(0xc7)); // 11000111
+	ASSERT_EQ(2, btElasticPlasticConstraint::countChanges(0x1e)); // 00011110
+	ASSERT_EQ(3 + extra, btElasticPlasticConstraint::countChanges(0x8e)); // 10001110
+	ASSERT_EQ(4 + extra, btElasticPlasticConstraint::countChanges(0x99)); // 10011001
+	ASSERT_EQ(7 + extra, btElasticPlasticConstraint::countChanges(0xaa)); // 10101010
 }
 
 int main(int argc, char **argv) {

@@ -27,8 +27,8 @@
 	files {
 		"**.cpp",
 		"**.h",
-		"../../examples/plasticity/PlasticityData.cpp",
-		"../../examples/plasticity/PlasticityData.h",
+		"../../examples/CharpyDemo/btElasticPlasticConstraint.cpp",
+		"../../examples/CharpyDemo/btElasticPlasticConstraint.h",
 	}
 
 	if os.is("Linux") then

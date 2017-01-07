@@ -111,20 +111,3 @@ void PlasticityData::log(btTypedConstraint::btConstraintInfo2 * info, int mode){
 	fprintf(fp, ";\n");
 	fflush(fp);
 }
-
-/** 
-Count how many times next bit is not same as previous
-*/
-int PlasticityData::countChanges(unsigned char byte)
-{
-	int count = 0;
-	for (int i = 0; i < 7; i++){
-		int last = byte & 1;
-		byte >>= 1;
-		int secondLast = byte & 1;
-		if (last != secondLast){
-			count++;
-		}
-	}
-	return count;
-}
