@@ -60,7 +60,6 @@ protected:
 	btScalar	m_springDamping[6];
 	// bcc, new fields for plasticity
 	static int idCounter;
-	static void resetIdCounter();
 	int id;
 	int getId(){ return id; }
 	btScalar	m_maxForce[6];
@@ -82,15 +81,14 @@ protected:
 	void init();
 	void internalUpdateSprings(btConstraintInfo2* info);
 public: 
-	
 	BT_DECLARE_ALIGNED_ALLOCATOR();
-	
     bt6DofElasticPlasticConstraint(btRigidBody& rbA, btRigidBody& rbB, const btTransform& frameInA, const btTransform& frameInB ,bool useLinearReferenceFrameA);
     bt6DofElasticPlasticConstraint(btRigidBody& rbB, const btTransform& frameInB, bool useLinearReferenceFrameB);
 	void enableSpring(int index, bool onOff);
 	void setStiffness(int index, btScalar stiffness);
 	void setDamping(int index, btScalar damping);
 	// bcc
+	static void resetIdCounter();
 	void setMaxForce(int index, btScalar value);
 	void setMaxPlasticStrain(btScalar value);
 	void setMaxPlasticRotation(btScalar value);

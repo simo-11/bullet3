@@ -125,8 +125,9 @@ bool initialLimitIfNeeded = true;
 bool limitIfNeeded=initialLimitIfNeeded;
 bool initialUseCcd = false;
 bool useCcd = initialUseCcd;
-float energy = 0;
+float energy = 0, pauseEnergy=0;
 float maxEnergy;
+void updateEnergy();
 btDynamicsWorld* dw;
 btVector3 y_up(0.01, 1., 0.01);
 btRigidBody *specimenBody, *hammerBody=0, *specimenBody2;
@@ -291,37 +292,6 @@ float getRotationEnergy(btScalar invInertia, btScalar angularVelocity){
 	return e;
 }
 
-void updateEnergy(){
-	energy = 0;
-	btVector3 gravity = dw->getGravity();
-	const btCollisionObjectArray objects = dw->getCollisionObjectArray();
-	for (int i = 0; i<objects.capacity(); i++)
-	{
-		const btCollisionObject* o = objects[i];
-		const btRigidBody* ro = btRigidBody::upcast(o);
-		btScalar iM = ro->getInvMass();
-		if (iM == 0){
-			continue;
-		}
-		btVector3 v = ro->getLinearVelocity();
-		btScalar m = 1 / iM;
-		float linearEnergy = 0.5*m*v.length2();
-		btVector3 com = ro->getCenterOfMassPosition();
-		float gravitationalEnergy = -m*gravity.dot(com);
-		const btVector3 rv = ro->getAngularVelocity();
-		const btVector3 iI = ro->getInvInertiaDiagLocal();
-		float inertiaEnergy = 0;
-		inertiaEnergy += getRotationEnergy(iI.getX(), rv.getX());
-		inertiaEnergy += getRotationEnergy(iI.getY(), rv.getY());
-		inertiaEnergy += getRotationEnergy(iI.getZ(), rv.getZ());
-		energy += linearEnergy;
-		energy += inertiaEnergy;
-		energy += gravitationalEnergy;
-	}
-	if (energy > maxEnergy){
-		maxEnergy = energy;
-	}
-}
 void tuneRestitution(btRigidBody* rb){
 	rb->setRestitution(restitution);
 }
@@ -402,6 +372,16 @@ void mode8callback(btDynamicsWorld *world, btScalar timeStep) {
 			mode8c[i]->updatePlasticity(*specimenJointFeedback[i]);
 		}
 	}
+}
+/*
+Limited formatter
+*/
+#define UIF_SIZE 10
+std::string uif(btScalar value, const char* fmt = "%.4f")
+{
+	char buffer[UIF_SIZE];
+	sprintf_s(buffer, UIF_SIZE, fmt, value);
+	return std::string(buffer);
 }
 
 class CharpyDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
@@ -511,16 +491,6 @@ public:
 	virtual void restart();
 	btRigidBody* localCreateRigidBody(btScalar mass, const btTransform& startTransform,
 		btCollisionShape* shape);
-	/* 
-	Limited formatter
-	*/
-#define UIF_SIZE 10
-	std::string uif(btScalar value, const char* fmt="%.4f")
-	{
-		char buffer[UIF_SIZE];
-		sprintf_s(buffer, UIF_SIZE, fmt, value);
-		return std::string(buffer);
-	}
 	/** Gwen controls handling.
 	Just flag changes to avoid need to specify all parent references
 	if calls come from Gwen
@@ -581,6 +551,7 @@ public:
 		setScalar(control, &damping);
 		restartHandler(control);
 	}
+	void setPauseEnergy(Gwen::Controls::Base* control);
 	void setFrequencyRatio(Gwen::Controls::Base* control){
 		setScalar(control, &frequencyRatio);
 		restartHandler(control);
@@ -831,6 +802,20 @@ public:
 		gy += gyInc;
 		gc->onReturnPressed.Add(pPage, &CharpyDemo::setDamping);
 	}
+	Gwen::Controls::TextBoxNumeric* peGc;
+	void addPauseEnergy(){
+		pauseEnergy = 0;
+		addLabel("pauseEnergy");
+		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
+		string text = uif(pauseEnergy,"%.0f");
+		peGc = gc;
+		gc->SetToolTip("pause simulation if energy gets higher, as default set to 1.1 times current");
+		gc->SetText(text);
+		gc->SetPos(gxi, gy);
+		gc->SetWidth(wxi);
+		gy += gyInc;
+		gc->onReturnPressed.Add(pPage, &CharpyDemo::setPauseEnergy);
+	}
 	void addFrequencyRatio(){
 		addLabel("frequencyRatio");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
@@ -969,6 +954,7 @@ public:
 		if (isDampingUsed()){
 			addDamping();
 		}
+		addPauseEnergy();
 		if (isFrequencyRatioUsed()){
 			addFrequencyRatio();
 		}
@@ -1948,6 +1934,9 @@ Z axis is horizontal and Z=0 is symmetry plane
 */
 void	CharpyDemo::initPhysics()
 {
+	PlasticityExampleBrowser::setPauseSimulation(false);
+	bt6DofElasticPlastic2Constraint::resetIdCounter();
+	bt6DofElasticPlasticConstraint::resetIdCounter();
 	if (maxStepCount != LONG_MAX){
 		// Single step is active
 		maxStepCount = 1;
@@ -2768,6 +2757,54 @@ void	CharpyDemo::exitPhysics()
 	tc.clear();
 	PlasticityData::setData(0);
 }
+
+void CharpyDemo::setPauseEnergy(Gwen::Controls::Base* control){
+	setScalar(control, &pauseEnergy);
+}
+void updateEnergy(){
+	energy = 0;
+	btVector3 gravity = dw->getGravity();
+	const btCollisionObjectArray objects = dw->getCollisionObjectArray();
+	for (int i = 0; i<objects.capacity(); i++)
+	{
+		const btCollisionObject* o = objects[i];
+		const btRigidBody* ro = btRigidBody::upcast(o);
+		btScalar iM = ro->getInvMass();
+		if (iM == 0){
+			continue;
+		}
+		btVector3 v = ro->getLinearVelocity();
+		btScalar m = 1 / iM;
+		float linearEnergy = 0.5*m*v.length2();
+		btVector3 com = ro->getCenterOfMassPosition();
+		float gravitationalEnergy = -m*gravity.dot(com);
+		const btVector3 rv = ro->getAngularVelocity();
+		const btVector3 iI = ro->getInvInertiaDiagLocal();
+		float inertiaEnergy = 0;
+		inertiaEnergy += getRotationEnergy(iI.getX(), rv.getX());
+		inertiaEnergy += getRotationEnergy(iI.getY(), rv.getY());
+		inertiaEnergy += getRotationEnergy(iI.getZ(), rv.getZ());
+		energy += linearEnergy;
+		energy += inertiaEnergy;
+		energy += gravitationalEnergy;
+	}
+	if (energy > maxEnergy){
+		maxEnergy = energy;
+		if (energy > pauseEnergy){
+			if (pauseEnergy > 0){
+				PlasticityExampleBrowser::setPauseSimulation(true);
+			}
+			pauseEnergy = 1.1*energy;
+			char * fmt = "%.0f";
+			if (pauseEnergy > 1e8){
+				fmt = "%6.2e";
+			}
+			string text = uif(pauseEnergy,fmt);
+			charpyDemo->peGc->SetText(text);
+		}
+	}
+}
+
 void CharpyDemo::resetHandler(Gwen::Controls::Base* control){
 	charpyDemo->initOptions();
 	restartHandler(control);
