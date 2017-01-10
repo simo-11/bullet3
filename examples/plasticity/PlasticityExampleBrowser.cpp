@@ -277,16 +277,16 @@ struct btTimings
 	btAlignedObjectArray<btTiming> m_timings[1];
 };
 
-btTimings gTimings[BT_MAX_THREAD_COUNT];
+btTimings gTimings[BT_QUICKPROF_MAX_THREAD_COUNT];
 
 btClock clk;
 
 #define MAX_NESTING 1024
 
 bool gProfileDisabled = true;
-int gStackDepths[BT_MAX_THREAD_COUNT] = { 0 };
-const char* gFuncNames[BT_MAX_THREAD_COUNT][MAX_NESTING];
-unsigned long long int gStartTimes[BT_MAX_THREAD_COUNT][MAX_NESTING];
+int gStackDepths[BT_QUICKPROF_MAX_THREAD_COUNT] = { 0 };
+const char* gFuncNames[BT_QUICKPROF_MAX_THREAD_COUNT][MAX_NESTING];
+unsigned long long int gStartTimes[BT_QUICKPROF_MAX_THREAD_COUNT][MAX_NESTING];
 
 void MyDummyEnterProfileZoneFunc(const char* msg)
 {
@@ -300,7 +300,7 @@ void MyEnterProfileZoneFunc(const char* msg)
 {
 	if (gProfileDisabled)
 		return;
-	int threadId = btGetCurrentThreadIndex();
+	int threadId = btQuickprofGetCurrentThreadIndex2();
 
 	if (gStackDepths[threadId] >= MAX_NESTING)
 	{
@@ -320,7 +320,7 @@ void MyLeaveProfileZoneFunc()
 	if (gProfileDisabled)
 		return;
 
-	int threadId = btGetCurrentThreadIndex();
+	int threadId = btQuickprofGetCurrentThreadIndex2();
 
 	if (gStackDepths[threadId] <= 0)
 	{
@@ -448,7 +448,7 @@ void MyKeyboardCallback(int key, int state)
 			gTimingFile = fopen(fileName, "w");
 			fprintf(gTimingFile, "{\"traceEvents\":[\n");
 			//dump the content to file
-			for (int i = 0; i<BT_MAX_THREAD_COUNT; i++)
+			for (int i = 0; i<BT_QUICKPROF_MAX_THREAD_COUNT; i++)
 			{
 				if (gTimings[i].m_numTimings)
 				{
