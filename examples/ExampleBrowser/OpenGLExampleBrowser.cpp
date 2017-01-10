@@ -116,7 +116,6 @@ bool gAllowRetina = true;
 bool gDisableDemoSelection = false;
 static class ExampleEntries* gAllExamples=0;
 bool sUseOpenGL2 = false;
-bool drawGUI=true;
 #ifndef USE_OPENGL3
 extern bool useShadowMap;
 #endif
@@ -162,7 +161,12 @@ FILE* gTimingFile = 0;
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
 #endif //__STDC_FORMAT_MACROS
+
+//see http://stackoverflow.com/questions/18107426/printf-format-for-unsigned-int64-on-windows
+#ifndef _WIN32
 #include <inttypes.h>
+#endif
+
 #define BT_TIMING_CAPACITY 16*65536
 static bool m_firstTiming = true;
 
@@ -246,12 +250,21 @@ struct btTimings
             
             char newname[1024];
 			static int counter2=0;
-         
             sprintf(newname,"%s%d",name,counter2++);
+         
+#ifdef _WIN32
+			
+			fprintf(gTimingFile,"{\"cat\":\"timing\",\"pid\":1,\"tid\":%d,\"ts\":%I64d.%s ,\"ph\":\"B\",\"name\":\"%s\",\"args\":{}},\n",
+				threadId, startTimeDiv1000,startTimeRem1000Str, newname);
+			fprintf(gTimingFile,"{\"cat\":\"timing\",\"pid\":1,\"tid\":%d,\"ts\":%I64d.%s ,\"ph\":\"E\",\"name\":\"%s\",\"args\":{}}",
+				threadId, endTimeDiv1000,endTimeRem1000Str,newname);
+
+#else
 			fprintf(gTimingFile,"{\"cat\":\"timing\",\"pid\":1,\"tid\":%d,\"ts\":%" PRIu64 ".%s ,\"ph\":\"B\",\"name\":\"%s\",\"args\":{}},\n",
 				threadId, startTimeDiv1000,startTimeRem1000Str, newname);
 			fprintf(gTimingFile,"{\"cat\":\"timing\",\"pid\":1,\"tid\":%d,\"ts\":%" PRIu64 ".%s ,\"ph\":\"E\",\"name\":\"%s\",\"args\":{}}",
 				threadId, endTimeDiv1000,endTimeRem1000Str,newname);
+#endif
 #endif
 
 		}
@@ -284,17 +297,20 @@ struct btTimings
 	int m_activeBuffer;
 	btAlignedObjectArray<btTiming> m_timings[1];
 };
-
-btTimings gTimings[BT_MAX_THREAD_COUNT];
+#ifndef BT_NO_PROFILE
+btTimings gTimings[BT_QUICKPROF_MAX_THREAD_COUNT];
+#define MAX_NESTING 1024
+int gStackDepths[BT_QUICKPROF_MAX_THREAD_COUNT] = {0};
+const char* gFuncNames[BT_QUICKPROF_MAX_THREAD_COUNT][MAX_NESTING];
+unsigned long long int gStartTimes[BT_QUICKPROF_MAX_THREAD_COUNT][MAX_NESTING];
+#endif
 
 btClock clk;
 
-#define MAX_NESTING 1024
+
 
 bool gProfileDisabled = true;
-int gStackDepths[BT_MAX_THREAD_COUNT] = {0};
-const char* gFuncNames[BT_MAX_THREAD_COUNT][MAX_NESTING];
-unsigned long long int gStartTimes[BT_MAX_THREAD_COUNT][MAX_NESTING];
+
 
 void MyDummyEnterProfileZoneFunc(const char* msg)
 {
@@ -308,8 +324,11 @@ void MyEnterProfileZoneFunc(const char* msg)
 {
 	if (gProfileDisabled)
 		return;
-	int threadId = btGetCurrentThreadIndex();
-
+#ifndef BT_NO_PROFILE
+	int threadId = btQuickprofGetCurrentThreadIndex2();
+	if (threadId<0)
+		return;
+	
 	if (gStackDepths[threadId]>=MAX_NESTING)
 	{
 		btAssert(0);
@@ -322,14 +341,18 @@ void MyEnterProfileZoneFunc(const char* msg)
 		gStartTimes[threadId][gStackDepths[threadId]]=1+gStartTimes[threadId][gStackDepths[threadId]-1];
 	}
 	gStackDepths[threadId]++;
+#endif
+
 }
 void MyLeaveProfileZoneFunc()
 {
 	if (gProfileDisabled)
 		return;
-
-	int threadId = btGetCurrentThreadIndex();
-
+#ifndef BT_NO_PROFILE
+	int threadId = btQuickprofGetCurrentThreadIndex2();
+	if (threadId<0)
+		return;
+	
 	if (gStackDepths[threadId]<=0)
 	{
 		return;
@@ -342,6 +365,7 @@ void MyLeaveProfileZoneFunc()
 	
 	unsigned long long int endTime = clk.getTimeNanoseconds();
 	gTimings[threadId].addTiming(name,threadId,startTime,endTime);
+#endif //BT_NO_PROFILE
 }
 
 
@@ -441,6 +465,7 @@ void MyKeyboardCallback(int key, int state)
 
 	if (key=='p')
 	{
+#ifndef BT_NO_PROFILE
 		if (state)
 		{
 			m_firstTiming = true;
@@ -465,7 +490,7 @@ void MyKeyboardCallback(int key, int state)
 			gTimingFile = fopen(fileName,"w");
 			fprintf(gTimingFile,"{\"traceEvents\":[\n");
 			//dump the content to file
-			for (int i=0;i<BT_MAX_THREAD_COUNT;i++)
+			for (int i=0;i<BT_QUICKPROF_MAX_THREAD_COUNT;i++)
 			{
 				if (gTimings[i].m_numTimings)
 				{
@@ -478,6 +503,7 @@ void MyKeyboardCallback(int key, int state)
 			gTimingFile = 0;
 
 		}
+#endif //BT_NO_PROFILE
 	}
 
 #ifndef NO_OPENGL3
