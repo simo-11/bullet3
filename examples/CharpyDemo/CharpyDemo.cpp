@@ -34,6 +34,7 @@ target is to break objects using plasticity.
 #include "../plasticity/PlasticityStatistics.h"
 #include "../plasticity/PlasticityExampleBrowser.h"
 #include "../plasticity/BulletKeyToGwen.h"
+#include "../plasticity/PlasticityTimeSeries.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenUserInterface.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenInternalData.h"
 
@@ -395,7 +396,7 @@ class CharpyDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	btCollisionDispatcher*	m_dispatcher;
 
 	btConstraintSolver*	m_solver;
-
+	btAlignedObjectArray<PlasticityTimeSeries*> tsArray;
 	btDefaultCollisionConfiguration* m_collisionConfiguration;
 	int m_viewMode=1;
 	int m_option;
@@ -473,6 +474,12 @@ public:
 	~CharpyDemo()
 	{
 		clearParameterUi();
+		for (int j = 0; j<tsArray.size(); j++)
+		{
+			PlasticityTimeSeries* ts = tsArray[j];
+			delete ts;
+		}
+		tsArray.clear();
 	}
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 	virtual void	initPhysics();
@@ -2720,6 +2727,12 @@ void	CharpyDemo::exitPhysics()
 	}
 
 	m_collisionShapes.clear();
+
+	for (int j = 0; j<tsArray.size(); j++)
+	{
+		PlasticityTimeSeries* ts = tsArray[j];
+		ts->deleteTs();
+	}
 
 	delete m_dynamicsWorld;
 	m_dynamicsWorld=0;
