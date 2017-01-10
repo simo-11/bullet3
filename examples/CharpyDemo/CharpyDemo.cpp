@@ -984,6 +984,7 @@ public:
 			pPage = 0;
 		}
 		Gwen::KeyboardFocus = NULL;
+		PlasticityExampleBrowser::setPauseSimulation(false);
 	}
 	// set in initPhysics
 	btVector3* basePoint;
