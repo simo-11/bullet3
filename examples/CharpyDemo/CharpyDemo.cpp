@@ -474,12 +474,7 @@ public:
 	~CharpyDemo()
 	{
 		clearParameterUi();
-		for (int j = 0; j<tsArray.size(); j++)
-		{
-			PlasticityTimeSeries* ts = tsArray[j];
-			delete ts;
-		}
-		tsArray.clear();
+		PlasticityTimeSeries::clear(tsArray);
 	}
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 	virtual void	initPhysics();

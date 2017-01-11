@@ -11,6 +11,10 @@ enum SourceType { ElasticPlasticConstraint, RigidBody };
 class PlasticityTimeSeries
 {
 public:
+	int width = 300;
+	int height = 300;
+	int ticksPerSecond=60;
+	char * title;
 	SourceType sourceType;
 	btElasticPlasticConstraint* epc;
 	btRigidBody* rb;
@@ -26,5 +30,11 @@ public:
 	~PlasticityTimeSeries(){
 		deleteTs();
 	}
+	bool connectToPrevious;
+	static void clear(btAlignedObjectArray<PlasticityTimeSeries*>);
+	void plot();
+	float maxValue;
+	float getScale();
+	float getValue();
 };
 #endif // PLASTICITY_TIME_SERIES_H
