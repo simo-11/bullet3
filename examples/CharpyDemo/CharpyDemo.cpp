@@ -1839,6 +1839,14 @@ public:
 		}
 		return false;
 	}
+	void initTimeSeries(){
+		int ticksPerSeconds = (int)1. / (timeStep*maxSimSubSteps);
+		if (tsArray.size() == 0){
+			PlasticityTimeSeries *pts = new PlasticityTimeSeries();
+			tsArray.push_back(pts);
+		}
+		PlasticityTimeSeries::update(tsArray, ticksPerSeconds);
+	}
 };
 /* 
 Adapted from ForkLiftDemo
@@ -1982,6 +1990,7 @@ void	CharpyDemo::initPhysics()
 	currentTime=0;
 	rtClock.reset();
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
+	initTimeSeries();
 }
 
 void CharpyDemo::resetCamera(){
@@ -2089,6 +2098,7 @@ void CharpyDemo::stepSimulation(float deltaTime){
 			writeGraphData();
 			writeRigidBodyData();
 			updateView();
+			PlasticityTimeSeries::plot(tsArray);
 		}
 	}
 }
@@ -2722,12 +2732,7 @@ void	CharpyDemo::exitPhysics()
 	}
 
 	m_collisionShapes.clear();
-
-	for (int j = 0; j<tsArray.size(); j++)
-	{
-		PlasticityTimeSeries* ts = tsArray[j];
-		ts->deleteTs();
-	}
+	PlasticityTimeSeries::deleteTs(tsArray);
 
 	delete m_dynamicsWorld;
 	m_dynamicsWorld=0;

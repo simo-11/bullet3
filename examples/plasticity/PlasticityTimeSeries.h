@@ -14,7 +14,8 @@ public:
 	int width = 300;
 	int height = 300;
 	int ticksPerSecond=60;
-	char * title;
+	int stepCount = 0;
+	char * title="PlasticityTimeSeries";
 	SourceType sourceType;
 	btElasticPlasticConstraint* epc;
 	btRigidBody* rb;
@@ -31,9 +32,12 @@ public:
 		deleteTs();
 	}
 	bool connectToPrevious;
+	static void deleteTs(btAlignedObjectArray<PlasticityTimeSeries*>);
 	static void clear(btAlignedObjectArray<PlasticityTimeSeries*>);
+	static void plot(btAlignedObjectArray<PlasticityTimeSeries*>);
+	static void update(btAlignedObjectArray<PlasticityTimeSeries*>,int ticksPerSecond);
 	void plot();
-	float maxValue;
+	float maxValue=0;
 	float getScale();
 	float getValue();
 };

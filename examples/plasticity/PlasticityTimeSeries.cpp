@@ -1,5 +1,8 @@
 #include "PlasticityTimeSeries.h"
 #include "../plasticity/PlasticityExampleBrowser.h"
+PlasticityTimeSeries::PlasticityTimeSeries(){
+
+}
 void PlasticityTimeSeries::plot(){
 	if (0 == tsc){
 		CommonGraphicsApp * app = PlasticityExampleBrowser::getApp();
@@ -14,7 +17,8 @@ void PlasticityTimeSeries::plot(){
 
 /** TODO: add callback to actual value */
 float PlasticityTimeSeries::getValue(){
-	float val = 3.0f;
+	stepCount++;
+	float val = (float)(stepCount%100);
 	float absVal = btFabs(val);
 	if (absVal>maxValue){
 		maxValue = absVal;
@@ -25,7 +29,7 @@ float PlasticityTimeSeries::getValue(){
 provide clean scaling value
 */
 float PlasticityTimeSeries::getScale(){
-	float v = ceilf(maxValue);
+	float v = ceilf(1.01f*maxValue);
 	return v;
 }
 
@@ -38,3 +42,27 @@ void PlasticityTimeSeries::clear(btAlignedObjectArray<PlasticityTimeSeries*> tsA
 	tsArray.clear();
 }
 
+void PlasticityTimeSeries::deleteTs(btAlignedObjectArray<PlasticityTimeSeries*> tsArray){
+	for (int j = 0; j < tsArray.size(); j++)
+	{
+		PlasticityTimeSeries* ts = tsArray[j];
+		ts->deleteTs();
+	}
+}
+
+void PlasticityTimeSeries::plot(btAlignedObjectArray<PlasticityTimeSeries*> tsArray){
+	for (int j = 0; j < tsArray.size(); j++)
+	{
+		PlasticityTimeSeries* ts = tsArray[j];
+		ts->plot();
+	}
+}
+
+void PlasticityTimeSeries::update(btAlignedObjectArray<PlasticityTimeSeries*> tsArray, 
+	int ticksPerSecond){
+	for (int j = 0; j < tsArray.size(); j++)
+	{
+		PlasticityTimeSeries* ts = tsArray[j];
+		ts->ticksPerSecond = ticksPerSecond;
+	}
+}

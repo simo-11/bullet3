@@ -1168,7 +1168,9 @@ p=% .1f, % .1f, % .1f",
 
 			{
 				BT_PROFILE("processPlasticityData");
+				gBlockGuiMessages = true;
 				processPlasticityData(s_pStatWindow, pauseSimulation);
+				gBlockGuiMessages = false;
 			}
 
 			if (sUseOpenGL2)
