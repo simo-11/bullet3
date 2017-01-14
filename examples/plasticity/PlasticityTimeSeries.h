@@ -1,5 +1,9 @@
 /**
 Helper for TimeSeriesPlotting
+Provides 
+ - automatic scaling on restarts
+ - intitialization and cleanup
+ - callback provides actual value
 Simo Nikula, 2017
 */
 #ifndef PLASTICITY_TIME_SERIES_H
@@ -7,7 +11,7 @@ Simo Nikula, 2017
 #include "btBulletDynamicsCommon.h"
 #include "../RenderingExamples/TimeSeriesCanvas.h"
 #include "../CharpyDemo/btElasticPlasticConstraint.h"
-enum SourceType { ElasticPlasticConstraint, RigidBody };
+enum SourceType { ElasticPlasticConstraint, RigidBody, Custom };
 class PlasticityTimeSeries
 {
 public:
@@ -16,9 +20,10 @@ public:
 	int ticksPerSecond=60;
 	int stepCount = 0;
 	char * title="PlasticityTimeSeries";
+	float(*cb)(PlasticityTimeSeries*) = 0;
 	SourceType sourceType;
-	btElasticPlasticConstraint* epc;
-	btRigidBody* rb;
+	btElasticPlasticConstraint* epc=0;
+	btRigidBody* rb=0;
 	int dof;
 	TimeSeriesCanvas* tsc=0;
 	PlasticityTimeSeries();
@@ -35,7 +40,8 @@ public:
 	static void deleteTs(btAlignedObjectArray<PlasticityTimeSeries*>);
 	static void clear(btAlignedObjectArray<PlasticityTimeSeries*>);
 	static void plot(btAlignedObjectArray<PlasticityTimeSeries*>);
-	static void update(btAlignedObjectArray<PlasticityTimeSeries*>,int ticksPerSecond);
+	static void updateParameters(btAlignedObjectArray<PlasticityTimeSeries*>,
+		int ticksPerSecond, float (*cb)(PlasticityTimeSeries* pts)=0);
 	void plot();
 	float maxValue=0;
 	float getScale();

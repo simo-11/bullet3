@@ -93,6 +93,7 @@ public:
 	void setMaxPlasticStrain(btScalar value);
 	void setMaxPlasticRotation(btScalar value);
 	void scalePlasticity(btScalar scale);
+	virtual btScalar getDisplacement(int dof);
 	virtual btScalar getMaxPlasticStrain();
 	virtual btScalar getMaxPlasticRotation();
 	virtual btScalar getCurrentPlasticStrain();

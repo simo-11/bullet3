@@ -14,6 +14,7 @@ typedef  unsigned short int velDirType;
 class btElasticPlasticConstraint
 {
 public:
+	virtual btScalar getDisplacement(int dof) = 0;
 	virtual btScalar getMaxPlasticRotation()=0;
 	virtual btScalar getCurrentPlasticRotation() = 0;
 	virtual btScalar getMaxPlasticStrain() = 0;

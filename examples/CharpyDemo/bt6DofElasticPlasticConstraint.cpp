@@ -349,6 +349,18 @@ void bt6DofElasticPlasticConstraint::setMaxPlasticRotation(btScalar value){
 	setAngularUpperLimit(btVector3(2 * value, 2 * value, 2 * value));
 	setAngularLowerLimit(btVector3(-2 * value, -2 * value, -2 * value));
 }
+btScalar bt6DofElasticPlasticConstraint::getDisplacement(int dof){
+	btVector3 vec;
+	if (dof > 2){
+		dof -= 3;
+		vec = m_calculatedAxisAngleDiff;
+	}
+	else{
+		vec = m_calculatedLinearDiff;
+	}
+	return vec.m_floats[dof];
+}
+
 btScalar bt6DofElasticPlasticConstraint::getMaxPlasticRotation(){
 	return m_maxPlasticRotation;
 }

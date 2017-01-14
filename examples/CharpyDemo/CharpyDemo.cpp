@@ -1839,13 +1839,74 @@ public:
 		}
 		return false;
 	}
+	static float tsCallback(PlasticityTimeSeries* pts);
 	void initTimeSeries(){
+		int ci = sCount - 1; // constraint index for e.g. feedback in the middle
 		int ticksPerSeconds = (int)1. / (timeStep*maxSimSubSteps);
+		btRigidBody* rb;
+		btElasticPlasticConstraint* epc = 0;
+		switch (m_mode){
+		case 7:
+		{
+			bt6DofElasticPlasticConstraint* c = mode7c[ci];
+			epc = dynamic_cast<btElasticPlasticConstraint*>(c);
+			break;
+		}
+		case 8:
+		{
+			bt6DofElasticPlastic2Constraint* c = mode8c[ci];
+			epc = dynamic_cast<btElasticPlasticConstraint*>(c);
+			break;
+		}
+		}
+		btTypedConstraint *c = tc[ci];
+		rb = &(c->getRigidBodyA());
+		bool create = false;
 		if (tsArray.size() == 0){
-			PlasticityTimeSeries *pts = new PlasticityTimeSeries();
+			create = true;
+		}
+		PlasticityTimeSeries *pts;
+		int tsIndex = 0;
+		pts = (create ? new PlasticityTimeSeries():tsArray[tsIndex]);
+		if (epc != 0){
+			pts->epc = epc;
+			if (create){
+				pts->sourceType = ElasticPlasticConstraint;
+				if (hammerThickness > 0.){
+					pts->title = "RY of middle constraint";
+					pts->dof = 4;
+				}
+				else{
+					pts->title = "RX of middle constraint";
+					pts->dof = 3;
+				}
+				tsArray.push_back(pts);
+				pts = new PlasticityTimeSeries();
+			}
+			tsIndex++;
+		}
+		pts = (create ? new PlasticityTimeSeries() : tsArray[tsIndex++]);
+		pts->rb = rb;
+		if (create){
+			if (hammerThickness > 0.){
+				pts->title = "RY velocity of middle body";
+				pts->dof = 4;
+			}
+			else{
+				pts->title = "RX velocity of middle body";
+				pts->dof = 3;
+			}
+			pts->sourceType = RigidBody;
 			tsArray.push_back(pts);
 		}
-		PlasticityTimeSeries::update(tsArray, ticksPerSeconds);
+		pts = (create ? new PlasticityTimeSeries() : tsArray[tsIndex++]);
+		if (create){
+			pts->sourceType = Custom;
+			pts->title = "Energy";
+			pts->dof= 0;
+			tsArray.push_back(pts);
+		}
+		PlasticityTimeSeries::updateParameters(tsArray, ticksPerSeconds, CharpyDemo::tsCallback);
 	}
 };
 /* 
@@ -2819,6 +2880,33 @@ void updateEnergy(){
 	}
 }
 
+float CharpyDemo::tsCallback(PlasticityTimeSeries* pts){
+	int dof = pts->dof;
+	switch (pts->sourceType){
+	case ElasticPlasticConstraint:
+		return pts->epc->getDisplacement(dof);
+		break;
+	case RigidBody:
+	{
+		btRigidBody* rb = pts->rb;
+		btVector3 vec;
+		if (dof > 2){
+			dof -= 3;
+			vec = rb->getLinearVelocity();
+		}
+		else{
+			vec = rb->getAngularVelocity();
+		}
+		return vec.m_floats[dof];
+	}
+		break;
+	case Custom:
+		return energy;
+	default:
+		assert(false);
+	}
+	return 0.f;
+}
 void CharpyDemo::resetHandler(Gwen::Controls::Base* control){
 	charpyDemo->initOptions();
 	restartHandler(control);

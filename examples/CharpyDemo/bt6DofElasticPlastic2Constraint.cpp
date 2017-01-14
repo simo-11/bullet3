@@ -1290,6 +1290,18 @@ btScalar bt6DofElasticPlastic2Constraint::getCurrentPlasticStrain(){
 void bt6DofElasticPlastic2Constraint::setMaxPlasticRotation(btScalar value){
 	m_maxPlasticRotation = value;
 }
+btScalar bt6DofElasticPlastic2Constraint::getDisplacement(int dof){
+	btVector3 vec;
+	if (dof > 2){
+		dof -= 3;
+		vec = m_calculatedAxisAngleDiff;
+	}
+	else{
+		vec = m_calculatedLinearDiff;
+	}
+	return vec.m_floats[dof];
+}
+
 btScalar bt6DofElasticPlastic2Constraint::getMaxPlasticRotation(){
 	return m_maxPlasticRotation;
 }
@@ -1340,6 +1352,7 @@ btScalar bt6DofElasticPlastic2Constraint::getMaxAbsMoment(btJointFeedback& force
 		return b;
 	}
 }
+
 
 void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 	BT_PROFILE("updatePlasticity");
