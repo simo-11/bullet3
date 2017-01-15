@@ -10,6 +10,7 @@ void PlasticityTimeSeries::plot(){
 		tsc = new TimeSeriesCanvas
 			(app->m_2dCanvasInterface, width, height, title);
 		tsc->setupTimeSeries(getScale(), ticksPerSecond, 0);
+		maxValue = btFabs(value);
 		tsc->addDataSource("", 255, 0, 0);
 	}
 	if (tsc != 0){
@@ -31,10 +32,10 @@ float PlasticityTimeSeries::getValue(){
 provide clean scaling value
 */
 float PlasticityTimeSeries::getScale(){
-	float v = ceilf(1.01f*maxValue);
-	connectToPrevious = (maxValue > 0.f);
+	float v = PlasticityUtils::roundWithDigits(maxValue,2);
 	return v;
 }
+
 
 void PlasticityTimeSeries::clear(btAlignedObjectArray<PlasticityTimeSeries*> tsArray){
 	for (int j = 0; j<tsArray.size(); j++)

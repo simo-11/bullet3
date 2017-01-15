@@ -18,21 +18,26 @@ subject to the following restrictions:
 
 #include <gtest/gtest.h>
 
-#include "CharpyDemo/btElasticPlasticConstraint.h"
+#include "plasticity/PlasticityUtils.h"
 
 /** http://www.binaryhexconverter.com/binary-to-hex-converter */
 TEST(btElasticPlasticConstraint, countChanges) {
 	int extra = (sizeof(velDirType) > 1 ? 1 : 0);
-	ASSERT_EQ(0, btElasticPlasticConstraint::countChanges(0x0));  // 00000000
-	ASSERT_EQ(0+extra, btElasticPlasticConstraint::countChanges(0xff)); // 11111111
-	ASSERT_EQ(1 + extra, btElasticPlasticConstraint::countChanges(0xfe)); // 11111110
-	ASSERT_EQ(1 + extra, btElasticPlasticConstraint::countChanges(0xfc)); // 11111100
-	ASSERT_EQ(1 + extra, btElasticPlasticConstraint::countChanges(0xf0)); // 11110000
-	ASSERT_EQ(2 + extra, btElasticPlasticConstraint::countChanges(0xc7)); // 11000111
-	ASSERT_EQ(2, btElasticPlasticConstraint::countChanges(0x1e)); // 00011110
-	ASSERT_EQ(3 + extra, btElasticPlasticConstraint::countChanges(0x8e)); // 10001110
-	ASSERT_EQ(4 + extra, btElasticPlasticConstraint::countChanges(0x99)); // 10011001
-	ASSERT_EQ(7 + extra, btElasticPlasticConstraint::countChanges(0xaa)); // 10101010
+	ASSERT_EQ(0, PlasticityUtils::countChanges(0x0));  // 00000000
+	ASSERT_EQ(0 + extra, PlasticityUtils::countChanges(0xff)); // 11111111
+	ASSERT_EQ(1 + extra, PlasticityUtils::countChanges(0xfe)); // 11111110
+	ASSERT_EQ(1 + extra, PlasticityUtils::countChanges(0xfc)); // 11111100
+	ASSERT_EQ(1 + extra, PlasticityUtils::countChanges(0xf0)); // 11110000
+	ASSERT_EQ(2 + extra, PlasticityUtils::countChanges(0xc7)); // 11000111
+	ASSERT_EQ(2, PlasticityUtils::countChanges(0x1e)); // 00011110
+	ASSERT_EQ(3 + extra, PlasticityUtils::countChanges(0x8e)); // 10001110
+	ASSERT_EQ(4 + extra, PlasticityUtils::countChanges(0x99)); // 10011001
+	ASSERT_EQ(7 + extra, PlasticityUtils::countChanges(0xaa)); // 10101010
+}
+
+TEST(PlasticityTimeSeries, roundWithDigits) {
+	ASSERT_EQ(35.f, PlasticityUtils::roundWithDigits(34.5f, 2));
+	ASSERT_EQ(0.0012f, PlasticityUtils::roundWithDigits(0.00118f, 2));
 }
 
 int main(int argc, char **argv) {

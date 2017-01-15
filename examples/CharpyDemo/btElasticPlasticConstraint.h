@@ -7,8 +7,8 @@ Simo Nikula, 2016/07
 
 #include "LinearMath/btScalar.h"
 #include "LinearMath/btTransform.h"
+#include "../examples/plasticity/PlasticityUtils.h"
 enum LimitReason { None = 0, Force = 1, Monitor = 2, Stiffness = 4, Damping = 8 };
-typedef  unsigned short int velDirType;
 
 ///Basic interface to allow common actions for various elasticPlasticConstraints
 class btElasticPlasticConstraint
@@ -28,11 +28,10 @@ public:
 	virtual btTransform & getTransformB() = 0;
 	virtual LimitReason getLimitReason(int dof) = 0;
 	/**
-	First letter of Enum for each dof and - for None e.g. -FMSD-
+	First letter of LimitReason Enum for each dof and - for None e.g. -FMSD-
 	*/
 	virtual void fillLimitReasons(char[]) = 0;
 	static void fillLimitReasons(char buff[], LimitReason[6]);
-	static int countChanges(velDirType byte);
 };
 
 #endif //_BT_ELASTIC_PLASTIC_CONSTRAINT_INTERFACE_H
