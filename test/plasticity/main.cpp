@@ -21,7 +21,7 @@ subject to the following restrictions:
 #include "plasticity/PlasticityUtils.h"
 
 /** http://www.binaryhexconverter.com/binary-to-hex-converter */
-TEST(btElasticPlasticConstraint, countChanges) {
+TEST(PlasticityUtils, countChanges) {
 	int extra = (sizeof(velDirType) > 1 ? 1 : 0);
 	ASSERT_EQ(0, PlasticityUtils::countChanges(0x0));  // 00000000
 	ASSERT_EQ(0 + extra, PlasticityUtils::countChanges(0xff)); // 11111111
@@ -35,7 +35,7 @@ TEST(btElasticPlasticConstraint, countChanges) {
 	ASSERT_EQ(7 + extra, PlasticityUtils::countChanges(0xaa)); // 10101010
 }
 
-TEST(PlasticityTimeSeries, roundWithDigits) {
+TEST(PlasticityUtils, roundWithDigits) {
 	ASSERT_EQ(35.f, PlasticityUtils::roundWithDigits(34.5f, 2));
 	ASSERT_EQ(0.0012f, PlasticityUtils::roundWithDigits(0.00118f, 2));
 }
