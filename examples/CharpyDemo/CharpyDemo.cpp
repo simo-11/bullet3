@@ -66,7 +66,7 @@ btScalar setTimeStep = initialTimeStep;
 int initialNumIterations = 10;
 int numIterations = initialNumIterations;
 bool variableTimeStep = true;
-btScalar currentTime;
+btScalar currentTime, realTime /** while in stepSimulation */;
 const char *modes[] =
 {
 	"None",
@@ -2049,7 +2049,7 @@ void	CharpyDemo::initPhysics()
 	addHammer();
 	updateEnergy();
 	currentTime=0;
-	rtClock.reset();
+	realTime = 0;
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
 	initTimeSeries();
 }
@@ -2142,11 +2142,11 @@ void CharpyDemo::stepSimulation(float deltaTime){
 	if (m_dynamicsWorld)	{
 		PlasticityData::setTime(currentTime);
 		btScalar maxSimulationStep(timeStep*maxSimSubSteps);
-		if (deltaTime > maxSimulationStep){
-			deltaTime = maxSimulationStep;
-		}
+		deltaTime = maxSimulationStep;
+		rtClock.reset();
 		stepCount += m_dynamicsWorld->stepSimulation
 			(deltaTime, maxSimSubSteps, timeStep);
+		realTime += rtClock.getTimeSeconds();
 		if (stepCount > maxStepCount) {
 			PlasticityExampleBrowser::setPauseSimulation(true);
 		}
@@ -2318,8 +2318,8 @@ void CharpyDemo::showMessage()
 		sprintf_s(buf, B_LEN, "Enable writing plasticity log data to file with ^p");
 	}
 	infoMsg(buf);
-	sprintf_s(buf, B_LEN, "currentTime=%3.5f s, realTime=%3.1f currentAngle=%1.4f",
-		currentTime, rtClock.getTimeSeconds(), getHammerAngle());
+	sprintf_s(buf, B_LEN, "currentTime=%3.5f s, realTime=%3.5f currentAngle=%1.4f",
+		currentTime, realTime, getHammerAngle());
 	infoMsg(buf);
 	PlasticityData::setData(&pData);
 }

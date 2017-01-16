@@ -44,7 +44,9 @@ public:
 		int ticksPerSecond, float (*cb)(PlasticityTimeSeries* pts)=0);
 	void plot();
 	float maxValue=0;
-	float getScale();
+	float scale;
+	/** stores current maxValue to scale and return scale */
+	float getScale(); 
 	float getValue();
 };
 #endif // PLASTICITY_TIME_SERIES_H

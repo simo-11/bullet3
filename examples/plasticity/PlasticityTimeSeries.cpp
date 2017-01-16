@@ -26,14 +26,17 @@ float PlasticityTimeSeries::getValue(){
 	if (absVal>maxValue){
 		maxValue = absVal;
 	}
+	if (absVal < 2 * scale){
+		connectToPrevious = true;
+	}
 	return val;
 }
 /**
 provide clean scaling value
 */
 float PlasticityTimeSeries::getScale(){
-	float v = PlasticityUtils::roundWithDigits(maxValue,2);
-	return v;
+	scale = PlasticityUtils::roundUpWithDigits(maxValue,2);
+	return scale;
 }
 
 

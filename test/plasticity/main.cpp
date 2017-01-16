@@ -36,8 +36,14 @@ TEST(PlasticityUtils, countChanges) {
 }
 
 TEST(PlasticityUtils, roundWithDigits) {
-	ASSERT_EQ(35.f, PlasticityUtils::roundWithDigits(34.5f, 2));
-	ASSERT_EQ(0.0012f, PlasticityUtils::roundWithDigits(0.00118f, 2));
+	ASSERT_EQ(4.f, PlasticityUtils::roundUpWithDigits(3.4f, 1));
+	ASSERT_EQ(35.f, PlasticityUtils::roundUpWithDigits(34.5f, 2));
+	ASSERT_EQ(0.9f, PlasticityUtils::roundUpWithDigits(0.81f, 1));
+	ASSERT_EQ(0.4f, PlasticityUtils::roundUpWithDigits(0.31f, 1));
+	ASSERT_EQ(40.f, PlasticityUtils::roundUpWithDigits(31.f, 1));
+	ASSERT_EQ(35.f, PlasticityUtils::roundUpWithDigits(34.1f, 2));
+	ASSERT_EQ(11.f, PlasticityUtils::roundUpWithDigits(10.1f, 2));
+	ASSERT_EQ(0.0012f, PlasticityUtils::roundUpWithDigits(0.00118f, 2));
 }
 
 int main(int argc, char **argv) {

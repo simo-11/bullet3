@@ -9,7 +9,8 @@ class PlasticityUtils
 {
 public:
 	static int countChanges(velDirType val);
-	static float roundWithDigits(float val, int decimals);
+	/** For x-y-plot scaling */
+	static float roundUpWithDigits(float val, int decimals);
 };
 
 #endif // PLASTICITY_UTILS_H
