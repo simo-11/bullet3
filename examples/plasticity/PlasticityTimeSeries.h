@@ -18,7 +18,6 @@ public:
 	int width = 300;
 	int height = 300;
 	int ticksPerSecond=60;
-	int stepCount = 0;
 	char * title="PlasticityTimeSeries";
 	float(*cb)(PlasticityTimeSeries*) = 0;
 	SourceType sourceType;
@@ -37,10 +36,17 @@ public:
 		deleteTs();
 	}
 	bool connectToPrevious;
-	static void deleteTs(btAlignedObjectArray<PlasticityTimeSeries*>);
-	static void clear(btAlignedObjectArray<PlasticityTimeSeries*>);
-	static void plot(btAlignedObjectArray<PlasticityTimeSeries*>);
-	static void updateParameters(btAlignedObjectArray<PlasticityTimeSeries*>,
+	/** 
+	Deletes TimeSeriesCanvas:es within PlasticityTimeSeries but
+	keeps e.g. scaling
+	*/
+	static void deleteTs(btAlignedObjectArray<PlasticityTimeSeries*>&);
+	/**
+	Complete deletion and clearing of btAlignedObjectArray
+	*/
+	static void clear(btAlignedObjectArray<PlasticityTimeSeries*>&);
+	static void plot(btAlignedObjectArray<PlasticityTimeSeries*>&);
+	static void updateParameters(btAlignedObjectArray<PlasticityTimeSeries*>&,
 		int ticksPerSecond, float (*cb)(PlasticityTimeSeries* pts)=0);
 	void plot();
 	float maxValue=0;

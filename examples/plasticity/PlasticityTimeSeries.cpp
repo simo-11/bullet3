@@ -20,7 +20,6 @@ void PlasticityTimeSeries::plot(){
 }
 
 float PlasticityTimeSeries::getValue(){
-	stepCount++;
 	float val = (*cb)(this);
 	float absVal = btFabs(val);
 	if (absVal>maxValue){
@@ -28,6 +27,9 @@ float PlasticityTimeSeries::getValue(){
 	}
 	if (absVal < 2 * scale){
 		connectToPrevious = true;
+	}
+	else{
+		connectToPrevious = false;
 	}
 	return val;
 }
@@ -40,7 +42,7 @@ float PlasticityTimeSeries::getScale(){
 }
 
 
-void PlasticityTimeSeries::clear(btAlignedObjectArray<PlasticityTimeSeries*> tsArray){
+void PlasticityTimeSeries::clear(btAlignedObjectArray<PlasticityTimeSeries*> &tsArray){
 	for (int j = 0; j<tsArray.size(); j++)
 	{
 		PlasticityTimeSeries* ts = tsArray[j];
@@ -49,7 +51,7 @@ void PlasticityTimeSeries::clear(btAlignedObjectArray<PlasticityTimeSeries*> tsA
 	tsArray.clear();
 }
 
-void PlasticityTimeSeries::deleteTs(btAlignedObjectArray<PlasticityTimeSeries*> tsArray){
+void PlasticityTimeSeries::deleteTs(btAlignedObjectArray<PlasticityTimeSeries*> &tsArray){
 	for (int j = 0; j < tsArray.size(); j++)
 	{
 		PlasticityTimeSeries* ts = tsArray[j];
@@ -57,7 +59,7 @@ void PlasticityTimeSeries::deleteTs(btAlignedObjectArray<PlasticityTimeSeries*> 
 	}
 }
 
-void PlasticityTimeSeries::plot(btAlignedObjectArray<PlasticityTimeSeries*> tsArray){
+void PlasticityTimeSeries::plot(btAlignedObjectArray<PlasticityTimeSeries*> &tsArray){
 	for (int j = 0; j < tsArray.size(); j++)
 	{
 		PlasticityTimeSeries* ts = tsArray[j];
@@ -65,7 +67,7 @@ void PlasticityTimeSeries::plot(btAlignedObjectArray<PlasticityTimeSeries*> tsAr
 	}
 }
 
-void PlasticityTimeSeries::updateParameters(btAlignedObjectArray<PlasticityTimeSeries*> tsArray, 
+void PlasticityTimeSeries::updateParameters(btAlignedObjectArray<PlasticityTimeSeries*> &tsArray, 
 	int ticksPerSecond,
 	float(*cb)(PlasticityTimeSeries* pts)){
 	for (int j = 0; j < tsArray.size(); j++)

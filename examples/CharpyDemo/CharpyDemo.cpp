@@ -402,8 +402,19 @@ class CharpyDemo : public Gwen::Event::Handler, public CommonRigidBodyBase
 	int m_option;
 	void showMessage();
 	CommonWindowInterface* window;
-public:
+private:
+	/** which constraint is used */
 	int m_mode;
+public:
+	int getMode(){
+		return m_mode;
+	}
+	void setMode(int newMode){
+		if (newMode != m_mode){
+			PlasticityTimeSeries::clear(tsArray);
+		}
+		m_mode = newMode;
+	}
 	CharpyDemo(CommonExampleOptions & options)
 		:CommonRigidBodyBase(options.m_guiHelper), Gwen::Event::Handler()
 	{
@@ -416,7 +427,7 @@ public:
 		int option = m_option;
 		reinit();
 		maxStepCount = LONG_MAX;
-		m_mode = option % 100;
+		setMode(option % 100);
 		option /= 100;
 		if (option%100>0){
 			sCount=(option%100);
@@ -1843,24 +1854,26 @@ public:
 	void initTimeSeries(){
 		int ci = sCount - 1; // constraint index for e.g. feedback in the middle
 		int ticksPerSeconds = (int)1. / (timeStep*maxSimSubSteps);
-		btRigidBody* rb;
+		btRigidBody* rb=0;
 		btElasticPlasticConstraint* epc = 0;
 		switch (m_mode){
-		case 7:
-		{
-			bt6DofElasticPlasticConstraint* c = mode7c[ci];
-			epc = dynamic_cast<btElasticPlasticConstraint*>(c);
-			break;
+			case 7:
+			{
+				bt6DofElasticPlasticConstraint* c = mode7c[ci];
+				epc = dynamic_cast<btElasticPlasticConstraint*>(c);
+				break;
+			}
+			case 8:
+			{
+				bt6DofElasticPlastic2Constraint* c = mode8c[ci];
+				epc = dynamic_cast<btElasticPlasticConstraint*>(c);
+				break;
+			}
 		}
-		case 8:
-		{
-			bt6DofElasticPlastic2Constraint* c = mode8c[ci];
-			epc = dynamic_cast<btElasticPlasticConstraint*>(c);
-			break;
+		if (tc.size() > ci){
+			btTypedConstraint *c = tc[ci];
+			rb = &(c->getRigidBodyA());
 		}
-		}
-		btTypedConstraint *c = tc[ci];
-		rb = &(c->getRigidBodyA());
 		bool create = false;
 		if (tsArray.size() == 0){
 			create = true;
@@ -1885,19 +1898,21 @@ public:
 			}
 			tsIndex++;
 		}
-		pts = (create ? new PlasticityTimeSeries() : tsArray[tsIndex++]);
-		pts->rb = rb;
-		if (create){
-			if (hammerThickness > 0.){
-				pts->title = "RY velocity of middle body";
-				pts->dof = 4;
+		if (rb != 0){
+			pts = (create ? new PlasticityTimeSeries() : tsArray[tsIndex++]);
+			pts->rb = rb;
+			if (create){
+				if (hammerThickness > 0.){
+					pts->title = "RY velocity of middle body";
+					pts->dof = 4;
+				}
+				else{
+					pts->title = "RX velocity of middle body";
+					pts->dof = 3;
+				}
+				pts->sourceType = RigidBody;
+				tsArray.push_back(pts);
 			}
-			else{
-				pts->title = "RX velocity of middle body";
-				pts->dof = 3;
-			}
-			pts->sourceType = RigidBody;
-			tsArray.push_back(pts);
 		}
 		pts = (create ? new PlasticityTimeSeries() : tsArray[tsIndex++]);
 		if (create){
@@ -1906,7 +1921,8 @@ public:
 			pts->dof= 0;
 			tsArray.push_back(pts);
 		}
-		PlasticityTimeSeries::updateParameters(tsArray, ticksPerSeconds, CharpyDemo::tsCallback);
+		PlasticityTimeSeries::updateParameters
+			(tsArray, ticksPerSeconds, CharpyDemo::tsCallback);
 	}
 };
 /* 
@@ -1967,14 +1983,14 @@ void toggleRigidBodyDataFile(){
 		rbd = NULL;
 	}
 	else{
-		sprintf_s(rbdfn, B_LEN, "d:/wrk/rbd-%d.m",charpyDemo->m_mode);
+		sprintf_s(rbdfn, B_LEN, "d:/wrk/rbd-%d.m",charpyDemo->getMode());
 		errno_t err = fopen_s(&rbd, rbdfn, "w");
 		if (!rbd || err){
 			strcpy_s(rbdfn, "");
 			openRigidBodyDataFile = false;
 			return;
 		}
-		fprintf(rbd, "rbd%d=[\n", charpyDemo->m_mode);
+		fprintf(rbd, "rbd%d=[\n", charpyDemo->getMode());
 	}
 }
 
@@ -2664,7 +2680,7 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 			setViewMode(1);
 		}
 		else{
-			m_mode = 1;
+			setMode(1);
 			resetScene = true;
 		}
 		break;
@@ -2673,7 +2689,7 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 			setViewMode(2);
 		}
 		else{
-			m_mode = 2;
+			setMode(2);
 			resetScene = true;
 		}
 		break;
@@ -2682,7 +2698,7 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 			setViewMode(3);
 		}
 		else{
-			m_mode = 3;
+			setMode(3);
 			resetScene = true;
 		}
 		break;
@@ -2692,7 +2708,7 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 		else if (window->isModifierKeyPressed(B3G_SHIFT)){
 		}
 		else{
-			m_mode = 4;
+			setMode(4);
 			resetScene = true;
 		}
 		break;
@@ -2702,7 +2718,7 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 		else if (window->isModifierKeyPressed(B3G_SHIFT)){
 		}
 		else{
-			m_mode = 5;
+			setMode(5);
 			resetScene = true;
 		}
 		break;
@@ -2712,7 +2728,7 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 		else if (window->isModifierKeyPressed(B3G_SHIFT)){
 		}
 		else{
-			m_mode = 6;
+			setMode(6);
 			resetScene = true;
 		}
 		break;
@@ -2722,7 +2738,7 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 		else if (window->isModifierKeyPressed(B3G_SHIFT)){
 		}
 		else{
-			m_mode = 7;
+			setMode(7);
 			resetScene = true;
 		}
 		break;
@@ -2732,7 +2748,7 @@ bool CharpyDemo::keyboardCallback(int key, int state){
 		else if (window->isModifierKeyPressed(B3G_SHIFT)){
 		}
 		else{
-			m_mode = 8;
+			setMode(8);
 			resetScene = true;
 		}
 		break;
