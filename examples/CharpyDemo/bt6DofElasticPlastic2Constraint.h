@@ -292,6 +292,10 @@ public:
 	LimitReason limitReason[6];
 	virtual LimitReason getLimitReason(int dof);
 	virtual void fillLimitReasons(char[6]);
+	virtual btScalar getElasticEnergy();
+	virtual btScalar getElasticEnergy(int dof);
+	virtual btScalar getSpringStiffness(int dof);
+	virtual btScalar getElasticDisplacement(int dof);
 	static void setMonitorVelocityDirection(int val);
 	static int getMonitorVelocityDirection();
 	bool isLimitNeeded(btScalar vel, int dof);

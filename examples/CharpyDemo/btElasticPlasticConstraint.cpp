@@ -15,3 +15,18 @@ void btElasticPlasticConstraint::fillLimitReasons(char buff[], LimitReason reaso
 		buff[i] = c;
 	}
 }
+
+btScalar btElasticPlasticConstraint::getElasticEnergy(btElasticPlasticConstraint *epc){
+	btScalar energy = BT_ZERO;
+	for (int i = 0; i < 6; i++){
+		energy += getElasticEnergy(epc,i);
+	}
+	return energy;
+}
+
+btScalar btElasticPlasticConstraint::getElasticEnergy(btElasticPlasticConstraint *epc, int dof){
+	btScalar k = epc->getSpringStiffness(dof);
+	btScalar d = epc->getElasticDisplacement(dof);
+	btScalar energy = BT_HALF*k*d*d;
+	return energy;
+}

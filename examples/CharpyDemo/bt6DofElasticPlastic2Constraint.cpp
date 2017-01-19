@@ -1466,3 +1466,50 @@ LimitReason bt6DofElasticPlastic2Constraint::getLimitReason(int dof){
 void bt6DofElasticPlastic2Constraint::fillLimitReasons(char *buf){
 	btElasticPlasticConstraint::fillLimitReasons(buf, limitReason);
 }
+
+btScalar bt6DofElasticPlastic2Constraint::getElasticEnergy(){
+	return btElasticPlasticConstraint::getElasticEnergy(this);
+}
+
+btScalar bt6DofElasticPlastic2Constraint::getElasticEnergy(int dof){
+	return btElasticPlasticConstraint::getElasticEnergy(this,dof);
+}
+
+btScalar bt6DofElasticPlastic2Constraint::getSpringStiffness(int dof){
+	if (dof < 3){
+		return getTranslationalLimitMotor()->m_springStiffness[dof];
+	}
+	else{
+		return getRotationalLimitMotor(dof - 3)->m_springStiffness;
+	}
+}
+
+btScalar bt6DofElasticPlastic2Constraint::getElasticDisplacement(int dof){
+	if (!isEnabled()){
+		return BT_ZERO;
+	}
+	btScalar currPos;
+	btScalar elasticPart;
+	btScalar k = getSpringStiffness(dof);
+	if (dof<3)
+	{
+		if (!m_linearLimits.m_enableSpring[dof]){
+			return BT_ZERO;
+		}
+		currPos = m_calculatedLinearDiff[dof];
+		elasticPart = m_maxForce[dof] / k;
+	}
+	else{
+		if (m_angularLimits[dof - 3].m_enableSpring){
+			return BT_ZERO;
+		}
+		currPos = m_calculatedAxisAngleDiff[dof - 3];
+		elasticPart = m_maxForce[dof] /k;
+	}
+	if (btFabs(elasticPart)<btFabs(currPos)){
+		return elasticPart;
+	}
+	else{
+		return currPos;
+	}
+}

@@ -27,11 +27,17 @@ public:
 	virtual btTransform & getTransformA() = 0;
 	virtual btTransform & getTransformB() = 0;
 	virtual LimitReason getLimitReason(int dof) = 0;
+	virtual btScalar getElasticEnergy()=0;
+	virtual btScalar getElasticEnergy(int dof) = 0;
+	virtual btScalar getSpringStiffness(int dof) = 0;
+	virtual btScalar getElasticDisplacement(int dof) = 0;
 	/**
 	First letter of LimitReason Enum for each dof and - for None e.g. -FMSD-
 	*/
 	virtual void fillLimitReasons(char[]) = 0;
 	static void fillLimitReasons(char buff[], LimitReason[6]);
+	static btScalar getElasticEnergy(btElasticPlasticConstraint*);
+	static btScalar getElasticEnergy(btElasticPlasticConstraint*, int dof);
 };
 
 #endif //_BT_ELASTIC_PLASTIC_CONSTRAINT_INTERFACE_H

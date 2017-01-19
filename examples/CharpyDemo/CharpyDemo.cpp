@@ -127,6 +127,7 @@ bool limitIfNeeded=initialLimitIfNeeded;
 bool initialUseCcd = false;
 bool useCcd = initialUseCcd;
 float energy = 0, pauseEnergy=0;
+float linearEnergySum,inertiaEnergySum,gravitationalEnergySum,elasticEnergySum;
 float maxEnergy;
 void updateEnergy();
 btDynamicsWorld* dw;
@@ -145,7 +146,7 @@ btScalar initialRestitution(0.);
 btScalar restitution(initialRestitution);
 btScalar initialMaxPlasticRotation(3.);
 btScalar maxPlasticRotation(initialMaxPlasticRotation);
-btAlignedObjectArray<btTypedConstraint*>tc; // points to specimen constraints
+btAlignedObjectArray<btTypedConstraint*>tc; // specimen constraints
 btScalar breakingImpulseThreshold = 0;
 float maxForces[6];
 FILE *fp;
@@ -2852,8 +2853,41 @@ void	CharpyDemo::exitPhysics()
 void CharpyDemo::setPauseEnergy(Gwen::Controls::Base* control){
 	setScalar(control, &pauseEnergy);
 }
+
+float getElasticEnergy(btGeneric6DofSpringConstraint *sc){
+	float energy = 0.f;
+	for (int i = 0; i < 6; i++){
+		btScalar k=sc->getStiffness(i);
+		btScalar d;
+		if (i < 3){
+			d = sc->getRelativePivotPosition(i);
+		}
+		else{
+			d = sc->getAngle(i - 3);
+		}
+		energy += 0.5*k*d*d;
+	}
+	return energy;
+}
+float getElasticEnergy(btGeneric6DofSpring2Constraint *sc){
+	float energy = 0.f;
+	for (int i = 0; i < 6; i++){
+		btScalar k;
+		btScalar d;
+		if (i < 3){
+			k = sc->getTranslationalLimitMotor()->m_springStiffness[i];
+			d = sc->getRelativePivotPosition(i);
+		}
+		else{
+			k = sc->getRotationalLimitMotor(i - 3)->m_springStiffness;
+			d = sc->getAngle(i - 3);
+		}
+		energy += 0.5*k*d*d;
+	}
+	return energy;
+}
 void updateEnergy(){
-	energy = 0;
+	linearEnergySum=inertiaEnergySum=gravitationalEnergySum=elasticEnergySum=energy = 0;
 	btVector3 gravity = dw->getGravity();
 	const btCollisionObjectArray objects = dw->getCollisionObjectArray();
 	for (int i = 0; i<objects.capacity(); i++)
@@ -2878,6 +2912,47 @@ void updateEnergy(){
 		energy += linearEnergy;
 		energy += inertiaEnergy;
 		energy += gravitationalEnergy;
+		linearEnergySum += linearEnergy;
+		inertiaEnergySum += inertiaEnergy;
+		gravitationalEnergySum += gravitationalEnergy;
+	}
+	int mode = charpyDemo->getMode();
+	for (int i = 0; i < tc.size(); i++){
+		if (!tc[i]->isEnabled()){
+			continue;
+		}
+		float elasticEnergy;
+		switch (mode){
+		case 1:
+		case 3:
+		case 5:
+		case 6:
+			continue;
+			break;
+		case 2:
+		{
+			btGeneric6DofSpringConstraint *sc =
+				dynamic_cast<btGeneric6DofSpringConstraint*>(tc[i]);
+			elasticEnergy = getElasticEnergy(sc);
+		}
+			break;
+		case 4:
+		{
+			btGeneric6DofSpring2Constraint *sc =
+				dynamic_cast<btGeneric6DofSpring2Constraint*>(tc[i]);
+			elasticEnergy = getElasticEnergy(sc);
+		}
+			break;
+		case 7:
+		case 8:
+		{
+			btElasticPlasticConstraint* epc = dynamic_cast<btElasticPlasticConstraint*>(tc[i]);
+			elasticEnergy = epc->getElasticEnergy();
+		}
+			break;
+		}
+		elasticEnergySum += elasticEnergy;
+		energy += elasticEnergy;
 	}
 	if (energy > maxEnergy){
 		maxEnergy = energy;

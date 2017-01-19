@@ -477,6 +477,42 @@ void bt6DofElasticPlasticConstraint::debugDraw(btIDebugDraw* debugDrawer)
 LimitReason bt6DofElasticPlasticConstraint::getLimitReason(int dof){
 	return limitReason[dof];
 }
+
 void bt6DofElasticPlasticConstraint::fillLimitReasons(char *buf){
 	btElasticPlasticConstraint::fillLimitReasons(buf, limitReason);
+}
+
+btScalar bt6DofElasticPlasticConstraint::getElasticEnergy(){
+	return btElasticPlasticConstraint::getElasticEnergy(this);
+}
+
+btScalar bt6DofElasticPlasticConstraint::getElasticEnergy(int dof){
+	return btElasticPlasticConstraint::getElasticEnergy(this,dof);
+}
+
+btScalar bt6DofElasticPlasticConstraint::getSpringStiffness(int dof){
+	return m_springStiffness[dof];
+}
+
+btScalar bt6DofElasticPlasticConstraint::getElasticDisplacement(int dof){
+	if (!isEnabled() || !m_springEnabled[dof]){
+		return BT_ZERO;
+	}
+	btScalar currPos;
+	btScalar elasticPart;
+	if (dof<3)
+	{
+			currPos = m_calculatedLinearDiff[dof];
+			elasticPart = m_maxForce[dof] / m_springStiffness[dof];
+	}
+	else{
+		currPos = m_calculatedAxisAngleDiff[dof - 3];
+		elasticPart = m_maxForce[dof] / m_springStiffness[dof];
+	}
+	if (btFabs(elasticPart)<btFabs(currPos)){
+		return elasticPart;
+	}
+	else{
+		return currPos;
+	}
 }

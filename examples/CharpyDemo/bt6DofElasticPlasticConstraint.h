@@ -75,6 +75,10 @@ protected:
 	LimitReason limitReason[6];
 	virtual LimitReason getLimitReason(int dof);
 	virtual void fillLimitReasons(char[6]);
+	virtual btScalar getElasticEnergy();
+	virtual btScalar getElasticEnergy(int dof);
+	virtual btScalar getSpringStiffness(int dof);
+	virtual btScalar getElasticDisplacement(int dof);
 	btScalar m_maxRatio;
 	int m_maxRatioDof;
 	// bcc end of new fields for plasticity
