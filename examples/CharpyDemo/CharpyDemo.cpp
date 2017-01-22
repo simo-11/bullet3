@@ -818,7 +818,6 @@ public:
 	}
 	Gwen::Controls::TextBoxNumeric* peGc;
 	void addPauseEnergy(){
-		pauseEnergy = 0;
 		addLabel("pauseEnergy");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
 		string text = uif(pauseEnergy,"%.0f");
@@ -1920,6 +1919,11 @@ public:
 			pts->sourceType = Custom;
 			pts->title = "Energy";
 			pts->dof= 0;
+			pts->dataSourceLabels.push_back("total");
+			pts->dataSourceLabels.push_back("velocity");
+			pts->dataSourceLabels.push_back("inertia");
+			pts->dataSourceLabels.push_back("gravity");
+			pts->dataSourceLabels.push_back("elastic");
 			tsArray.push_back(pts);
 		}
 		PlasticityTimeSeries::updateParameters
@@ -2992,7 +2996,14 @@ float CharpyDemo::tsCallback(PlasticityTimeSeries* pts){
 	}
 		break;
 	case Custom:
-		return energy;
+		switch (pts->dataSourceIndex){
+		case 0:
+			return energy;
+		case 1:	return -linearEnergySum;
+		case 2:	return -inertiaEnergySum;
+		case 3: return -gravitationalEnergySum;
+		case 4: return -elasticEnergySum;
+		}
 	default:
 		assert(false);
 	}

@@ -11,6 +11,10 @@ public:
 	static int countChanges(velDirType val);
 	/** For x-y-plot scaling */
 	static float roundUpWithDigits(float val, int decimals);
+	/** Fills rgb values so that there will be 
+	count distinct value
+	*/
+	static void fillRgbs(unsigned char rgbs[3], int count, int index);
 };
 
 #endif // PLASTICITY_UTILS_H

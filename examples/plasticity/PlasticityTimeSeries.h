@@ -15,7 +15,7 @@ enum SourceType { ElasticPlasticConstraint, RigidBody, Custom };
 class PlasticityTimeSeries
 {
 public:
-	int width = 300;
+	int width = 400;
 	int height = 300;
 	int ticksPerSecond=60;
 	char * title="PlasticityTimeSeries";
@@ -36,6 +36,8 @@ public:
 		deleteTs();
 	}
 	bool connectToPrevious;
+	btAlignedObjectArray<const char *> dataSourceLabels;
+	int dataSourceIndex;
 	/** 
 	Deletes TimeSeriesCanvas:es within PlasticityTimeSeries but
 	keeps e.g. scaling
@@ -54,5 +56,8 @@ public:
 	/** stores current maxValue to scale and return scale */
 	float getScale(); 
 	float getValue();
+#define PTS_WINDOW_TITLE_LEN 50
+	char windowTitleBuffer[PTS_WINDOW_TITLE_LEN];
+	const char * getWindowTitle();
 };
 #endif // PLASTICITY_TIME_SERIES_H

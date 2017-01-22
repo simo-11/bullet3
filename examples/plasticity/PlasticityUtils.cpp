@@ -38,3 +38,18 @@ int PlasticityUtils::countChanges(velDirType byte)
 	}
 	return count;
 }
+unsigned char getRGBVal(int k1, int b1, int i, int k2, int b2, int count){
+	int v = 255 * b1 + 255 * k1 * i * 3 / count;
+	if (v > 255){
+		v = 255 * b2 + 255 * k2*i * 3 / count;
+	}
+	if (v < 0){
+		v = 0;
+	}
+	return (unsigned char)v;
+}
+void PlasticityUtils::fillRgbs(unsigned char rgbs[3], int count, int index){
+	rgbs[0]=getRGBVal(-1, 1, index, 0, 0,count);
+	rgbs[1]=getRGBVal(1, 0, index, -1, 2,count);
+	rgbs[2]=getRGBVal(1, -1, index, 0, 0,count);
+}

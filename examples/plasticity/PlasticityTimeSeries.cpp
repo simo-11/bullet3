@@ -4,17 +4,33 @@ PlasticityTimeSeries::PlasticityTimeSeries(){
 
 }
 void PlasticityTimeSeries::plot(){
-	float value = getValue();
+	if (dataSourceLabels.size() == 0){
+		dataSourceLabels.push_back("");
+	}
+	btAlignedObjectArray<float> values;
+	for (int i = 0; i < dataSourceLabels.size(); i++){
+		dataSourceIndex = i;
+		values.push_back(getValue());
+	}
 	if (0 == tsc && maxValue>0){
+		getScale();
 		CommonGraphicsApp * app = PlasticityExampleBrowser::getApp();
 		tsc = new TimeSeriesCanvas
-			(app->m_2dCanvasInterface, width, height, title);
-		tsc->setupTimeSeries(getScale(), ticksPerSecond, 0);
-		maxValue = btFabs(value);
-		tsc->addDataSource("", 255, 0, 0);
+			(app->m_2dCanvasInterface, width, height, getWindowTitle());
+		tsc->setupTimeSeries(100., ticksPerSecond, 0);
+		maxValue = 0.f;
+		int dataSources = dataSourceLabels.size();
+		for (int i = 0; i < dataSources; i++){
+			unsigned char rgbs[3];
+			PlasticityUtils::fillRgbs(rgbs,dataSources,i);
+			tsc->addDataSource(dataSourceLabels[i], rgbs[0], rgbs[1], rgbs[2]);
+			maxValue = btMax(btFabs(values[i]), maxValue);
+		}
 	}
 	if (tsc != 0){
-		tsc->insertDataAtCurrentTime(value, 0, connectToPrevious);
+		for (int i = 0; i < dataSourceLabels.size(); i++){
+			tsc->insertDataAtCurrentTime(100.f*values[i]/scale, i, connectToPrevious);
+		}
 		tsc->nextTick();
 	}
 }
@@ -32,6 +48,11 @@ float PlasticityTimeSeries::getValue(){
 		connectToPrevious = false;
 	}
 	return val;
+}
+
+const char * PlasticityTimeSeries::getWindowTitle(){
+	sprintf_s(windowTitleBuffer, PTS_WINDOW_TITLE_LEN, "%s as %% - max %8.4g", title, scale);
+	return windowTitleBuffer;
 }
 /**
 provide clean scaling value

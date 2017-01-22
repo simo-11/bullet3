@@ -1425,28 +1425,6 @@ public:
 		}
 	}
 	/**
-	*/
-	unsigned char getRGBVal(int k1, int b1, int i, int k2, int b2){
-		int v = 255*b1 + 255*k1 * i *3/ C_ERROR_SIZE;
-		if (v>255){
-			v = 255*b2+255*k2*i*3/C_ERROR_SIZE;
-		}
-		if (v < 0){
-			v = 0;
-		}
-		return (unsigned char)v;
-
-	}
-	unsigned char getR(int i){
-		return getRGBVal(-1, 1, i,0,0);
-	}
-	unsigned char getG(int i){
-		return getRGBVal(1, 0, i,-1,2);
-	}
-	unsigned char getB(int i){
-		return getRGBVal(1, -1, i,0,0);
-	}
-	/**
 	provide clean scaling value
 	*/
 	float getScale(float in){
@@ -1475,9 +1453,10 @@ public:
 		currentMaxPosError = maxPosError;
 		tsPosError->setupTimeSeries(getScale(maxPosError), intFreq, 0);
 		for (int i = 0; i < C_ERROR_SIZE; i++){
-			unsigned char r = getR(i), g = getG(i), b = getB(i);
-			tsVelError->addDataSource(label[i], r, g, b);
-			tsPosError->addDataSource(label[i], r, g, b);
+			unsigned char rgbs[3];
+			PlasticityUtils::fillRgbs(rgbs, C_ERROR_SIZE, i);
+			tsVelError->addDataSource(label[i], rgbs[0], rgbs[1], rgbs[2]);
+			tsPosError->addDataSource(label[i], rgbs[0], rgbs[1], rgbs[2]);
 		}
 		maxVelError = 0;
 		maxPosError = 0;
