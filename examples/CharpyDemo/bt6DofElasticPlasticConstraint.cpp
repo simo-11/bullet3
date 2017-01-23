@@ -52,11 +52,12 @@ void bt6DofElasticPlasticConstraint::init()
 		m_springStiffness[i] = btScalar(0.f);
 		m_springDamping[i] = btScalar(1.f);
 		m_maxForce[i] = btScalar(SIMD_INFINITY);
-		m_maxPlasticStrain = btScalar(0.f);
-		m_currentPlasticStrain = btScalar(0.f);
-		m_maxPlasticRotation = btScalar(0.f);
-		m_currentPlasticRotation = btScalar(0.f);
+		m_plasticDisplacement[i] = btScalar(0.f);
 	}
+	m_maxPlasticStrain = btScalar(0.f);
+	m_currentPlasticStrain = btScalar(0.f);
+	m_maxPlasticRotation = btScalar(0.f);
+	m_currentPlasticRotation = btScalar(0.f);
 	id = ++idCounter;
 }
 
@@ -423,6 +424,7 @@ void bt6DofElasticPlasticConstraint::updatePlasticity(btJointFeedback& forces,
 				}
 				setEquilibriumPoint(i, newVal);
 				m_currentPlasticStrain += plasticDelta;
+				m_plasticDisplacement[i] += plasticDelta;
 			}
 		}
 	}
@@ -459,6 +461,7 @@ void bt6DofElasticPlasticConstraint::updatePlasticity(btJointFeedback& forces,
 				}
 				setEquilibriumPoint(i + 3, newVal);
 				m_currentPlasticRotation += plasticDelta;
+				m_plasticDisplacement[i+3] += plasticDelta;
 			}
 		}
 	}
@@ -486,8 +489,17 @@ btScalar bt6DofElasticPlasticConstraint::getElasticEnergy(){
 	return btElasticPlasticConstraint::getElasticEnergy(this);
 }
 
+
 btScalar bt6DofElasticPlasticConstraint::getElasticEnergy(int dof){
 	return btElasticPlasticConstraint::getElasticEnergy(this,dof);
+}
+
+btScalar bt6DofElasticPlasticConstraint::getPlasticEnergy(){
+	return btElasticPlasticConstraint::getPlasticEnergy(this);
+}
+
+btScalar bt6DofElasticPlasticConstraint::getPlasticEnergy(int dof){
+	return btElasticPlasticConstraint::getPlasticEnergy(this, dof);
 }
 
 btScalar bt6DofElasticPlasticConstraint::getSpringStiffness(int dof){
@@ -515,4 +527,10 @@ btScalar bt6DofElasticPlasticConstraint::getElasticDisplacement(int dof){
 	else{
 		return currPos;
 	}
+}
+btScalar bt6DofElasticPlasticConstraint::getMaxForce(int dof){
+	return m_maxForce[dof];
+}
+btScalar bt6DofElasticPlasticConstraint::getPlasticDisplacement(int dof){
+	return m_plasticDisplacement[dof];
 }

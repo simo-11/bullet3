@@ -30,3 +30,18 @@ btScalar btElasticPlasticConstraint::getElasticEnergy(btElasticPlasticConstraint
 	btScalar energy = BT_HALF*k*d*d;
 	return energy;
 }
+
+btScalar btElasticPlasticConstraint::getPlasticEnergy(btElasticPlasticConstraint *epc){
+	btScalar energy = BT_ZERO;
+	for (int i = 0; i < 6; i++){
+		energy += getPlasticEnergy(epc, i);
+	}
+	return energy;
+}
+
+btScalar btElasticPlasticConstraint::getPlasticEnergy(btElasticPlasticConstraint *epc, int dof){
+	btScalar f = epc->getMaxForce(dof);
+	btScalar d = epc->getPlasticDisplacement(dof);
+	btScalar energy = f*d;
+	return energy;
+}

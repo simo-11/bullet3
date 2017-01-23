@@ -15,7 +15,9 @@ class btElasticPlasticConstraint
 {
 public:
 	virtual btScalar getDisplacement(int dof) = 0;
-	virtual btScalar getMaxPlasticRotation()=0;
+	virtual btScalar getMaxForce(int dof) = 0;
+	virtual btScalar getPlasticDisplacement(int dof) = 0;
+	virtual btScalar getMaxPlasticRotation() = 0;
 	virtual btScalar getCurrentPlasticRotation() = 0;
 	virtual btScalar getMaxPlasticStrain() = 0;
 	virtual btScalar getCurrentPlasticStrain() = 0;
@@ -29,6 +31,8 @@ public:
 	virtual LimitReason getLimitReason(int dof) = 0;
 	virtual btScalar getElasticEnergy()=0;
 	virtual btScalar getElasticEnergy(int dof) = 0;
+	virtual btScalar getPlasticEnergy() = 0;
+	virtual btScalar getPlasticEnergy(int dof) = 0;
 	virtual btScalar getSpringStiffness(int dof) = 0;
 	virtual btScalar getElasticDisplacement(int dof) = 0;
 	/**
@@ -38,6 +42,8 @@ public:
 	static void fillLimitReasons(char buff[], LimitReason[6]);
 	static btScalar getElasticEnergy(btElasticPlasticConstraint*);
 	static btScalar getElasticEnergy(btElasticPlasticConstraint*, int dof);
+	static btScalar getPlasticEnergy(btElasticPlasticConstraint*);
+	static btScalar getPlasticEnergy(btElasticPlasticConstraint*, int dof);
 };
 
 #endif //_BT_ELASTIC_PLASTIC_CONSTRAINT_INTERFACE_H

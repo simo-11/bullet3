@@ -63,6 +63,7 @@ protected:
 	int id;
 	int getId(){ return id; }
 	btScalar	m_maxForce[6];
+	btScalar	m_plasticDisplacement[6];
 	btScalar	m_fpsLimit[6];
 	// how many integration steps is needed for single period before
 	// elastic part is activated
@@ -97,6 +98,10 @@ public:
 	void setMaxPlasticStrain(btScalar value);
 	void setMaxPlasticRotation(btScalar value);
 	void scalePlasticity(btScalar scale);
+	virtual btScalar getPlasticEnergy(int dof);
+	virtual btScalar getPlasticEnergy();
+	virtual btScalar getPlasticDisplacement(int dof);
+	virtual btScalar getMaxForce(int dof);
 	virtual btScalar getDisplacement(int dof);
 	virtual btScalar getMaxPlasticStrain();
 	virtual btScalar getMaxPlasticRotation();

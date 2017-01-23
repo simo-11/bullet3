@@ -112,12 +112,13 @@ void bt6DofElasticPlastic2Constraint::initPlasticity()
 	for (int i = 0; i < 6; i++)
 	{
 		m_maxForce[i] = btScalar(SIMD_INFINITY);
-		m_maxPlasticStrain = btScalar(0.f);
-		m_currentPlasticStrain = btScalar(0.f);
-		m_maxPlasticRotation = btScalar(0.f);
-		m_currentPlasticRotation = btScalar(0.f);
+		m_plasticDisplacement[i] = BT_ZERO;
 		velDir[i] = 0;
 	}
+	m_maxPlasticStrain = BT_ZERO;
+	m_currentPlasticStrain = BT_ZERO;
+	m_maxPlasticRotation = BT_ZERO;
+	m_currentPlasticRotation = BT_ZERO;
 }
 
 
@@ -1390,6 +1391,7 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 				}
 				setEquilibriumPoint(i, newVal);
 				m_currentPlasticStrain += plasticDelta;
+				m_plasticDisplacement[i] += plasticDelta;
 			}
 		}
 	}
@@ -1421,6 +1423,7 @@ void bt6DofElasticPlastic2Constraint::updatePlasticity(btJointFeedback& forces){
 				}
 				setEquilibriumPoint(i + 3, newVal);
 				m_currentPlasticRotation += plasticDelta;
+				m_plasticDisplacement[i+3] += plasticDelta;
 			}
 		}
 	}
@@ -1475,6 +1478,15 @@ btScalar bt6DofElasticPlastic2Constraint::getElasticEnergy(int dof){
 	return btElasticPlasticConstraint::getElasticEnergy(this,dof);
 }
 
+btScalar bt6DofElasticPlastic2Constraint::getPlasticEnergy(){
+	return btElasticPlasticConstraint::getPlasticEnergy(this);
+}
+
+btScalar bt6DofElasticPlastic2Constraint::getPlasticEnergy(int dof){
+	return btElasticPlasticConstraint::getPlasticEnergy(this, dof);
+}
+
+
 btScalar bt6DofElasticPlastic2Constraint::getSpringStiffness(int dof){
 	if (dof < 3){
 		return getTranslationalLimitMotor()->m_springStiffness[dof];
@@ -1512,4 +1524,10 @@ btScalar bt6DofElasticPlastic2Constraint::getElasticDisplacement(int dof){
 	else{
 		return currPos;
 	}
+}
+btScalar bt6DofElasticPlastic2Constraint::getMaxForce(int dof){
+	return m_maxForce[dof];
+}
+btScalar bt6DofElasticPlastic2Constraint::getPlasticDisplacement(int dof){
+	return m_plasticDisplacement[dof];
 }

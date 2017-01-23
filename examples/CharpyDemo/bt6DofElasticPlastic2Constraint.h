@@ -283,6 +283,7 @@ public:
 	int id;
 	int getId(){ return id; }
 	btScalar	m_maxForce[6];
+	btScalar    m_plasticDisplacement[6];
 	btScalar    m_currentPlasticStrain;
 	btScalar    m_maxPlasticStrain;
 	btScalar    m_maxPlasticRotation = 3;
@@ -294,6 +295,10 @@ public:
 	virtual void fillLimitReasons(char[6]);
 	virtual btScalar getElasticEnergy();
 	virtual btScalar getElasticEnergy(int dof);
+	virtual btScalar getPlasticEnergy();
+	virtual btScalar getPlasticEnergy(int dof);
+	virtual btScalar getPlasticDisplacement(int dof);
+	virtual btScalar getMaxForce(int dof);
 	virtual btScalar getSpringStiffness(int dof);
 	virtual btScalar getElasticDisplacement(int dof);
 	static void setMonitorVelocityDirection(int val);
