@@ -41,8 +41,10 @@ struct MyTexture
 	unsigned char* textureData;
 };
 
-struct BulletURDFInternalData
+ATTRIBUTE_ALIGNED16(struct) BulletURDFInternalData
 {
+	BT_DECLARE_ALIGNED_ALLOCATOR();
+
 	UrdfParser m_urdfParser;
 	struct GUIHelperInterface* m_guiHelper;
 	char m_pathPrefix[1024];
@@ -119,7 +121,7 @@ bool BulletURDFImporter::loadURDF(const char* fileName, bool forceFixedBase)
 	b3FileUtils fu;
 	
 	//bool fileFound = fu.findFile(fileName, relativeFileName, 1024);
-  	bool fileFound = b3ResourcePath::findResourcePath(fileName,relativeFileName,1024);
+  	bool fileFound = (b3ResourcePath::findResourcePath(fileName,relativeFileName,1024))>0;
 	
 	std::string xml_string;
 	m_data->m_pathPrefix[0] = 0;
@@ -171,7 +173,7 @@ bool BulletURDFImporter::loadSDF(const char* fileName, bool forceFixedBase)
     b3FileUtils fu;
     
     //bool fileFound = fu.findFile(fileName, relativeFileName, 1024);
-    bool fileFound = b3ResourcePath::findResourcePath(fileName,relativeFileName,1024);
+    bool fileFound = (b3ResourcePath::findResourcePath(fileName,relativeFileName,1024))>0;
     
     std::string xml_string;
     m_data->m_pathPrefix[0] = 0;
@@ -453,6 +455,16 @@ btCollisionShape* convertURDFToCollisionShape(const UrdfCollision* collision, co
 
     switch (collision->m_geometry.m_type)
     {
+		case URDF_GEOM_CAPSULE:
+        {
+			btScalar radius = collision->m_geometry.m_capsuleRadius;
+			btScalar height = btScalar(2.f)*collision->m_geometry.m_capsuleHalfHeight;
+			btCapsuleShapeZ* capsuleShape = new btCapsuleShapeZ(radius,height);
+            shape = capsuleShape;
+			shape ->setMargin(gUrdfDefaultCollisionMargin);
+			break;
+		}
+
         case URDF_GEOM_CYLINDER:
         {
 			btScalar cylRadius = collision->m_geometry.m_cylinderRadius;

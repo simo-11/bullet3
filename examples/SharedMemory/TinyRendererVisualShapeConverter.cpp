@@ -94,9 +94,19 @@ struct TinyRendererVisualShapeConverterInternalData
 	m_swWidth(START_WIDTH),
 	m_swHeight(START_HEIGHT),
 	m_rgbColorBuffer(START_WIDTH,START_HEIGHT,TGAImage::RGB),
+	m_lightDirection(btVector3(-5,200,-40)),
 	m_hasLightDirection(false),
+	m_lightColor(btVector3(1.0,1.0,1.0)),
     m_hasLightColor(false),
-    m_hasShadow(false)
+	m_lightDistance(2.0),
+	m_hasLightDistance(false),
+	m_lightAmbientCoeff(0.6),
+    m_hasLightAmbientCoeff(false),
+	m_lightDiffuseCoeff(0.35),
+    m_hasLightDiffuseCoeff(false),
+	m_lightSpecularCoeff(0.05),
+    m_hasLightSpecularCoeff(false),
+	m_hasShadow(false)
 	{
 	    m_depthBuffer.resize(m_swWidth*m_swHeight);
         m_shadowBuffer.resize(m_swWidth*m_swHeight);
@@ -279,7 +289,14 @@ void convertURDFToVisualShape(const UrdfVisual* visual, const char* urdfPathPref
 					visualShapeOut.m_dimensions[0] = visual->m_geometry.m_meshScale[0];
 					visualShapeOut.m_dimensions[1] = visual->m_geometry.m_meshScale[1];
 					visualShapeOut.m_dimensions[2] = visual->m_geometry.m_meshScale[2];
-
+                    visualShapeOut.m_localVisualFrame[0] = visual->m_linkLocalFrame.getOrigin()[0];
+                    visualShapeOut.m_localVisualFrame[1] = visual->m_linkLocalFrame.getOrigin()[1];
+                    visualShapeOut.m_localVisualFrame[2] = visual->m_linkLocalFrame.getOrigin()[2];
+                    visualShapeOut.m_localVisualFrame[3] = visual->m_linkLocalFrame.getRotation()[0];
+                    visualShapeOut.m_localVisualFrame[4] = visual->m_linkLocalFrame.getRotation()[1];
+                    visualShapeOut.m_localVisualFrame[5] = visual->m_linkLocalFrame.getRotation()[2];
+                    visualShapeOut.m_localVisualFrame[6] = visual->m_linkLocalFrame.getRotation()[3];
+                    
 					int sl = strlen(fullPath);
 					if (sl < (VISUAL_SHAPE_MAX_PATH_LEN-1))
 					{
@@ -540,15 +557,15 @@ void TinyRendererVisualShapeConverter::convertVisualShapes(int linkIndex, const 
 
 		const UrdfLink* link = *linkPtr;
 	
-		for (int v = 0; v < link->m_visualArray.size();v++)
+		for (int v1 = 0; v1 < link->m_visualArray.size();v1++)
 		{
 			btAlignedObjectArray<MyTexture2> textures;
 			btAlignedObjectArray<GLInstanceVertex> vertices;
 			btAlignedObjectArray<int> indices;
 			btTransform startTrans; startTrans.setIdentity();
-			int graphicsIndex = -1;
+			//int graphicsIndex = -1;
 
-			const UrdfVisual& vis = link->m_visualArray[v];
+			const UrdfVisual& vis = link->m_visualArray[v1];
 			btTransform childTrans = vis.m_linkLocalFrame;
 			btHashString matName(vis.m_materialName.c_str());
 			UrdfMaterial *const * matPtr = model.m_materials[matName];
@@ -576,13 +593,13 @@ void TinyRendererVisualShapeConverter::convertVisualShapes(int linkIndex, const 
 			b3VisualShapeData visualShape;
 			visualShape.m_objectUniqueId = bodyUniqueId;
 			visualShape.m_linkIndex = linkIndex;
-			visualShape.m_localInertiaFrame[0] = localInertiaFrame.getOrigin()[0];
-			visualShape.m_localInertiaFrame[1] = localInertiaFrame.getOrigin()[1];
-			visualShape.m_localInertiaFrame[2] = localInertiaFrame.getOrigin()[2];
-			visualShape.m_localInertiaFrame[3] = localInertiaFrame.getRotation()[0];
-			visualShape.m_localInertiaFrame[4] = localInertiaFrame.getRotation()[1];
-			visualShape.m_localInertiaFrame[5] = localInertiaFrame.getRotation()[2];
-			visualShape.m_localInertiaFrame[6] = localInertiaFrame.getRotation()[3];
+            visualShape.m_localVisualFrame[0] = vis.m_linkLocalFrame.getOrigin()[0];
+            visualShape.m_localVisualFrame[1] = vis.m_linkLocalFrame.getOrigin()[1];
+			visualShape.m_localVisualFrame[2] = vis.m_linkLocalFrame.getOrigin()[2];
+			visualShape.m_localVisualFrame[3] = vis.m_linkLocalFrame.getRotation()[0];
+			visualShape.m_localVisualFrame[4] = vis.m_linkLocalFrame.getRotation()[1];
+			visualShape.m_localVisualFrame[5] = vis.m_linkLocalFrame.getRotation()[2];
+			visualShape.m_localVisualFrame[6] = vis.m_linkLocalFrame.getRotation()[3];
             visualShape.m_rgbaColor[0] = rgbaColor[0];
             visualShape.m_rgbaColor[1] = rgbaColor[1];
             visualShape.m_rgbaColor[2] = rgbaColor[2];
@@ -660,7 +677,7 @@ int TinyRendererVisualShapeConverter::getVisualShapesData(int bodyUniqueId, int 
 			break;
 		}
 	}
-	int count = 0;
+	//int count = 0;
 
 	if (start >= 0)
 	{

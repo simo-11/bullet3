@@ -26,11 +26,14 @@ struct UrdfMaterial
 struct UrdfInertia
 {
 	btTransform m_linkLocalFrame;
+	bool m_hasLinkLocalFrame;
+
 	double m_mass;
 	double m_ixx,m_ixy,m_ixz,m_iyy,m_iyz,m_izz;
 	
 	UrdfInertia()
 	{
+		m_hasLinkLocalFrame = false;
 		m_linkLocalFrame.setIdentity();
 		m_mass = 0.f;
 		m_ixx=m_ixy=m_ixz=m_iyy=m_iyz=m_izz=0.f;
@@ -58,6 +61,8 @@ struct UrdfGeometry
 	btVector3 m_boxSize;
 	
 	double m_capsuleRadius;
+	double m_capsuleHalfHeight;
+	int m_hasFromTo;
 	btVector3 m_capsuleFrom;
 	btVector3 m_capsuleTo;
 
@@ -80,10 +85,7 @@ struct UrdfVisual
 	UrdfMaterial m_localMaterial;
 };
 
-enum UrdfCollisionFlags
-{
-	URDF_FORCE_CONCAVE_TRIMESH=1,
-};
+
 
 
 struct UrdfCollision
@@ -92,6 +94,8 @@ struct UrdfCollision
 	UrdfGeometry m_geometry;
 	std::string m_name;
 	int m_flags;
+	int m_collisionGroup;
+	int m_collisionMask;
 	UrdfCollision()
 		:m_flags(0)
 	{

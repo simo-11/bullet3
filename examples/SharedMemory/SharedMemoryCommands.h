@@ -33,7 +33,7 @@
 #define MAX_SDF_FILENAME_LENGTH 1024
 #define MAX_FILENAME_LENGTH MAX_URDF_FILENAME_LENGTH
 #define MAX_NUM_LINKS MAX_DEGREE_OF_FREEDOM
-#define MAX_SDF_BODIES 500
+#define MAX_SDF_BODIES 512
 
 struct TmpFloat3 
 {
@@ -313,6 +313,7 @@ enum EnumSimParamUpdateFlags
 	SIM_PARAM_UPDATE_INTERNAL_SIMULATION_FLAGS=64,
 	SIM_PARAM_UPDATE_USE_SPLIT_IMPULSE=128,
 	SIM_PARAM_UPDATE_SPLIT_IMPULSE_PENETRATION_THRESHOLD = 256,
+	SIM_PARAM_UPDATE_COLLISION_FILTER_MODE=512
 };
 
 enum EnumLoadBunnyUpdateFlags
@@ -341,6 +342,7 @@ struct SendPhysicsSimulationParameters
 	double m_splitImpulsePenetrationThreshold;
 	int m_internalSimFlags;
 	double m_defaultContactERP;
+	int m_collisionFilterMode;
 };
 
 struct LoadBunnyArgs
@@ -430,6 +432,8 @@ struct SdfLoadedArgs
 {
     int m_numBodies;
     int m_bodyUniqueIds[MAX_SDF_BODIES];
+    int m_numUserConstraints;
+	int m_userConstraintUniqueIds[MAX_SDF_BODIES];
     
     ///@todo(erwincoumans) load cameras, lights etc
     //int m_numCameras; 
@@ -538,25 +542,14 @@ enum EnumUserConstraintFlags
 	USER_CONSTRAINT_CHANGE_CONSTRAINT=4,
 	USER_CONSTRAINT_CHANGE_PIVOT_IN_B=8,
 	USER_CONSTRAINT_CHANGE_FRAME_ORN_IN_B=16,
+	USER_CONSTRAINT_CHANGE_MAX_FORCE=32,
+	USER_CONSTRAINT_REQUEST_INFO=64,
+	
 };
 
-struct UserConstraintArgs
-{
-    int m_parentBodyIndex;
-    int m_parentJointIndex;
-    int m_childBodyIndex;
-    int m_childJointIndex;
-    double m_parentFrame[7];
-    double m_childFrame[7];
-    double m_jointAxis[3];
-    int m_jointType;
-	int m_userConstraintUniqueId;
-};
 
-struct UserConstraintResultArgs
-{
-	int m_userConstraintUniqueId;
-};
+
+
 
 enum EnumUserDebugDrawFlags
 {
@@ -566,6 +559,8 @@ enum EnumUserDebugDrawFlags
 	USER_DEBUG_REMOVE_ALL=8,	
 	USER_DEBUG_SET_CUSTOM_OBJECT_COLOR = 16,
 	USER_DEBUG_REMOVE_CUSTOM_OBJECT_COLOR = 32,
+	USER_DEBUG_ADD_PARAMETER=64,
+	USER_DEBUG_READ_PARAMETER=128,
 
 };
 
@@ -577,12 +572,16 @@ struct UserDebugDrawArgs
 	double	m_lineWidth;
 	
 	double m_lifeTime;
-	int m_removeItemUniqueId;
+	int m_itemUniqueId;
 
 	char m_text[MAX_FILENAME_LENGTH];
 	double m_textPositionXYZ[3];
 	double m_textColorRGB[3];
 	double m_textSize;
+
+	double m_rangeMin;
+	double m_rangeMax;
+	double m_startValue;
 
 	double m_objectDebugColorRGB[3];
 	int m_objectUniqueId;
@@ -594,6 +593,7 @@ struct UserDebugDrawArgs
 struct UserDebugDrawResultArgs
 {
 	int m_debugItemUniqueId;
+	double m_parameterValue;
 };
 
 struct SendVREvents
@@ -647,7 +647,7 @@ struct SharedMemoryCommand
         struct ExternalForceArgs m_externalForceArguments;
 		struct CalculateInverseDynamicsArgs m_calculateInverseDynamicsArguments;
         struct CalculateJacobianArgs m_calculateJacobianArguments;
-        struct UserConstraintArgs m_userConstraintArguments;
+        struct b3UserConstraint m_userConstraintArguments;
         struct RequestContactDataArgs m_requestContactPointArguments;
 		struct RequestOverlappingObjectsArgs m_requestOverlappingObjectsArgs;
         struct RequestVisualShapeDataArgs m_requestVisualShapeDataArguments;
@@ -696,6 +696,10 @@ struct SharedMemoryStatus
 	int		m_numDataStreamBytes;
 	char*	m_dataStream;
 
+	//m_updateFlags is a bit fields to tell which parameters were updated, 
+	//m_updateFlags is ignored for most status messages
+    int m_updateFlags;
+
 	union
 	{
 		struct BulletDataStreamArgs	m_dataStreamArguments;
@@ -711,7 +715,7 @@ struct SharedMemoryStatus
 		struct CalculateInverseKinematicsResultArgs m_inverseKinematicsResultArgs;
 		struct SendVisualShapeDataArgs m_sendVisualShapeArgs;
 		struct UserDebugDrawResultArgs m_userDebugDrawArgs;
-		struct UserConstraintResultArgs m_userConstraintResultArgs;
+		struct b3UserConstraint m_userConstraintResultArgs;
 		struct SendVREvents m_sendVREvents;
 		struct SendRaycastHits m_raycastHits;
 	};

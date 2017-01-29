@@ -56,29 +56,15 @@ const char* startFileNameVR = "0_VRDemoSettings.txt";
 
 #include <vector>
 
-//remember the settings (you don't want to re-tune again and again...)
-static void saveCurrentSettingsVR()
-{
-	FILE* f = fopen(startFileNameVR, "w");
-	if (f)
-	{
-		fprintf(f, "--camPosX= %f\n", gVRTeleportPosLocal[0]);
-		fprintf(f, "--camPosY= %f\n", gVRTeleportPosLocal[1]);
-		fprintf(f, "--camPosZ= %f\n", gVRTeleportPosLocal[2]);
-		fprintf(f, "--camRotZ= %f\n", gVRTeleportRotZ);
-		fclose(f);
-	}
-};
-
 static void loadCurrentSettingsVR(b3CommandLineArgs& args)
 {
-	int currentEntry = 0;
+	//int currentEntry = 0;
 	FILE* f = fopen(startFileNameVR, "r");
 	if (f)
 	{
 		char oneline[1024];
 		char* argv[] = { 0,&oneline[0] };
-
+		
 		while (fgets(oneline, 1024, f) != NULL)
 		{
 			char *pos;
@@ -88,9 +74,25 @@ static void loadCurrentSettingsVR(b3CommandLineArgs& args)
 		}
 		fclose(f);
 	}
-
+	
 };
+
+//remember the settings (you don't want to re-tune again and again...)
+static void saveCurrentSettingsVR()
+{
+	FILE* f = fopen(startFileNameVR, "w");
+	if (f)
+	{
+		fprintf(f, "--camPosX= %f\n", gVRTeleportPos1[0]);
+		fprintf(f, "--camPosY= %f\n", gVRTeleportPos1[1]);
+		fprintf(f, "--camPosZ= %f\n", gVRTeleportPos1[2]);
+		fprintf(f, "--camRotZ= %f\n", gVRTeleportRotZ);
+		fclose(f);
+	}
+};
+
 #if B3_USE_MIDI
+
 
 
 static float getParamf(float rangeMin, float rangeMax, int midiVal)
@@ -114,7 +116,7 @@ void midiCallback(double deltatime, std::vector< unsigned char > *message, void 
 			if (message->at(1) == 16)
 			{
 				gVRTeleportRotZ= getParamf(-3.1415, 3.1415, message->at(2));
-				gVRTeleportOrnLocal = btQuaternion(btVector3(0, 0, 1), gVRTeleportRotZ);
+				gVRTeleportOrn = btQuaternion(btVector3(0, 0, 1), gVRTeleportRotZ);
 				saveCurrentSettingsVR();
 //				b3Printf("gVRTeleportOrnLocal rotZ = %f\n", gVRTeleportRotZ);
 			}
@@ -128,7 +130,7 @@ void midiCallback(double deltatime, std::vector< unsigned char > *message, void 
 			{
 				if (message->at(1) == i)
 				{
-					gVRTeleportPosLocal[i] = getParamf(-2, 2, message->at(2));
+					gVRTeleportPos1[i] = getParamf(-2, 2, message->at(2));
 					saveCurrentSettingsVR();
 //					b3Printf("gVRTeleportPos[%d] =  %f\n", i,gVRTeleportPosLocal[i]);
 
@@ -174,6 +176,7 @@ enum MultiThreadedGUIHelperCommunicationEnums
 	eGUIHelperAutogenerateGraphicsObjects,
 	eGUIUserDebugAddText,
 	eGUIUserDebugAddLine,
+	eGUIUserDebugAddParameter,
 	eGUIUserDebugRemoveItem,
 	eGUIUserDebugRemoveAllItems,
 };
@@ -280,10 +283,10 @@ float sleepTimeThreshold = 8./1000.;
 void	MotionThreadFunc(void* userPtr,void* lsMemory)
 {
 	printf("MotionThreadFunc thread started\n");
-	MotionThreadLocalStorage* localStorage = (MotionThreadLocalStorage*) lsMemory;
+	//MotionThreadLocalStorage* localStorage = (MotionThreadLocalStorage*) lsMemory;
 
 	MotionArgs* args = (MotionArgs*) userPtr;
-	int workLeft = true;
+	//int workLeft = true;
 	b3Clock clock;
 	clock.reset();
 	bool init = true;
@@ -479,6 +482,15 @@ struct UserDebugDrawLine
 	int m_itemUniqueId;
 };
 
+struct UserDebugParameter
+{
+	char m_text[1024];
+	double m_rangeMin;
+	double m_rangeMax;
+	btScalar m_value;
+	int m_itemUniqueId;
+};
+
 struct UserDebugText
 {
 	char m_text[1024];
@@ -494,7 +506,7 @@ struct UserDebugText
 
 class MultiThreadedOpenGLGuiHelper : public GUIHelperInterface
 {
-	CommonGraphicsApp* m_app;
+//	CommonGraphicsApp* m_app;
 	
 	b3CriticalSection* m_cs;
 	b3CriticalSection* m_cs2;
@@ -558,8 +570,9 @@ public:
 	}
 
 	MultiThreadedOpenGLGuiHelper(CommonGraphicsApp* app, GUIHelperInterface* guiHelper)
-		:m_app(app)
-		,m_cs(0),
+		:
+	//m_app(app),
+		m_cs(0),
 		m_cs2(0),
 		m_cs3(0),
 		m_csGUI(0),
@@ -804,8 +817,6 @@ public:
 	}
 
 
-
-
 	btAlignedObjectArray<UserDebugText> m_userDebugText;
 	
 	UserDebugText m_tmpText;
@@ -816,7 +827,7 @@ public:
 		m_tmpText.m_itemUniqueId = m_uidGenerator++;
 		m_tmpText.m_lifeTime = lifeTime;
 		m_tmpText.textSize = size;
-		int len = strlen(txt);
+		//int len = strlen(txt);
 		strcpy(m_tmpText.m_text,txt);
 		m_tmpText.m_textPositionXYZ[0] = positionXYZ[0];
 		m_tmpText.m_textPositionXYZ[1] = positionXYZ[1];
@@ -831,6 +842,38 @@ public:
 
 		return m_userDebugText[m_userDebugText.size()-1].m_itemUniqueId;
 	}
+
+	btAlignedObjectArray<UserDebugParameter*> m_userDebugParams;
+	UserDebugParameter m_tmpParam;
+
+	virtual int		readUserDebugParameter(int itemUniqueId, double* value) 
+	{ 
+		for (int i=0;i<m_userDebugParams.size();i++)
+		{
+			if (m_userDebugParams[i]->m_itemUniqueId == itemUniqueId)
+			{
+				*value = m_userDebugParams[i]->m_value;
+				return 1;
+			}
+		}
+		return 0;
+	}
+
+	virtual int		addUserDebugParameter(const char* txt, double	rangeMin, double	rangeMax, double startValue)
+	{
+		strcpy(m_tmpParam.m_text,txt);
+		m_tmpParam.m_rangeMin = rangeMin;
+		m_tmpParam.m_rangeMax = rangeMax;
+		m_tmpParam.m_value = startValue;
+		m_tmpParam.m_itemUniqueId = m_uidGenerator++;
+
+		m_cs->lock();
+		m_cs->setSharedParam(1, eGUIUserDebugAddParameter);
+		workerThreadWait();
+
+		return (*m_userDebugParams[m_userDebugParams.size()-1]).m_itemUniqueId;
+	}
+
 
 	btAlignedObjectArray<UserDebugDrawLine> m_userDebugLines;
 	UserDebugDrawLine m_tmpLine;
@@ -893,7 +936,7 @@ class PhysicsServerExample : public SharedMemoryCommon
     bool m_isConnected;
     btClock m_clock;
 	bool m_replay;
-	int m_options;
+//	int m_options;
 	
 #ifdef BT_ENABLE_VR
 	TinyVRGui* m_tinyVrGui;
@@ -1028,7 +1071,46 @@ public:
 		//printf("button=%d, state=%d\n",button,state);
 		return false;
 	}
-	virtual bool	keyboardCallback(int key, int state){return false;}
+	virtual bool	keyboardCallback(int key, int state){
+		if (key=='w' && state)
+		{
+			gVRTeleportPos1[0]+=0.1;
+			saveCurrentSettingsVR();
+		}
+		if (key=='s' && state)
+		{
+			gVRTeleportPos1[0]-=0.1;
+			saveCurrentSettingsVR();
+		}
+		if (key=='a' && state)
+		{
+			gVRTeleportPos1[1]-=0.1;
+			saveCurrentSettingsVR();
+		}
+		if (key=='d' && state)
+		{
+			gVRTeleportPos1[1]+=0.1;
+			saveCurrentSettingsVR();
+		}
+		if (key=='q' && state)
+		{
+			gVRTeleportPos1[2]+=0.1;
+			saveCurrentSettingsVR();
+		}
+		if (key=='e' && state)
+		{
+			gVRTeleportPos1[2]-=0.1;
+			saveCurrentSettingsVR();
+		}
+		if (key=='z' && state)
+		{
+			gVRTeleportRotZ+=0.1;
+			gVRTeleportOrn = btQuaternion(btVector3(0, 0, 1), gVRTeleportRotZ);
+			saveCurrentSettingsVR();
+		}
+		
+		return false;
+	}
 
 	virtual void setSharedMemoryKey(int key)
 	{
@@ -1046,19 +1128,19 @@ public:
 			setSharedMemoryKey(shmemKey);
 		}
 
-		if (args.GetCmdLineArgument("camPosX", gVRTeleportPosLocal[0]))
+		if (args.GetCmdLineArgument("camPosX", gVRTeleportPos1[0]))
 		{
-			printf("camPosX=%f\n", gVRTeleportPosLocal[0]);
+			printf("camPosX=%f\n", gVRTeleportPos1[0]);
 		}
 
-		if (args.GetCmdLineArgument("camPosY", gVRTeleportPosLocal[1]))
+		if (args.GetCmdLineArgument("camPosY", gVRTeleportPos1[1]))
 		{
-			printf("camPosY=%f\n", gVRTeleportPosLocal[1]);
+			printf("camPosY=%f\n", gVRTeleportPos1[1]);
 		}
 
-		if (args.GetCmdLineArgument("camPosZ", gVRTeleportPosLocal[2]))
+		if (args.GetCmdLineArgument("camPosZ", gVRTeleportPos1[2]))
 		{
-			printf("camPosZ=%f\n", gVRTeleportPosLocal[2]);
+			printf("camPosZ=%f\n", gVRTeleportPos1[2]);
 		}
 
 		float camRotZ = 0.f;
@@ -1066,7 +1148,7 @@ public:
 		{
 			printf("camRotZ = %f\n", camRotZ);
 			btQuaternion ornZ(btVector3(0, 0, 1), camRotZ);
-			gVRTeleportOrnLocal = ornZ;
+			gVRTeleportOrn = ornZ;
 		}
 
 		if (args.CheckCmdLineFlag("robotassets"))
@@ -1076,7 +1158,7 @@ public:
 
 		if (args.CheckCmdLineFlag("norobotassets"))
 		{
-//			gCreateDefaultRobotAssets = false;
+			gCreateDefaultRobotAssets = false;
 		}
 
 
@@ -1123,8 +1205,8 @@ PhysicsServerExample::PhysicsServerExample(MultiThreadedOpenGLGuiHelper* helper,
 m_physicsServer(sharedMem),
 m_wantsShutdown(false),
 m_isConnected(false),
-m_replay(false),
-m_options(options)
+m_replay(false)
+//m_options(options)
 #ifdef BT_ENABLE_VR
 ,m_tinyVrGui(0)
 #endif
@@ -1201,7 +1283,7 @@ void	PhysicsServerExample::initPhysics()
 			int numMoving = 0;
  			m_args[w].m_positions.resize(numMoving);
 			m_args[w].m_physicsServerPtr = &m_physicsServer;
-			int index = 0;
+			//int index = 0;
 			
 			m_threadSupport->runTask(B3_THREAD_SCHEDULE_TASK, (void*) &this->m_args[w], w);
 			
@@ -1365,7 +1447,8 @@ void	PhysicsServerExample::stepSimulation(float deltaTime)
             m_multiThreadedHelper->m_childGuiHelper->removeAllGraphicsInstances();
 			if (m_multiThreadedHelper->m_childGuiHelper->getRenderInterface())
 			{
-				int numRenderInstances = m_multiThreadedHelper->m_childGuiHelper->getRenderInterface()->getTotalNumInstances();
+				int numRenderInstances;
+				numRenderInstances = m_multiThreadedHelper->m_childGuiHelper->getRenderInterface()->getTotalNumInstances();
 				b3Assert(numRenderInstances==0);
 			}
 			m_multiThreadedHelper->mainThreadRelease();
@@ -1376,17 +1459,17 @@ void	PhysicsServerExample::stepSimulation(float deltaTime)
     case eGUIHelperCopyCameraImageData:
         {
              m_multiThreadedHelper->m_childGuiHelper->copyCameraImageData(m_multiThreadedHelper->m_viewMatrix,
-                                                                                 m_multiThreadedHelper->m_projectionMatrix,
-                                                                                 m_multiThreadedHelper->m_pixelsRGBA,
-                                                                                 m_multiThreadedHelper->m_rgbaBufferSizeInPixels,
-                                                                                 m_multiThreadedHelper->m_depthBuffer,
-                                                                                 m_multiThreadedHelper->m_depthBufferSizeInPixels,
-                                                                                 m_multiThreadedHelper->m_segmentationMaskBuffer,
-                                                                                 m_multiThreadedHelper->m_segmentationMaskBufferSizeInPixels,
-                                                                                 m_multiThreadedHelper->m_startPixelIndex, 
-                                                                                 m_multiThreadedHelper->m_destinationWidth, 
-                                                                                 m_multiThreadedHelper->m_destinationHeight, 
-                                                                                 m_multiThreadedHelper->m_numPixelsCopied);
+				 m_multiThreadedHelper->m_projectionMatrix,
+				 m_multiThreadedHelper->m_pixelsRGBA,
+				 m_multiThreadedHelper->m_rgbaBufferSizeInPixels,
+				 m_multiThreadedHelper->m_depthBuffer,
+				 m_multiThreadedHelper->m_depthBufferSizeInPixels,
+				 m_multiThreadedHelper->m_segmentationMaskBuffer,
+				 m_multiThreadedHelper->m_segmentationMaskBufferSizeInPixels,
+				 m_multiThreadedHelper->m_startPixelIndex, 
+				 m_multiThreadedHelper->m_destinationWidth, 
+				 m_multiThreadedHelper->m_destinationHeight, 
+				 m_multiThreadedHelper->m_numPixelsCopied);
  		m_multiThreadedHelper->mainThreadRelease();
             break;
         }
@@ -1400,6 +1483,24 @@ void	PhysicsServerExample::stepSimulation(float deltaTime)
 	case eGUIUserDebugAddText:
 	{
 		m_multiThreadedHelper->m_userDebugText.push_back(m_multiThreadedHelper->m_tmpText);
+		m_multiThreadedHelper->mainThreadRelease();
+		break;
+	}
+	case eGUIUserDebugAddParameter:
+	{
+		UserDebugParameter* param = new UserDebugParameter(m_multiThreadedHelper->m_tmpParam);
+		m_multiThreadedHelper->m_userDebugParams.push_back(param);
+
+		{
+        SliderParams slider(param->m_text,&param->m_value);
+        slider.m_minVal=param->m_rangeMin;
+        slider.m_maxVal=param->m_rangeMax;
+		
+		if (m_multiThreadedHelper->m_childGuiHelper->getParameterInterface())
+	        m_multiThreadedHelper->m_childGuiHelper->getParameterInterface()->registerSliderFloatParameter(slider);
+		}
+
+		//also add actual menu
 		m_multiThreadedHelper->mainThreadRelease();
 		break;
 	}
@@ -1507,8 +1608,8 @@ extern btTransform gVRTrackingObjectTr;
 
 void PhysicsServerExample::drawUserDebugLines()
 {
-	static char line0[1024];
-	static char line1[1024];
+	//static char line0[1024];
+	//static char line1[1024];
 
 	//draw all user-debug-lines
 
@@ -1609,8 +1710,8 @@ void PhysicsServerExample::drawUserDebugLines()
 void PhysicsServerExample::renderScene()
 {
 	btTransform vrTrans;
-	gVRTeleportPos1 = gVRTeleportPosLocal;
-	gVRTeleportOrn = gVRTeleportOrnLocal;
+	//gVRTeleportPos1 = gVRTeleportPosLocal;
+	//gVRTeleportOrn = gVRTeleportOrnLocal;
 
 	///little VR test to follow/drive Husky vehicle
 	if (gVRTrackingObjectUniqueId >= 0)
@@ -1634,15 +1735,16 @@ void PhysicsServerExample::renderScene()
 	{
 		
 		static int frameCount=0;
-		static btScalar prevTime = m_clock.getTimeSeconds();
+		//static btScalar prevTime = m_clock.getTimeSeconds();
 		frameCount++;
-		
+
+#if 0
+
 		static btScalar worseFps = 1000000;
 		int numFrames = 200;
 		static int count = 0;
 		count++;
 
-#if 0
 		if (0 == (count & 1))
 		{
 			btScalar curTime = m_clock.getTimeSeconds();
@@ -1973,7 +2075,7 @@ void	PhysicsServerExample::vrControllerButtonCallback(int controllerId, int butt
 
 	if (controllerId == gGraspingController && (button == 33))
 	{
-		gVRGripperClosed =state;
+		gVRGripperClosed =(state!=0);
 	}
 	else
 	{

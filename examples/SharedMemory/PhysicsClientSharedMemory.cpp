@@ -28,6 +28,7 @@ struct PhysicsClientSharedMemoryInternalData {
     SharedMemoryBlock* m_testBlock1;
    
 	btHashMap<btHashInt,BodyJointInfoCache*> m_bodyJointMap;
+	btHashMap<btHashInt,b3UserConstraint> m_userConstraintInfoMap;
 
     btAlignedObjectArray<TmpFloat3> m_debugLinesFrom;
     btAlignedObjectArray<TmpFloat3> m_debugLinesTo;
@@ -46,6 +47,8 @@ struct PhysicsClientSharedMemoryInternalData {
 	btAlignedObjectArray<b3RayHitInfo>	m_raycastHits;
 
     btAlignedObjectArray<int> m_bodyIdsRequestInfo;
+	btAlignedObjectArray<int> m_constraintIdsRequestInfo;
+
     SharedMemoryStatus m_tempBackupServerStatus;
     
     SharedMemoryStatus m_lastServerStatus;
@@ -62,10 +65,9 @@ struct PhysicsClientSharedMemoryInternalData {
         : m_sharedMemory(0),
 		  m_ownsSharedMemory(false),
           m_testBlock1(0),
-		  m_counter(0),
 		  m_cachedCameraPixelsWidth(0),
 		  m_cachedCameraPixelsHeight(0),
-		  
+		  m_counter(0),		  
           m_isConnected(false),
           m_waitingForServer(false),
           m_hasLastServerStatus(false),
@@ -139,6 +141,22 @@ bool PhysicsClientSharedMemory::getJointInfo(int bodyUniqueId, int jointIndex, b
     return false;
 }
 
+int PhysicsClientSharedMemory::getNumUserConstraints() const
+{
+    return m_data->m_userConstraintInfoMap.size();
+}
+
+int PhysicsClientSharedMemory::getUserConstraintInfo(int constraintUniqueId, struct b3UserConstraint& info) const
+{
+    b3UserConstraint* constraintPtr =m_data->m_userConstraintInfoMap[constraintUniqueId];
+    if (constraintPtr)
+    {
+        info = *constraintPtr;
+        return 1;
+    }
+    return 0;
+}
+
 PhysicsClientSharedMemory::PhysicsClientSharedMemory()
 
 {
@@ -157,6 +175,8 @@ PhysicsClientSharedMemory::~PhysicsClientSharedMemory() {
     if (m_data->m_isConnected) {
         disconnectSharedMemory();
     }
+	resetData();
+
 	if (m_data->m_ownsSharedMemory)
 	{
 	    delete m_data->m_sharedMemory;
@@ -164,6 +184,34 @@ PhysicsClientSharedMemory::~PhysicsClientSharedMemory() {
     delete m_data;
 }
 
+void PhysicsClientSharedMemory::resetData()
+{
+	m_data->m_debugLinesFrom.clear();
+	m_data->m_debugLinesTo.clear();
+	m_data->m_debugLinesColor.clear();
+	for (int i=0;i<m_data->m_bodyJointMap.size();i++)
+	{
+		BodyJointInfoCache** bodyJointsPtr = m_data->m_bodyJointMap.getAtIndex(i);
+		if (bodyJointsPtr && *bodyJointsPtr)
+		{
+			BodyJointInfoCache* bodyJoints = *bodyJointsPtr;
+			for (int j=0;j<bodyJoints->m_jointInfo.size();j++) {
+				if (bodyJoints->m_jointInfo[j].m_jointName)
+				{
+					free(bodyJoints->m_jointInfo[j].m_jointName);
+				}
+				if (bodyJoints->m_jointInfo[j].m_linkName)
+				{
+					free(bodyJoints->m_jointInfo[j].m_linkName);
+				}
+			}
+			delete (*bodyJointsPtr);
+		}
+	}
+	m_data->m_bodyJointMap.clear();
+	m_data->m_userConstraintInfoMap.clear();
+                
+}
 void PhysicsClientSharedMemory::setSharedMemoryKey(int key) { m_data->m_sharedMemoryKey = key; }
 
 
@@ -283,7 +331,7 @@ void PhysicsClientSharedMemory::processBodyJointInfo(int bodyUniqueId, const Sha
 }
 
 const SharedMemoryStatus* PhysicsClientSharedMemory::processServerStatus() {
-    SharedMemoryStatus* stat = 0;
+   // SharedMemoryStatus* stat = 0;
 
     if (!m_data->m_testBlock1) {
 		m_data->m_lastServerStatus.m_type = CMD_SHARED_MEMORY_NOT_INITIALIZED;
@@ -308,7 +356,7 @@ const SharedMemoryStatus* PhysicsClientSharedMemory::processServerStatus() {
         const SharedMemoryStatus& serverCmd = m_data->m_testBlock1->m_serverCommands[0];
         m_data->m_lastServerStatus = serverCmd;
 
-        EnumSharedMemoryServerStatus s = (EnumSharedMemoryServerStatus)serverCmd.m_type;
+ //       EnumSharedMemoryServerStatus s = (EnumSharedMemoryServerStatus)serverCmd.m_type;
         // consume the command
 
         switch (serverCmd.m_type) {
@@ -399,7 +447,72 @@ const SharedMemoryStatus* PhysicsClientSharedMemory::processServerStatus() {
                 
                 break;
             }
-            
+			case CMD_USER_CONSTRAINT_INFO_COMPLETED:
+			{
+				 int cid = serverCmd.m_userConstraintResultArgs.m_userConstraintUniqueId;
+				m_data->m_userConstraintInfoMap.insert(cid,serverCmd.m_userConstraintResultArgs);
+				break;
+			}
+			case CMD_USER_CONSTRAINT_COMPLETED:
+			{
+				int cid = serverCmd.m_userConstraintResultArgs.m_userConstraintUniqueId;
+				m_data->m_userConstraintInfoMap.insert(cid,serverCmd.m_userConstraintResultArgs);
+				break;
+			}
+			case CMD_REMOVE_USER_CONSTRAINT_COMPLETED:
+			{
+				int cid = serverCmd.m_userConstraintResultArgs.m_userConstraintUniqueId;
+				m_data->m_userConstraintInfoMap.remove(cid);
+				break;
+			}
+			case CMD_CHANGE_USER_CONSTRAINT_COMPLETED:
+			{
+				int cid = serverCmd.m_userConstraintResultArgs.m_userConstraintUniqueId;
+				b3UserConstraint* userConstraintPtr = m_data->m_userConstraintInfoMap[cid];
+				if (userConstraintPtr)
+				{
+					const b3UserConstraint* serverConstraint = &serverCmd.m_userConstraintResultArgs;
+					if (serverCmd.m_updateFlags & USER_CONSTRAINT_CHANGE_PIVOT_IN_B)
+					{
+							userConstraintPtr->m_childFrame[0] = serverConstraint->m_childFrame[0];
+							userConstraintPtr->m_childFrame[1] = serverConstraint->m_childFrame[1];
+							userConstraintPtr->m_childFrame[2] = serverConstraint->m_childFrame[2];
+					}
+					if (serverCmd.m_updateFlags & USER_CONSTRAINT_CHANGE_FRAME_ORN_IN_B)
+					{
+						userConstraintPtr->m_childFrame[3] = serverConstraint->m_childFrame[3];
+						userConstraintPtr->m_childFrame[4] = serverConstraint->m_childFrame[4];
+						userConstraintPtr->m_childFrame[5] = serverConstraint->m_childFrame[5];
+						userConstraintPtr->m_childFrame[6] = serverConstraint->m_childFrame[6];
+					}
+					if (serverCmd.m_updateFlags & USER_CONSTRAINT_CHANGE_MAX_FORCE)
+					{
+						userConstraintPtr->m_maxAppliedForce = serverConstraint->m_maxAppliedForce;
+					}
+				}
+				break;
+			}
+
+			case CMD_USER_CONSTRAINT_FAILED:
+			{
+				b3Warning("createConstraint failed");
+				break;
+			}
+			case CMD_REMOVE_USER_CONSTRAINT_FAILED:
+			{
+				b3Warning("removeConstraint failed");
+				break;
+			}
+			case CMD_CHANGE_USER_CONSTRAINT_FAILED:
+			{
+				b3Warning("changeConstraint failed");
+				break;
+			}
+			case CMD_ACTUAL_STATE_UPDATE_FAILED:
+			{
+				b3Warning("request actual state failed");
+				break;
+			}
             case CMD_BODY_INFO_COMPLETED:
             {
                 if (m_data->m_verboseOutput) {
@@ -498,30 +611,8 @@ const SharedMemoryStatus* PhysicsClientSharedMemory::processServerStatus() {
                 if (m_data->m_verboseOutput) {
                     b3Printf("CMD_RESET_SIMULATION_COMPLETED clean data\n");
                 }
-				m_data->m_debugLinesFrom.clear();
-				m_data->m_debugLinesTo.clear();
-				m_data->m_debugLinesColor.clear();
-                for (int i=0;i<m_data->m_bodyJointMap.size();i++)
-				{
-					BodyJointInfoCache** bodyJointsPtr = m_data->m_bodyJointMap.getAtIndex(i);
-					if (bodyJointsPtr && *bodyJointsPtr)
-					{
-						BodyJointInfoCache* bodyJoints = *bodyJointsPtr;
-						for (int j=0;j<bodyJoints->m_jointInfo.size();j++) {
-							if (bodyJoints->m_jointInfo[j].m_jointName)
-							{
-								free(bodyJoints->m_jointInfo[j].m_jointName);
-							}
-							if (bodyJoints->m_jointInfo[j].m_linkName)
-							{
-								free(bodyJoints->m_jointInfo[j].m_linkName);
-							}
-						}
-						delete (*bodyJointsPtr);
-					}
-				}
-				m_data->m_bodyJointMap.clear();
-                
+				resetData();
+
                 break;
             }
             case CMD_DEBUG_LINES_COMPLETED: {
@@ -793,6 +884,7 @@ const SharedMemoryStatus* PhysicsClientSharedMemory::processServerStatus() {
 				b3Warning("Save .bullet failed");
 				break;
 			}
+			case CMD_USER_DEBUG_DRAW_PARAMETER_COMPLETED:
 			case CMD_USER_DEBUG_DRAW_COMPLETED:
 			{
 				break;
@@ -802,13 +894,9 @@ const SharedMemoryStatus* PhysicsClientSharedMemory::processServerStatus() {
 				b3Warning("User debug draw failed");
 				break;
 			}
-			case CMD_USER_CONSTRAINT_COMPLETED:
+			
+			case CMD_SYNC_BODY_INFO_COMPLETED:
 			{
-				break;
-			}
-			case CMD_USER_CONSTRAINT_FAILED:
-			{
-				b3Warning("createConstraint failed");
 				break;
 			}
             default: {
@@ -830,8 +918,14 @@ const SharedMemoryStatus* PhysicsClientSharedMemory::processServerStatus() {
         }
 
 
-        if ((serverCmd.m_type == CMD_SDF_LOADING_COMPLETED) || (serverCmd.m_type == CMD_MJCF_LOADING_COMPLETED))
+        if ((serverCmd.m_type == CMD_SDF_LOADING_COMPLETED) || (serverCmd.m_type == CMD_MJCF_LOADING_COMPLETED) || (serverCmd.m_type == CMD_SYNC_BODY_INFO_COMPLETED))
         {
+			int numConstraints = serverCmd.m_sdfLoadedArgs.m_numUserConstraints;
+			for (int i=0;i<numConstraints;i++)
+			{
+				int constraintUid = serverCmd.m_sdfLoadedArgs.m_userConstraintUniqueIds[i];
+				m_data->m_constraintIdsRequestInfo.push_back(constraintUid);
+			}
             int numBodies = serverCmd.m_sdfLoadedArgs.m_numBodies;
             if (numBodies>0)
             {
@@ -854,6 +948,25 @@ const SharedMemoryStatus* PhysicsClientSharedMemory::processServerStatus() {
             }
         }
         
+		if (serverCmd.m_type == CMD_USER_CONSTRAINT_INFO_COMPLETED)
+		{
+			if (m_data->m_constraintIdsRequestInfo.size())
+			{
+				int cid = m_data->m_constraintIdsRequestInfo[m_data->m_constraintIdsRequestInfo.size()-1];
+				m_data->m_constraintIdsRequestInfo.pop_back();
+				SharedMemoryCommand& command = m_data->m_testBlock1->m_clientCommands[0];
+				command.m_type = CMD_USER_CONSTRAINT;
+				command.m_updateFlags = USER_CONSTRAINT_REQUEST_INFO;
+				command.m_userConstraintArguments.m_userConstraintUniqueId = cid;
+				submitClientCommand(command);
+				return 0;
+			} 
+			else
+			{
+	            m_data->m_lastServerStatus = m_data->m_tempBackupServerStatus;
+			}
+		}
+
         if (serverCmd.m_type == CMD_BODY_INFO_COMPLETED)
         {
             //are there any bodies left to be processed?
@@ -870,7 +983,20 @@ const SharedMemoryStatus* PhysicsClientSharedMemory::processServerStatus() {
                 return 0;
             } else
             {
-                m_data->m_lastServerStatus = m_data->m_tempBackupServerStatus;
+				if (m_data->m_constraintIdsRequestInfo.size())
+				{
+					int cid = m_data->m_constraintIdsRequestInfo[m_data->m_constraintIdsRequestInfo.size()-1];
+					m_data->m_constraintIdsRequestInfo.pop_back();
+					SharedMemoryCommand& command = m_data->m_testBlock1->m_clientCommands[0];
+					command.m_type = CMD_USER_CONSTRAINT;
+					command.m_updateFlags = USER_CONSTRAINT_REQUEST_INFO;
+					command.m_userConstraintArguments.m_userConstraintUniqueId = cid;
+					submitClientCommand(command);
+					return 0;
+				} else
+				{
+	                m_data->m_lastServerStatus = m_data->m_tempBackupServerStatus;
+				}
             }
         }
 
