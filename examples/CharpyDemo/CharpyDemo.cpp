@@ -35,6 +35,7 @@ target is to break objects using plasticity.
 #include "../plasticity/PlasticityExampleBrowser.h"
 #include "../plasticity/BulletKeyToGwen.h"
 #include "../plasticity/PlasticityTimeSeries.h"
+#include "../plasticity/EnergySum.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenUserInterface.h"
 #include "../ExampleBrowser/GwenGUISupport/gwenInternalData.h"
 
@@ -127,8 +128,8 @@ bool limitIfNeeded=initialLimitIfNeeded;
 bool initialUseCcd = false;
 bool useCcd = initialUseCcd;
 float energy = 0, pauseEnergy=0;
-float linearEnergySum,inertiaEnergySum,gravitationalEnergySum,elasticEnergySum;
-float maxEnergy;
+float maxEnergy, startEnergy;
+EnergySum *energySum=0;
 void updateEnergy();
 btDynamicsWorld* dw;
 btVector3 y_up(0.01, 1., 0.01);
@@ -1916,7 +1917,7 @@ public:
 		}
 		pts = (create ? new PlasticityTimeSeries() : tsArray[tsIndex++]);
 		if (create){
-			pts->sourceType = Custom;
+			pts->sourceType = Energy;
 			pts->title = "Energy";
 			pts->dof= 0;
 			pts->dataSourceLabels.push_back("total");
@@ -1924,6 +1925,7 @@ public:
 			pts->dataSourceLabels.push_back("inertia");
 			pts->dataSourceLabels.push_back("gravity");
 			pts->dataSourceLabels.push_back("elastic");
+			pts->dataSourceLabels.push_back("plastic");
 			tsArray.push_back(pts);
 		}
 		PlasticityTimeSeries::updateParameters
@@ -2039,8 +2041,7 @@ void	CharpyDemo::initPhysics()
 	}
 	stepCount = 0;
 	timeStep = setTimeStep;
-	energy = 0;
-	maxEnergy = energy;
+	startEnergy=maxEnergy = energy=0;
 	b3Printf("mode=%d startAngle=%f timeStep=%f", m_mode, startAngle, timeStep);
 	basePoint = new btVector3(w / 2, 0.2 + w / 2, 0);
 	m_collisionConfiguration = new btDefaultCollisionConfiguration();
@@ -2051,6 +2052,7 @@ void	CharpyDemo::initPhysics()
 		new btDiscreteDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collisionConfiguration);
 	m_dynamicsWorld = btWorld;
 	dw=m_dynamicsWorld;
+	energySum = new EnergySum(dw);
 	m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
 	tuneSolver();
 	// floor
@@ -2207,8 +2209,12 @@ void CharpyDemo::showMessage()
 	pData.clear();
 	int ci = sCount - 1; // constraint index for e.g. feedback in the middle
 	char buf[B_LEN*2];
-	sprintf_s(buf, B_LEN, "energy:max/current/loss %9.3g/%9.3g/%9.3g J", 
-		maxEnergy,energy,maxEnergy-energy);
+	sprintf_s(buf, B_LEN, "energy:max/current/change %9.3g/%9.3g/%9.3g J", 
+		maxEnergy,energy,(energy-startEnergy));
+	infoMsg(buf);
+	sprintf_s(buf, B_LEN, "gravity/elastic/plastic/kinetic %6.0f/%6.0f/%6.0f/%6.0f J",
+		energySum->gravitational, energySum->elastic, energySum->plastic, 
+		(energySum->linear + energySum->inertia));
 	infoMsg(buf);
 	btDiscreteDynamicsWorld *dw = m_dynamicsWorld;
 	bool headerDone = false;
@@ -2816,6 +2822,10 @@ void	CharpyDemo::exitPhysics()
 	m_collisionShapes.clear();
 	PlasticityTimeSeries::deleteTs(tsArray);
 
+	if (0 != energySum){
+		delete energySum;
+		energySum = 0;
+	}
 	delete m_dynamicsWorld;
 	m_dynamicsWorld=0;
 
@@ -2891,72 +2901,13 @@ float getElasticEnergy(btGeneric6DofSpring2Constraint *sc){
 	return energy;
 }
 void updateEnergy(){
-	linearEnergySum=inertiaEnergySum=gravitationalEnergySum=elasticEnergySum=energy = 0;
-	btVector3 gravity = dw->getGravity();
-	const btCollisionObjectArray objects = dw->getCollisionObjectArray();
-	for (int i = 0; i<objects.capacity(); i++)
-	{
-		const btCollisionObject* o = objects[i];
-		const btRigidBody* ro = btRigidBody::upcast(o);
-		btScalar iM = ro->getInvMass();
-		if (iM == 0){
-			continue;
-		}
-		btVector3 v = ro->getLinearVelocity();
-		btScalar m = 1 / iM;
-		float linearEnergy = 0.5*m*v.length2();
-		btVector3 com = ro->getCenterOfMassPosition();
-		float gravitationalEnergy = -m*gravity.dot(com);
-		const btVector3 rv = ro->getAngularVelocity();
-		const btVector3 iI = ro->getInvInertiaDiagLocal();
-		float inertiaEnergy = 0;
-		inertiaEnergy += getRotationEnergy(iI.getX(), rv.getX());
-		inertiaEnergy += getRotationEnergy(iI.getY(), rv.getY());
-		inertiaEnergy += getRotationEnergy(iI.getZ(), rv.getZ());
-		energy += linearEnergy;
-		energy += inertiaEnergy;
-		energy += gravitationalEnergy;
-		linearEnergySum += linearEnergy;
-		inertiaEnergySum += inertiaEnergy;
-		gravitationalEnergySum += gravitationalEnergy;
+	if (0 == energySum){
+		return;
 	}
-	int mode = charpyDemo->getMode();
-	for (int i = 0; i < tc.size(); i++){
-		if (!tc[i]->isEnabled()){
-			continue;
-		}
-		float elasticEnergy;
-		switch (mode){
-		case 1:
-		case 3:
-		case 5:
-		case 6:
-			continue;
-			break;
-		case 2:
-		{
-			btGeneric6DofSpringConstraint *sc =
-				dynamic_cast<btGeneric6DofSpringConstraint*>(tc[i]);
-			elasticEnergy = getElasticEnergy(sc);
-		}
-			break;
-		case 4:
-		{
-			btGeneric6DofSpring2Constraint *sc =
-				dynamic_cast<btGeneric6DofSpring2Constraint*>(tc[i]);
-			elasticEnergy = getElasticEnergy(sc);
-		}
-			break;
-		case 7:
-		case 8:
-		{
-			btElasticPlasticConstraint* epc = dynamic_cast<btElasticPlasticConstraint*>(tc[i]);
-			elasticEnergy = epc->getElasticEnergy();
-		}
-			break;
-		}
-		elasticEnergySum += elasticEnergy;
-		energy += elasticEnergy;
+	energySum->update();
+	energy = energySum->getTotal();
+	if (startEnergy == 0){
+		startEnergy = energy;
 	}
 	if (energy > maxEnergy){
 		maxEnergy = energy;
@@ -2995,14 +2946,15 @@ float CharpyDemo::tsCallback(PlasticityTimeSeries* pts){
 		return vec.m_floats[dof];
 	}
 		break;
-	case Custom:
+	case Energy:
 		switch (pts->dataSourceIndex){
 		case 0:
-			return energy;
-		case 1:	return -linearEnergySum;
-		case 2:	return -inertiaEnergySum;
-		case 3: return -gravitationalEnergySum;
-		case 4: return -elasticEnergySum;
+			return energySum->getTotal();
+		case 1:	return -energySum->linear;
+		case 2:	return -energySum->inertia;
+		case 3: return -energySum->gravitational;
+		case 4: return -energySum->elastic;
+		case 5: return -energySum->plastic;
 		}
 	default:
 		assert(false);

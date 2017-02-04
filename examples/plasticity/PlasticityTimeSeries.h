@@ -11,7 +11,7 @@ Simo Nikula, 2017
 #include "btBulletDynamicsCommon.h"
 #include "../RenderingExamples/TimeSeriesCanvas.h"
 #include "../CharpyDemo/btElasticPlasticConstraint.h"
-enum SourceType { ElasticPlasticConstraint, RigidBody, Custom };
+enum SourceType { ElasticPlasticConstraint, RigidBody, Energy, Custom };
 class PlasticityTimeSeries
 {
 public:
