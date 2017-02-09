@@ -884,7 +884,6 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			either implementation is not correct or theory is not valid
 			*/
 			bool useBuddha = false;
-			btScalar error = limot->m_currentPosition - limot->m_equilibriumPoint;
 			calculateJacobi(limot,transA,transB,info,srow,ax1,rotational,rotAllowed);
 			btScalar kd = limot->m_springDamping;
 			btScalar ks = limot->m_springStiffness;
@@ -897,7 +896,17 @@ int bt6DofElasticPlastic2Constraint::get_limit_motor_info2(
 			// bcc
 			bool usePlasticity=false;
 			bool frequencyLimited = false;
-			btScalar vel = rotational ? angVelA.dot(ax1) - angVelB.dot(ax1) : linVelA.dot(ax1) - linVelB.dot(ax1);
+			btScalar vel = rotational ? 
+				angVelA.dot(ax1) - angVelB.dot(ax1) : 
+				linVelA.dot(ax1) - linVelB.dot(ax1);
+			btScalar error=limot->m_currentPosition - limot->m_equilibriumPoint;
+			/** 
+			* for testing if expected error at end of step could be used
+			*/
+			bool useVelInError = false;
+			if (useVelInError){
+				error += vel*dt;
+			}
 			btScalar m;
 			btScalar afdt;
 			btScalar f;
