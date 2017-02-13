@@ -61,22 +61,6 @@ SimpleCamera::~SimpleCamera()
 	delete m_data;
 }
 
-
-void SimpleCamera::setFrustumZFar(float far){
-	m_data->m_frustumZFar = far;
-	update();
-}
-void SimpleCamera::setFrustumZNear(float near){
-	m_data->m_frustumZNear = near;
-	update();
-}
-float SimpleCamera::getFrustumZFar(){
-	return m_data->m_frustumZFar;
-}
-float SimpleCamera::getFrustumZNear(){
-	return m_data->m_frustumZNear;
-}
-
 void	SimpleCamera::setVRCamera(const float viewMat[16], const float projectionMatrix[16])
 {
 	m_data->m_enableVR = true;
@@ -398,4 +382,14 @@ float	SimpleCamera::getCameraPitch() const
 float	SimpleCamera::getAspectRatio() const
 {
 	return m_data->m_aspect;
+}
+
+float SimpleCamera::getCameraFrustumFar() const
+{
+    return m_data->m_frustumZFar;
+}
+
+float SimpleCamera::getCameraFrustumNear() const
+{
+    return m_data->m_frustumZNear;
 }

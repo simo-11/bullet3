@@ -2387,8 +2387,6 @@ void CharpyDemo::setViewMode(int viewMode){
 		PlasticityExampleBrowser::getRenderer()->getActiveCamera();
 	camera->setCameraDistance(btScalar(2.5));
 	camera->setCameraUpVector(0,1,0);
-	camera->setFrustumZNear(0.01);
-	camera->setFrustumZFar(10);
 	if (viewMode == 1){
 		camera->setCameraTargetPosition(0, 0.2, 0);
 	}

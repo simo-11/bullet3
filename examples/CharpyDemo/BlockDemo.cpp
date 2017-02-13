@@ -185,8 +185,6 @@ public:
 		m_guiHelper->resetCamera(dist, pitch, yaw, targetPos[0], targetPos[1], targetPos[2]);
 		CommonCameraInterface* camera =
 			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
-		camera->setFrustumZNear(0.01);
-		camera->setFrustumZFar(1000);
 	}
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 	btClock idleClock;
