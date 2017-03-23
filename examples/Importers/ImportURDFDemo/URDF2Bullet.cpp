@@ -71,7 +71,7 @@ struct URDF2BulletCachedData
     }
 
 
-    void registerMultiBody( int urdfLinkIndex, class btMultiBody* body, const btTransform& worldTransform, btScalar mass, const btVector3& localInertiaDiagonal, const class btCompoundShape* compound, const btTransform& localInertialFrame)
+    void registerMultiBody( int urdfLinkIndex, class btMultiBody* body, const btTransform& worldTransform, btScalar mass, const btVector3& localInertiaDiagonal, const class btCollisionShape* compound, const btTransform& localInertialFrame)
     {
         m_urdfLinkLocalInertialFrames[urdfLinkIndex] = localInertialFrame;
     }
@@ -81,7 +81,7 @@ struct URDF2BulletCachedData
         return m_urdfLink2rigidBodies[urdfLinkIndex];
     }
 
-    void registerRigidBody( int urdfLinkIndex, class btRigidBody* body, const btTransform& worldTransform, btScalar mass, const btVector3& localInertiaDiagonal, const class btCompoundShape* compound, const btTransform& localInertialFrame)
+    void registerRigidBody( int urdfLinkIndex, class btRigidBody* body, const btTransform& worldTransform, btScalar mass, const btVector3& localInertiaDiagonal, const class btCollisionShape* compound, const btTransform& localInertialFrame)
     {
         btAssert(m_urdfLink2rigidBodies[urdfLinkIndex]==0);
 
@@ -165,6 +165,10 @@ void processContactParameters(const URDFLinkContactInfo& contactInfo, btCollisio
 	if ((contactInfo.m_flags & URDF_CONTACT_HAS_STIFFNESS_DAMPING) != 0)
 	{
 		col->setContactStiffnessAndDamping(contactInfo.m_contactStiffness, contactInfo.m_contactDamping);
+	}
+	if ((contactInfo.m_flags & URDF_CONTACT_HAS_FRICTION_ANCHOR) != 0)
+	{
+		col->setCollisionFlags(col->getCollisionFlags() | btCollisionObject::CF_HAS_FRICTION_ANCHOR);
 	}
 }
 
@@ -250,7 +254,12 @@ void ConvertURDF2BulletInternal(
     
     
 
-    btCompoundShape* compoundShape = u2b.convertLinkCollisionShapes(urdfLinkIndex,pathPrefix,localInertialFrame);
+    btCompoundShape* tmpShape = u2b.convertLinkCollisionShapes(urdfLinkIndex,pathPrefix,localInertialFrame);
+	btCollisionShape* compoundShape = tmpShape;
+	if (tmpShape->getNumChildShapes() == 1 && tmpShape->getChildTransform(0)==btTransform::getIdentity())
+	{
+		compoundShape = tmpShape->getChildShape(0);
+	}
 	
 	int graphicsIndex = u2b.convertLinkVisualShapes(urdfLinkIndex,pathPrefix,localInertialFrame);
 	
@@ -306,7 +315,7 @@ void ConvertURDF2BulletInternal(
             
 
 
-            //untested: u2b.convertLinkVisualShapes2(urdfLinkIndex,pathPrefix,localInertialFrame,body);
+            //untested: u2b.convertLinkVisualShapes2(linkIndex,urdfLinkIndex,pathPrefix,localInertialFrame,body);
         } else
         {
             if (cache.m_bulletMultiBody==0)
@@ -464,8 +473,8 @@ void ConvertURDF2BulletInternal(
                 btVector4 color = selectColor2();//(0.0,0.0,0.5);
 				u2b.getLinkColor(urdfLinkIndex,color);
                 creation.createCollisionObjectGraphicsInstance(urdfLinkIndex,col,color);
-                
-                u2b.convertLinkVisualShapes2(urdfLinkIndex,pathPrefix,localInertialFrame,col, u2b.getBodyUniqueId());
+
+                u2b.convertLinkVisualShapes2(mbLinkIndex, urdfLinkIndex, pathPrefix, localInertialFrame,col, u2b.getBodyUniqueId());
 
 				URDFLinkContactInfo contactInfo;
 				u2b.getLinkContactInfo(urdfLinkIndex,contactInfo);
@@ -482,7 +491,7 @@ void ConvertURDF2BulletInternal(
             }
         } else
         {
-            //u2b.convertLinkVisualShapes2(urdfLinkIndex,pathPrefix,localInertialFrame,compoundShape);
+            //u2b.convertLinkVisualShapes2(urdfLinkIndex,urdfIndex,pathPrefix,localInertialFrame,compoundShape);
         }
     }
 
