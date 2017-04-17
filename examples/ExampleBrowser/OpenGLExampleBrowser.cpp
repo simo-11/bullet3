@@ -201,96 +201,99 @@ void MyKeyboardCallback(int key, int state)
 	//if (handled)
 	//	return;
 
-	if (key=='a' && state)
+	//if (s_window && s_window->isModifierKeyPressed(B3G_CONTROL))
 	{
-		gDebugDrawFlags ^= btIDebugDraw::DBG_DrawAabb;
-	}
-	if (key=='c' && state)
-	{
-		gDebugDrawFlags ^= btIDebugDraw::DBG_DrawContactPoints;
-	}
-	if (key == 'd' && state)
-	{
-		gDebugDrawFlags ^= btIDebugDraw::DBG_NoDeactivation;
-		gDisableDeactivation = ((gDebugDrawFlags & btIDebugDraw::DBG_NoDeactivation) != 0);
-	}
-	if (key == 'k' && state)
-	{
-		gDebugDrawFlags ^= btIDebugDraw::DBG_DrawConstraints;
-	}
-
-	if (key=='l' && state)
-	{
-		gDebugDrawFlags ^= btIDebugDraw::DBG_DrawConstraintLimits;
-	}
-	if (key=='w' && state)
-	{
-		visualWireframe=!visualWireframe;
-		gDebugDrawFlags ^= btIDebugDraw::DBG_DrawWireframe;
-	}
-
-
-	if (key=='v' && state)
-	{
-		renderVisualGeometry = !renderVisualGeometry;
-	}
-	if (key=='g' && state)
-	{
-		renderGrid = !renderGrid;
-		renderGui = !renderGui;
-	}
-
-
-	if (key=='i' && state)
-	{
-		pauseSimulation = !pauseSimulation;
-	}
-	if (key == 'o' && state)
-	{
-		singleStepSimulation = true;
-	}
-
-	if (key=='p')
-	{
-#ifndef BT_NO_PROFILE
-		if (state)
+		if (key=='a' && state)
 		{
-			b3ChromeUtilsStartTimings();
-
-		} else
-		{
-			b3ChromeUtilsStopTimingsAndWriteJsonFile();
+			gDebugDrawFlags ^= btIDebugDraw::DBG_DrawAabb;
 		}
-#endif //BT_NO_PROFILE
-	}
-
-#ifndef NO_OPENGL3
-	if (key=='s' && state)
-	{
-		useShadowMap=!useShadowMap;
-	}
-#endif
-	if (key==B3G_F1)
-	{
-		static int count=0;
-		if (state)
+		if (key=='c' && state)
 		{
-			b3Printf("F1 pressed %d", count++);
+			gDebugDrawFlags ^= btIDebugDraw::DBG_DrawContactPoints;
+		}
+		if (key == 'd' && state)
+		{
+			gDebugDrawFlags ^= btIDebugDraw::DBG_NoDeactivation;
+			gDisableDeactivation = ((gDebugDrawFlags & btIDebugDraw::DBG_NoDeactivation) != 0);
+		}
+		if (key == 'k' && state)
+		{
+			gDebugDrawFlags ^= btIDebugDraw::DBG_DrawConstraints;
+		}
 
-			if (gPngFileName)
+		if (key=='l' && state)
+		{
+			gDebugDrawFlags ^= btIDebugDraw::DBG_DrawConstraintLimits;
+		}
+		if (key=='w' && state)
+		{
+			visualWireframe=!visualWireframe;
+			gDebugDrawFlags ^= btIDebugDraw::DBG_DrawWireframe;
+		}
+
+
+		if (key=='v' && state)
+		{
+			renderVisualGeometry = !renderVisualGeometry;
+		}
+		if (key=='g' && state)
+		{
+			renderGrid = !renderGrid;
+			renderGui = !renderGui;
+		}
+
+
+		if (key=='i' && state)
+		{
+			pauseSimulation = !pauseSimulation;
+		}
+		if (key == 'o' && state)
+		{
+			singleStepSimulation = true;
+		}
+
+		if (key=='p')
+		{
+	#ifndef BT_NO_PROFILE
+			if (state)
 			{
-				b3Printf("disable image dump");
+				b3ChromeUtilsStartTimings();
 
-				gPngFileName=0;
 			} else
 			{
-				gPngFileName = gAllExamples->getExampleName(sCurrentDemoIndex);
-				b3Printf("enable image dump %s",gPngFileName);
-
+				b3ChromeUtilsStopTimingsAndWriteJsonFile();
 			}
-		} else 
+	#endif //BT_NO_PROFILE
+		}
+
+	#ifndef NO_OPENGL3
+		if (key=='s' && state)
 		{
-			b3Printf("F1 released %d",count++);
+			useShadowMap=!useShadowMap;
+		}
+	#endif
+		if (key==B3G_F1)
+		{
+			static int count=0;
+			if (state)
+			{
+				b3Printf("F1 pressed %d", count++);
+
+				if (gPngFileName)
+				{
+					b3Printf("disable image dump");
+
+					gPngFileName=0;
+				} else
+				{
+					gPngFileName = gAllExamples->getExampleName(sCurrentDemoIndex);
+					b3Printf("enable image dump %s",gPngFileName);
+
+				}
+			} else 
+			{
+				b3Printf("F1 released %d",count++);
+			}
 		}
 	}
 	if (key==B3G_ESCAPE && s_window)
@@ -495,10 +498,10 @@ static void saveCurrentSettings(int currentEntry,const char* startFileName)
 		{
 			fprintf(f,"--enable_experimental_opencl\n");
 		}
-		if (sUseOpenGL2 )
-		{
-			fprintf(f,"--opengl2\n");
-		}
+//		if (sUseOpenGL2 )
+//		{
+//			fprintf(f,"--opengl2\n");
+//		}
 
 		fclose(f);
 	}
@@ -871,6 +874,16 @@ bool OpenGLExampleBrowser::init(int argc, char* argv[])
 	
 	int width = 1024;
     int height=768;
+
+	if (args.CheckCmdLineFlag("width"))
+	{
+		args.GetCmdLineArgument("width",width );
+	}
+	if (args.CheckCmdLineFlag("height"))
+	{
+		args.GetCmdLineArgument("height",height);
+	}
+
 #ifndef NO_OPENGL3
     SimpleOpenGL3App* simpleApp=0;
 	sUseOpenGL2 =args.CheckCmdLineFlag("opengl2");
@@ -1237,8 +1250,8 @@ void OpenGLExampleBrowser::update(float deltaTime)
 			if (renderGrid)
             {
                 BT_PROFILE("Draw Grid");
-                glPolygonOffset(3.0, 3);
-                glEnable(GL_POLYGON_OFFSET_FILL);
+                //glPolygonOffset(3.0, 3);
+                //glEnable(GL_POLYGON_OFFSET_FILL);
                 s_app->drawGrid(dg);
                 
             }

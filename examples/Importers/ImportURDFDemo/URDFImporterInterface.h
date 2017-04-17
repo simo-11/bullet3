@@ -15,7 +15,6 @@ public:
 
 	virtual ~URDFImporterInterface() {}
 	
- 
     virtual bool loadURDF(const char* fileName, bool forceFixedBase = false)=0;
 
     virtual bool loadSDF(const char* fileName, bool forceFixedBase = false) { return false;}
@@ -27,6 +26,13 @@ public:
     
     ///pure virtual interfaces, precondition is a valid linkIndex (you can assert/terminate if the linkIndex is out of range)
     virtual std::string getLinkName(int linkIndex) const =0;
+
+	//various derived class in internal source code break with new pure virtual methods, so provide some default implementation
+	virtual std::string getBodyName() const
+	{
+		return "";
+	}
+    
 	/// optional method to provide the link color. return true if the color is available and copied into colorRGBA, return false otherwise
 	virtual bool getLinkColor(int linkIndex, btVector4& colorRGBA) const { return false;}
 
@@ -43,6 +49,14 @@ public:
     virtual void getLinkChildIndices(int urdfLinkIndex, btAlignedObjectArray<int>& childLinkIndices) const =0;
     
     virtual bool getJointInfo(int urdfLinkIndex, btTransform& parent2joint, btTransform& linkTransformInWorld, btVector3& jointAxisInJointSpace, int& jointType, btScalar& jointLowerLimit, btScalar& jointUpperLimit, btScalar& jointDamping, btScalar& jointFriction) const =0;
+
+	virtual bool getJointInfo2(int urdfLinkIndex, btTransform& parent2joint, btTransform& linkTransformInWorld, btVector3& jointAxisInJointSpace, int& jointType, btScalar& jointLowerLimit, btScalar& jointUpperLimit, btScalar& jointDamping, btScalar& jointFriction, btScalar& jointMaxForce, btScalar& jointMaxVelocity) const 
+	{
+		//backwards compatibility for custom file importers
+		jointMaxForce = 0;
+		jointMaxVelocity = 0;
+		return getJointInfo(urdfLinkIndex, parent2joint, linkTransformInWorld, jointAxisInJointSpace, jointType, jointLowerLimit, jointUpperLimit, jointDamping, jointFriction);
+	};
     
     virtual bool getRootTransformInWorld(btTransform& rootTransformInWorld) const =0;
     

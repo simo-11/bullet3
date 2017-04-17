@@ -403,7 +403,7 @@ bool UrdfParser::parseGeometry(UrdfGeometry& geom, TiXmlElement* g, ErrorLogger*
 	  }
 		geom.m_hasFromTo = false;
 		geom.m_capsuleRadius = urdfLexicalCast<double>(shape->Attribute("radius"));
-		geom.m_capsuleHalfHeight = urdfLexicalCast<double>(shape->Attribute("length"));
+		geom.m_capsuleHeight = urdfLexicalCast<double>(shape->Attribute("length"));
 		
 	}
 	else if (type_name == "capsule")
@@ -417,7 +417,7 @@ bool UrdfParser::parseGeometry(UrdfGeometry& geom, TiXmlElement* g, ErrorLogger*
 		}
 		geom.m_hasFromTo = false;
 		geom.m_capsuleRadius = urdfLexicalCast<double>(shape->Attribute("radius"));
-		geom.m_capsuleHalfHeight = btScalar(0.5)*urdfLexicalCast<double>(shape->Attribute("length"));
+		geom.m_capsuleHeight = urdfLexicalCast<double>(shape->Attribute("length"));
 	}
 	else if (type_name == "mesh")
 	{
@@ -620,6 +620,15 @@ bool UrdfParser::parseVisual(UrdfModel& model, UrdfVisual& visual, TiXmlElement*
               if (parseMaterial(visual.m_geometry.m_localMaterial, mat,logger))
               {
                   UrdfMaterial* matPtr = new UrdfMaterial(visual.m_geometry.m_localMaterial);
+				  
+				  UrdfMaterial** oldMatPtrPtr = model.m_materials[matPtr->m_name.c_str()];
+				  if (oldMatPtrPtr)
+				  {
+					  UrdfMaterial* oldMatPtr = *oldMatPtrPtr;
+					  model.m_materials.remove(matPtr->m_name.c_str());
+					  if (oldMatPtr)
+						  delete oldMatPtr;
+				  }
                   model.m_materials.insert(matPtr->m_name.c_str(),matPtr);
                   visual.m_geometry.m_hasLocalMaterial = true;
               }

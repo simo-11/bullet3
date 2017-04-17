@@ -269,6 +269,11 @@ std::string BulletURDFImporter::getLinkName(int linkIndex) const
 	}
 	return "";
 }
+
+std::string BulletURDFImporter::getBodyName() const
+{
+	return m_data->m_urdfParser.getModel().m_name;
+}
     
 std::string BulletURDFImporter::getJointName(int linkIndex) const
 {
@@ -360,12 +365,14 @@ void  BulletURDFImporter::getMassAndInertia(int linkIndex, btScalar& mass,btVect
 	}
 }
     
-bool BulletURDFImporter::getJointInfo(int urdfLinkIndex, btTransform& parent2joint, btTransform& linkTransformInWorld, btVector3& jointAxisInJointSpace, int& jointType, btScalar& jointLowerLimit, btScalar& jointUpperLimit, btScalar& jointDamping, btScalar& jointFriction) const
+bool BulletURDFImporter::getJointInfo2(int urdfLinkIndex, btTransform& parent2joint, btTransform& linkTransformInWorld, btVector3& jointAxisInJointSpace, int& jointType, btScalar& jointLowerLimit, btScalar& jointUpperLimit, btScalar& jointDamping, btScalar& jointFriction, btScalar& jointMaxForce, btScalar& jointMaxVelocity) const 
 {
     jointLowerLimit = 0.f;
     jointUpperLimit = 0.f;
 	jointDamping = 0.f;
 	jointFriction = 0.f;
+	jointMaxForce = 0.f;
+	jointMaxVelocity = 0.f;
 
 	UrdfLink* const* linkPtr = m_data->m_urdfParser.getModel().m_links.getAtIndex(urdfLinkIndex);
 	btAssert(linkPtr);
@@ -384,7 +391,8 @@ bool BulletURDFImporter::getJointInfo(int urdfLinkIndex, btTransform& parent2joi
 			jointUpperLimit = pj->m_upperLimit;
 			jointDamping = pj->m_jointDamping;
 			jointFriction = pj->m_jointFriction;
-
+			jointMaxForce = pj->m_effortLimit;
+			jointMaxVelocity = pj->m_velocityLimit;
 			return true;
 		} else
 		{
@@ -394,6 +402,14 @@ bool BulletURDFImporter::getJointInfo(int urdfLinkIndex, btTransform& parent2joi
 	}
 	
 	return false;
+
+};
+
+bool BulletURDFImporter::getJointInfo(int urdfLinkIndex, btTransform& parent2joint, btTransform& linkTransformInWorld, btVector3& jointAxisInJointSpace, int& jointType, btScalar& jointLowerLimit, btScalar& jointUpperLimit, btScalar& jointDamping, btScalar& jointFriction) const
+{
+	btScalar jointMaxForce;
+	btScalar jointMaxVelocity;
+	return getJointInfo2(urdfLinkIndex, parent2joint, linkTransformInWorld, jointAxisInJointSpace, jointType, jointLowerLimit, jointUpperLimit, jointDamping, jointFriction,jointMaxForce,jointMaxVelocity); 
 	
 }
 
@@ -405,6 +421,7 @@ bool BulletURDFImporter::getRootTransformInWorld(btTransform& rootTransformInWor
 
 static btCollisionShape* createConvexHullFromShapes(std::vector<tinyobj::shape_t>& shapes, const btVector3& geomScale)
 {
+	B3_PROFILE("createConvexHullFromShapes");
 	btCompoundShape* compound = new btCompoundShape();
 	compound->setMargin(gUrdfDefaultCollisionMargin);
 
@@ -553,9 +570,9 @@ btCollisionShape* convertURDFToCollisionShape(const UrdfCollision* collision, co
 		case URDF_GEOM_CAPSULE:
         {
 			btScalar radius = collision->m_geometry.m_capsuleRadius;
-			btScalar height = btScalar(2.f)*collision->m_geometry.m_capsuleHalfHeight;
+			btScalar height = collision->m_geometry.m_capsuleHeight;
 			btCapsuleShapeZ* capsuleShape = new btCapsuleShapeZ(radius,height);
-            shape = capsuleShape;
+			shape = capsuleShape;
 			shape ->setMargin(gUrdfDefaultCollisionMargin);
 			break;
 		}
@@ -563,7 +580,7 @@ btCollisionShape* convertURDFToCollisionShape(const UrdfCollision* collision, co
         case URDF_GEOM_CYLINDER:
         {
 			btScalar cylRadius = collision->m_geometry.m_capsuleRadius;
-			btScalar cylLength = collision->m_geometry.m_capsuleHalfHeight;
+			btScalar cylLength = collision->m_geometry.m_capsuleHeight;
 			
             btAlignedObjectArray<btVector3> vertices;
             //int numVerts = sizeof(barrel_vertices)/(9*sizeof(float));
@@ -617,6 +634,7 @@ btCollisionShape* convertURDFToCollisionShape(const UrdfCollision* collision, co
 		case UrdfGeometry::FILE_OBJ:
 			if (collision->m_flags & URDF_FORCE_CONCAVE_TRIMESH)
 			{
+				
 				glmesh = LoadMeshFromObj(collision->m_geometry.m_meshFileName.c_str(), 0);
 			}
 			else
@@ -728,19 +746,23 @@ upAxisMat.setIdentity();
 		{
 			BT_PROFILE("convert trimesh");
 			btTriangleMesh* meshInterface = new btTriangleMesh();
-			for (int i=0; i<glmesh->m_numIndices/3; i++)
 			{
-				float* v0 = glmesh->m_vertices->at(glmesh->m_indices->at(i*3)).xyzw;
-				float* v1 = glmesh->m_vertices->at(glmesh->m_indices->at(i*3+1)).xyzw;
-				float* v2 = glmesh->m_vertices->at(glmesh->m_indices->at(i*3+2)).xyzw;
-				meshInterface->addTriangle(
-					btVector3(v0[0],v0[1],v0[2]),
-					btVector3(v1[0],v1[1],v1[2]),
-					btVector3(v2[0],v2[1],v2[2]));
+				BT_PROFILE("convert vertices");
+
+				for (int i=0; i<glmesh->m_numIndices/3; i++)
+				{
+					const btVector3& v0 = convertedVerts[glmesh->m_indices->at(i*3)];
+					const btVector3& v1 = convertedVerts[glmesh->m_indices->at(i*3+1)];
+					const btVector3& v2 = convertedVerts[glmesh->m_indices->at(i*3+2)];
+					meshInterface->addTriangle(v0,v1,v2);
+				}
 			}
-			btBvhTriangleMeshShape* trimesh = new btBvhTriangleMeshShape(meshInterface,true,true);
-			trimesh->setLocalScaling(collision->m_geometry.m_meshScale);
-			shape = trimesh;
+			{
+				BT_PROFILE("create btBvhTriangleMeshShape");
+				btBvhTriangleMeshShape* trimesh = new btBvhTriangleMeshShape(meshInterface,true,true);
+				//trimesh->setLocalScaling(collision->m_geometry.m_meshScale);
+				shape = trimesh;
+			}
 
 		} else
 		{
@@ -749,7 +771,7 @@ upAxisMat.setIdentity();
 			convexHull->optimizeConvexHull();
 			//convexHull->initializePolyhedralFeatures();
 			convexHull->setMargin(gUrdfDefaultCollisionMargin);
-			convexHull->setLocalScaling(collision->m_geometry.m_meshScale);
+			//convexHull->setLocalScaling(collision->m_geometry.m_meshScale);
 			shape = convexHull;
 		}
 
@@ -786,7 +808,7 @@ static void convertURDFToVisualShapeInternal(const UrdfVisual* visual, const cha
 			{
 
 				btScalar cylRadius = visual->m_geometry.m_capsuleRadius;
-				btScalar cylLength = visual->m_geometry.m_capsuleHalfHeight;
+				btScalar cylLength = visual->m_geometry.m_capsuleHeight;
 				
 				btVector3 vert(cylRadius*btSin(SIMD_2_PI*(float(i) / numSteps)), cylRadius*btCos(SIMD_2_PI*(float(i) / numSteps)), cylLength / 2.);
 				vertices.push_back(vert);
@@ -945,9 +967,15 @@ static void convertURDFToVisualShapeInternal(const UrdfVisual* visual, const cha
 			}
 			break;
 		}
-
+		case URDF_GEOM_PLANE:
+		{
+			b3Warning("No default visual for URDF_GEOM_PLANE");
+			break;
+		}
 		default:
+		{
 			b3Warning("Error: unknown visual geometry type %i\n", visual->m_geometry.m_type);
+		}
 	}
 
 	//if we have a convex, tesselate into localVertices/localIndices

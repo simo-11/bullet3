@@ -4,7 +4,7 @@
 #define SHARED_MEMORY_KEY 12347
 ///increase the SHARED_MEMORY_MAGIC_NUMBER whenever incompatible changes are made in the structures
 ///my convention is year/month/day/rev
-#define SHARED_MEMORY_MAGIC_NUMBER 201703010
+#define SHARED_MEMORY_MAGIC_NUMBER 201703024
 
 enum EnumSharedMemoryClientCommand
 {
@@ -54,6 +54,7 @@ enum EnumSharedMemoryClientCommand
 	CMD_STATE_LOGGING,
     CMD_CONFIGURE_OPENGL_VISUALIZER,
 	CMD_REQUEST_KEYBOARD_EVENTS_DATA,
+	CMD_REQUEST_OPENGL_VISUALIZER_CAMERA,
     //don't go beyond this command!
     CMD_MAX_CLIENT_COMMANDS,
     
@@ -133,6 +134,8 @@ enum EnumSharedMemoryServerStatus
 		CMD_STATE_LOGGING_FAILED,
 		CMD_REQUEST_KEYBOARD_EVENTS_DATA_COMPLETED,
 		CMD_REQUEST_KEYBOARD_EVENTS_DATA_FAILED,
+		CMD_REQUEST_OPENGL_VISUALIZER_CAMERA_FAILED,
+		CMD_REQUEST_OPENGL_VISUALIZER_CAMERA_COMPLETED,
         //don't go beyond 'CMD_MAX_SERVER_COMMANDS!
         CMD_MAX_SERVER_COMMANDS
 };
@@ -175,9 +178,13 @@ struct b3JointInfo
         int m_flags;
 		double m_jointDamping;
 		double m_jointFriction;
-    double m_parentFrame[7]; // position and orientation (quaternion)
-    double m_childFrame[7]; // ^^^
-    double m_jointAxis[3]; // joint axis in parent local frame
+		double m_jointLowerLimit;
+		double m_jointUpperLimit;
+		double m_jointMaxForce;
+		double m_jointMaxVelocity;
+		double m_parentFrame[7]; // position and orientation (quaternion)
+		double m_childFrame[7]; // ^^^
+		double m_jointAxis[3]; // joint axis in parent local frame
 };
 
 struct b3UserConstraint
@@ -197,6 +204,7 @@ struct b3UserConstraint
 struct b3BodyInfo
 {
 	const char* m_baseName;
+	const char* m_bodyName; // for btRigidBody, it does not have a base, but can still have a body name from urdf
 };
 
 
@@ -243,17 +251,36 @@ struct b3CameraImageData
 	const int* m_segmentationMaskValues;//m_pixelWidth*m_pixelHeight ints
 };
 
+struct b3OpenGLVisualizerCameraInfo
+{
+    int m_width;
+    int m_height;
+	float m_viewMatrix[16];
+	float m_projectionMatrix[16];
+	
+	float m_camUp[3];
+	float m_camForward[3];
+
+	float m_horizontal[3];
+	float m_vertical[3];
+};
 
 enum b3VREventType
 {
 	VR_CONTROLLER_MOVE_EVENT=1,
-	VR_CONTROLLER_BUTTON_EVENT
+	VR_CONTROLLER_BUTTON_EVENT=2,
+	VR_HMD_MOVE_EVENT=4,
+	VR_GENERIC_TRACKER_MOVE_EVENT=8,
 };
 
 #define MAX_VR_BUTTONS 64
 #define MAX_VR_CONTROLLERS 8
-#define MAX_RAY_HITS 128
+
+#define MAX_RAY_INTERSECTION_BATCH_SIZE 1024
+#define MAX_RAY_HITS MAX_RAY_INTERSECTION_BATCH_SIZE
 #define MAX_KEYBOARD_EVENTS 256
+
+
 
 enum b3VRButtonInfo
 {
@@ -262,9 +289,19 @@ enum b3VRButtonInfo
 	eButtonReleased = 4,
 };
 
+
+
+enum eVRDeviceTypeEnums
+{
+	VR_DEVICE_CONTROLLER=1,
+	VR_DEVICE_HMD=2,
+	VR_DEVICE_GENERIC_TRACKER=4,
+};
+
 struct b3VRControllerEvent
 {
 	int m_controllerId;//valid for VR_CONTROLLER_MOVE_EVENT and VR_CONTROLLER_BUTTON_EVENT
+	int m_deviceType;
 	int m_numMoveEvents;
 	int m_numButtonEvents;
 	
@@ -280,6 +317,11 @@ struct b3VREventsData
 {
 	int m_numControllerEvents;
 	struct b3VRControllerEvent* m_controllerEvents;
+	int m_numHmdEvents;
+	struct b3VRMoveEvent* m_hmdEvents;
+
+	int  m_numGenericTrackerEvents;
+	struct b3VRMoveEvent* m_genericTrackerEvents;
 };
 
 
@@ -332,6 +374,7 @@ enum  b3StateLoggingType
 	STATE_LOGGING_VR_CONTROLLERS = 2,
 	STATE_LOGGING_VIDEO_MP4 = 3,
 	STATE_LOGGING_COMMANDS = 4,
+	STATE_LOGGING_CONTACT_POINTS = 5,
 };
 
 
@@ -377,6 +420,11 @@ struct b3VisualShapeInformation
 	struct b3VisualShapeData* m_visualShapeData;
 };
 
+enum eLinkStateFlags
+{
+	ACTUAL_STATE_COMPUTE_LINKVELOCITY=1
+};
+
 ///b3LinkState provides extra information such as the Cartesian world coordinates
 ///center of mass (COM) of the link, relative to the world reference frame.
 ///Orientation is a quaternion x,y,z,w
@@ -394,6 +442,10 @@ struct b3LinkState
 	///world position and orientation of the (URDF) link frame
 	double m_worldLinkFramePosition[3];
     double m_worldLinkFrameOrientation[4];
+
+	double m_worldLinearVelocity[3]; //only valid when ACTUAL_STATE_COMPUTE_LINKVELOCITY is set (b3RequestActualStateCommandComputeLinkVelocity)
+	double m_worldAngularVelocity[3]; //only valid when ACTUAL_STATE_COMPUTE_LINKVELOCITY is set (b3RequestActualStateCommandComputeLinkVelocity)
+
 };
 
 //todo: discuss and decide about control mode and combinations
@@ -432,6 +484,12 @@ enum eCONNECT_METHOD {
   eCONNECT_SHARED_MEMORY = 3,
   eCONNECT_UDP = 4,
   eCONNECT_TCP = 5,
+};
+
+enum eURDF_Flags
+{
+	URDF_USE_INERTIA_FROM_FILE=2,//sync with URDF2Bullet.h 'ConvertURDFFlags'
+	URDF_USE_SELF_COLLISION=8,//see CUF_USE_SELF_COLLISION
 };
 
 #endif//SHARED_MEMORY_PUBLIC_H

@@ -41,6 +41,8 @@ public:
     
     ///pure virtual interfaces, precondition is a valid linkIndex (you can assert/terminate if the linkIndex is out of range)
     virtual std::string getLinkName(int linkIndex) const;
+    
+	virtual std::string getBodyName() const;
 
 	/// optional method to provide the link color. return true if the color is available and copied into colorRGBA, return false otherwise
 	virtual bool getLinkColor(int linkIndex, btVector4& colorRGBA) const;
@@ -60,7 +62,8 @@ public:
     virtual void getLinkChildIndices(int urdfLinkIndex, btAlignedObjectArray<int>& childLinkIndices) const;
     
     virtual bool getJointInfo(int urdfLinkIndex, btTransform& parent2joint, btTransform& linkTransformInWorld, btVector3& jointAxisInJointSpace, int& jointType, btScalar& jointLowerLimit, btScalar& jointUpperLimit, btScalar& jointDamping, btScalar& jointFriction) const;
-    
+	virtual bool getJointInfo2(int urdfLinkIndex, btTransform& parent2joint, btTransform& linkTransformInWorld, btVector3& jointAxisInJointSpace, int& jointType, btScalar& jointLowerLimit, btScalar& jointUpperLimit, btScalar& jointDamping, btScalar& jointFriction, btScalar& jointMaxForce, btScalar& jointMaxVelocity) const;
+
     virtual bool getRootTransformInWorld(btTransform& rootTransformInWorld) const;
     
 	virtual int convertLinkVisualShapes(int linkIndex, const char* pathPrefix, const btTransform& inertialFrame) const;

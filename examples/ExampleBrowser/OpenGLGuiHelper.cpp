@@ -10,8 +10,6 @@
 
 #include "../OpenGLWindow/SimpleCamera.h"
 #include "../OpenGLWindow/GLInstanceGraphicsShape.h"
-//backwards compatibility
-#include "GL_ShapeDrawer.h"
 
 
 #define BT_LINE_BATCH_SIZE 512
@@ -147,7 +145,6 @@ struct OpenGLGuiHelperInternalData
 {
 	struct CommonGraphicsApp* m_glApp;
 	class MyDebugDrawer* m_debugDraw;
-	GL_ShapeDrawer* m_gl2ShapeDrawer;
 	bool m_vrMode;
 	int m_vrSkipShadowPass;
 
@@ -178,23 +175,22 @@ OpenGLGuiHelper::OpenGLGuiHelper(CommonGraphicsApp* glApp, bool useOpenGL2)
 	m_data->m_glApp = glApp;
 	m_data->m_debugDraw = 0;
 	
-	m_data->m_gl2ShapeDrawer = 0;
-
-	if (useOpenGL2)
-	{
-		m_data->m_gl2ShapeDrawer = new GL_ShapeDrawer();
-
-	}
+	
 }
 
 OpenGLGuiHelper::~OpenGLGuiHelper()
 {
 	delete m_data->m_debugDraw;
-	delete m_data->m_gl2ShapeDrawer;
+
 	delete m_data;
 }
 
 struct CommonRenderInterface* OpenGLGuiHelper::getRenderInterface()
+{
+	return m_data->m_glApp->m_renderer;
+}
+
+const struct CommonRenderInterface* OpenGLGuiHelper::getRenderInterface() const
 {
 	return m_data->m_glApp->m_renderer;
 }
@@ -337,17 +333,17 @@ void OpenGLGuiHelper::render(const btDiscreteDynamicsWorld* rbWorld)
 		m_data->m_glApp->m_renderer->renderScene();	
 	}
 	
-	//backwards compatible OpenGL2 rendering
-
-	if (m_data->m_gl2ShapeDrawer && rbWorld)
-	{
-		m_data->m_gl2ShapeDrawer->enableTexture(true);
-		m_data->m_gl2ShapeDrawer->drawScene(rbWorld,true, m_data->m_glApp->getUpAxis());
-	}
+	
 }
 void OpenGLGuiHelper::createPhysicsDebugDrawer(btDiscreteDynamicsWorld* rbWorld)
 {
 	btAssert(rbWorld);
+	if (m_data->m_debugDraw)
+	{
+		delete m_data->m_debugDraw;
+		m_data->m_debugDraw = 0;
+	}
+
     m_data->m_debugDraw = new MyDebugDrawer(m_data->m_glApp);
     rbWorld->setDebugDrawer(m_data->m_debugDraw );
 
@@ -399,6 +395,57 @@ void OpenGLGuiHelper::resetCamera(float camDist, float pitch, float yaw, float c
 		getRenderInterface()->getActiveCamera()->setCameraYaw(yaw);
 		getRenderInterface()->getActiveCamera()->setCameraTargetPosition(camPosX,camPosY,camPosZ);
 	}
+}
+
+bool OpenGLGuiHelper::getCameraInfo(int* width, int* height, float viewMatrix[16], float projectionMatrix[16], float camUp[3], float camForward[3],float hor[3], float vert[3] ) const
+{
+	if (getRenderInterface() && getRenderInterface()->getActiveCamera())
+	{
+		*width = m_data->m_glApp->m_window->getWidth()*m_data->m_glApp->m_window->getRetinaScale();
+		*height = m_data->m_glApp->m_window->getHeight()*m_data->m_glApp->m_window->getRetinaScale();
+		getRenderInterface()->getActiveCamera()->getCameraViewMatrix(viewMatrix);
+		getRenderInterface()->getActiveCamera()->getCameraProjectionMatrix(projectionMatrix);
+		getRenderInterface()->getActiveCamera()->getCameraUpVector(camUp);
+		getRenderInterface()->getActiveCamera()->getCameraForwardVector(camForward);
+		float frustumNearPlane =     getRenderInterface()->getActiveCamera()->getCameraFrustumNear();
+		float frustumFarPlane =     getRenderInterface()->getActiveCamera()->getCameraFrustumFar();
+
+		float top = 1.f;
+		float bottom = -1.f;
+		float tanFov = (top-bottom)*0.5f / frustumNearPlane;
+		float fov = btScalar(2.0) * btAtan(tanFov);
+		btVector3 camPos,camTarget;
+		getRenderInterface()->getActiveCamera()->getCameraPosition(camPos);
+		getRenderInterface()->getActiveCamera()->getCameraTargetPosition(camTarget);
+		btVector3	rayFrom = camPos;
+		btVector3 rayForward = (camTarget-camPos);
+		rayForward.normalize();
+		float farPlane = 10000.f;
+		rayForward*= farPlane;
+
+		btVector3 rightOffset;
+		btVector3 cameraUp=btVector3(camUp[0],camUp[1],camUp[2]);
+		btVector3 vertical = cameraUp;
+		btVector3 hori;
+		hori = rayForward.cross(vertical);
+		hori.normalize();
+		vertical = hori.cross(rayForward);
+		vertical.normalize();
+		float tanfov = tanf(0.5f*fov);
+		hori *= 2.f * farPlane * tanfov;
+		vertical *= 2.f * farPlane * tanfov;
+		btScalar aspect =  *width / *height;
+		hori*=aspect;
+		//compute 'hor' and 'vert' vectors, useful to generate raytracer rays
+		hor[0] = hori[0];
+		hor[1] = hori[1];
+		hor[2] = hori[2];
+		vert[0] = vertical[0];
+		vert[1] = vertical[1];
+		vert[2] = vertical[2];
+		return true;
+	}
+	return false;
 }
 
 
