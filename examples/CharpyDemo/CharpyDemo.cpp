@@ -379,7 +379,7 @@ void mode8callback(btDynamicsWorld *world, btScalar timeStep) {
 /*
 Limited formatter
 */
-#define UIF_SIZE 10
+#define UIF_SIZE 20
 std::string uif(btScalar value, const char* fmt = "%.4f")
 {
 	char buffer[UIF_SIZE];
@@ -711,7 +711,7 @@ public:
 	void addE(){
 		addLabel("E [GPa]");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = uif(E / 1e9,"%.3f");
+		string text = uif(E / 1e9,"%.1f");
 		gc->SetText(text);
 		gc->SetToolTip("Young's modulus");
 		gc->SetPos(gxi, gy);
@@ -722,7 +722,7 @@ public:
 	void addfy(){
 		addLabel("fy [MPa]");
 		Gwen::Controls::TextBoxNumeric* gc = new Gwen::Controls::TextBoxNumeric(pPage);
-		string text = uif(fy / 1e6,"%.3f");
+		string text = uif(fy / 1e6,"%.1f");
 		gc->SetText(text);
 		gc->SetToolTip("yield stress");
 		gc->SetPos(gxi, gy);
@@ -1399,16 +1399,17 @@ public:
 			btScalar w1 = fy*b*h*h / 4;
 			btScalar w2(fy*b*b*h / 4);
 			sc->setStiffness(0, k1,limitIfNeeded);
-			sc->setLimit(0, 0, 0);
+			sc->setLimit(0, 1, -1);
 			sc->setStiffness(1, k2, limitIfNeeded);
-			sc->setLimit(1, 0, 0);
+			sc->setLimit(1, 1, -1);
 			sc->setStiffness(2, k0, limitIfNeeded);
-			sc->setLimit(2, 0, 0);
+			sc->setLimit(2, 1, -1);
 			sc->setStiffness(3, w2, limitIfNeeded);
-			sc->setLimit(3, 0, 0);
+			sc->setLimit(3, 1, -1);
 			sc->setStiffness(4, w1, limitIfNeeded);
+			sc->setLimit(4, 1, -1);
 			sc->setStiffness(5, (w1 + w2) / 2, limitIfNeeded);
-			sc->setLimit(5, 0, 0);
+			sc->setLimit(5, 1, -1);
 			dw->addConstraint(sc, true);
 			for (int i = 0; i < 6; i++)
 			{
@@ -2472,6 +2473,9 @@ bool CharpyDemo::ctrlKeyboardCallback(int key){
 	case B3G_F4:
 		setSolverType(lemkeSolverType);
 		return true;
+	}
+	key -= 96;
+	switch (key){
 	case 1: // a
 		if (shiftActive){
 			scalePlasticity(1.2);
@@ -2571,7 +2575,7 @@ bool CharpyDemo::ctrlKeyboardCallback(int key){
 		return false;
 	case 26: //z
 		return false;
-	case '{':
+	case -41: // {
 		if (setDisplayWait < 10 && setDisplayWait>0){
 			setDisplayWait--;
 		}
@@ -2580,7 +2584,7 @@ bool CharpyDemo::ctrlKeyboardCallback(int key){
 		}
 		displayWait = setDisplayWait;
 		break;
-	case '}':
+	case -48: // }
 		if (setDisplayWait < 10){
 			setDisplayWait++;
 		}
