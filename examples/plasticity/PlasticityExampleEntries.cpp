@@ -112,6 +112,12 @@ static ExampleEntry gDefaultExamples[]=
 	ExampleEntry(2, "Charpy:ElasticPlastic2",
 	"two objects and 6DofElasticPlastic2Constraint",
 	CharpyDemoCreateFunc, 8),
+	ExampleEntry(2, "elastic-spring2",
+	"10 objects using spring2Constraints, \
+SI solver, \
+no hammer, \
+elastic deflection, l=4 m",
+	CharpyDemoCreateFunc, 902030507),
 	ExampleEntry(2, "elastic",
 	"10 objects using 6DofElasticPlasticConstraint, \
 SI solver, \
@@ -120,10 +126,10 @@ elastic deflection, l=4 m",
 	CharpyDemoCreateFunc, 2030507),
 	ExampleEntry(2, "elastic2",
 	"10 objects using 6DofElasticPlastic2Constraint, \
-MLCP solver, \
+SI solver, \
 no hammer, \
 elastic deflection, l=4 m",
-	CharpyDemoCreateFunc, 102030208),
+	CharpyDemoCreateFunc, 2030208),
 	ExampleEntry(2, "elastic2 - unstable",
 	"4 objects using 6DofElasticPlastic2Constraint, \
 SI solver, timestep=0.2, 100 subSteps, \

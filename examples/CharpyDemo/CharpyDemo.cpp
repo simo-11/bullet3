@@ -480,6 +480,9 @@ public:
 				setTimeStep = 0.0002;
 				maxSimSubSteps = 100;
 				break;
+			case 9:
+				fy = E;
+				break;
 			}
 		}
 
@@ -1637,6 +1640,12 @@ public:
 					btScalar((i == 0 ? -1 : 1)*zTrans));
 				tr.setOrigin(pos);
 				btRigidBody* rb = localCreateRigidBody(0.f, tr, shape);
+				if (hammerThickness <= 0.){
+					// support on both sides
+					pos.setX(pos.x()+w + 2 * shape->getHalfExtentsWithMargin().x());
+					tr.setOrigin(pos);
+					localCreateRigidBody(0.f, tr, shape);
+				}
 				tuneRestitution(rb);
 			}
 		}
