@@ -38,9 +38,10 @@ bool BulletKeyToGwen::keyboardCallback(Gwen::Controls::Canvas* canvas, int key, 
 	if (chr){
 		return canvas->InputKey(chr, bDown);
 	}
-	else{
+	else if(bDown){
 		chr = (Gwen::UnicodeChar) key;
 		return canvas->InputCharacter(chr);
 	}
+	return false;
 }
 
