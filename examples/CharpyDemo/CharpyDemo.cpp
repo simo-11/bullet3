@@ -71,14 +71,14 @@ btScalar currentTime, realTime /** while in stepSimulation */;
 const char *modes[] =
 {
 	"None",
-	"single rigid object",
-	"two objects and springConstraints",
-	"two objects and constraints with zero limits",
-	"two objects and spring2Constraints",
-	"two objects and hingeConstraint",
-	"two objects and plasticHingeConstraint",
-	"two objects and 6DofElasticPlasticConstraint",
-	"two objects and 6DofElasticPlastic2Constraint",
+	"single rigid body",
+	"bodies and springConstraints",
+	"bodies and constraints with zero limits",
+	"bodies and spring2Constraints",
+	"bodies and hingeConstraint",
+	"bodies and plasticHingeConstraint",
+	"bodies and 6DofElasticPlasticConstraint",
+	"bodies and 6DofElasticPlastic2Constraint",
 };
 const char *viewModes[] =
 {
@@ -1938,6 +1938,7 @@ public:
 			pts->dataSourceLabels.push_back("plastic");
 			tsArray.push_back(pts);
 		}
+		pts->maxValue = pauseEnergy;
 		PlasticityTimeSeries::updateParameters
 			(tsArray, ticksPerSeconds, CharpyDemo::tsCallback);
 	}

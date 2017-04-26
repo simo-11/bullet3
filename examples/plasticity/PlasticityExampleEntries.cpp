@@ -117,7 +117,7 @@ static ExampleEntry gDefaultExamples[]=
 SI solver, \
 no hammer, \
 elastic deflection, l=4 m",
-	CharpyDemoCreateFunc, 902030507),
+	CharpyDemoCreateFunc, 902030504),
 	ExampleEntry(2, "elastic",
 	"10 objects using 6DofElasticPlasticConstraint, \
 SI solver, \
