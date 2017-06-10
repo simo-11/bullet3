@@ -1,0 +1,293 @@
+% Simo.Nikula@gmail.com
+\def\mytitle{Breakable Elastic-plastic Constraint for Rigid Body Simulation}
+\def\lut{Lappeenranta University of Technology}
+\def\
+
+\documentclass{jcgt}
+
+\setciteauthor{Simo Nikula, Aki Mikkola and Timo Björk}
+\setcitetitle{\\mytitle}
+
+% Mark submissions with the date of submission using the following line:
+\submitted{\today}
+
+% Once an article is accepted accepted, switch to the following line and comment the preceding one. The editor will supply the argument values.
+%\accepted{2014-02-07}{2014-02-07}{2014-02-07}{Editor Name}{3}{1}{1}{1}{2014}
+%\seturl{http://jcgt.org/published/0003/01/01/}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{document}
+\newcommand{\cbullet}[0]{Bullet Physics}
+\title{\\mytitle}
+
+\author
+       {SIMO NIKULA {\upshape and} AKI MIKKOLA {\upshape and} TIMO BJÖRK\\\lut
+       }
+
+\teaser{
+  \includegraphics[width=2in]{figs/demolisher-done.PNG}
+  \label{fig:teaser}
+  \caption{Adding ductile breakable constraint to popular open source physics engines \cbullet\ and Box2D
+allows more realistic simulation of many scenarios.
+}
+}
+
+\maketitle
+\thispagestyle{firstpagestyle}
+
+\begin{abstract}
+\small
+This paper introduces simple and efficient method to simulate ductile fracture in existing 
+impulse-based physics engines.
+Method is based on technique of splitting bodies to multiple pieces and joining them with constraints.
+Constraints are described using body dimensions and material parameters.
+
+Sample programs with source code are made available to allow developers already using \cbullet\
+and Box2D to add plasticity into their simulations.
+\end{abstract}
+
+
+%-------------------------------------------------------------------------
+\section{Introduction}
+\label{sec:introduction}
+
+Theory for handling of plasticity in computer graphics has been presented already 1988, \cite{cg1988}. 
+Recent paper by Jones  provides extensive listing of related work during past decades, \cite{Jones:2016:EPD}.
+
+In impulse-based phycis engines most breakable scenarios  are implemented by destructing various bodies based on collision
+or impulse exceeding predefined limit.
+Nevertheless, breaking of steel or reinforced concrete structures using this approach 
+is not appropriate if the simulation is to look realistic. 
+
+More realistic simulation of ductile destructable bodies is possible but in many cases it would require selecting of new physics engine.
+
+\paragraph{Our approach}
+This study will introduce an approach to account for plastic deformation in impulse-based phycis engines.   
+Presented methodology does not require significant software development efforts from
+game vendors and is thus easily adoptable. 
+In the introduced method, plastic deformation takes place if the force or moment exceeds a predefined 
+limit, deformation absorbs energy and joint breaks if plastic capacity is exceeded. 
+Maximum forces and moments are estimated based on the plastic section modulus.
+Joint breaking is based on summing plastic deformation and comparing it to a
+predefined material based limit. The elastic part of deformation is modelled by employing 
+modification of an existing constraints.
+
+\paragraph{Limitations}
+Forces are calculated by dividing impulse by timestep and maximum impulse is calculated
+by multiplying maximum force by timestep. 
+This means that simulation of quick interactions requires small timestep.
+This limitation is not introduced by this approach but is build in feature of impulse-based simulation.
+
+Multiaxial stress is not taken into account. 
+
+
+\section{Description of plasticity in the framework of physics engines}
+
+In this work simulation of breaking of bodies made of ductile material is made more realistic 
+by splitting the rigid body
+to multiple bodies that are connected by energy absorbing joints.
+
+\paragraph{Stress-strain behaviour of ductile steel}
+A typical engineering stress-strain curve of ductile steel is shown in Figure \ref{fig:sscurve}.
+
+\begin{figure}
+\centering
+\begin{tikzpicture}
+\coordinate (Y) at (1,4);
+\draw[->] (0,0) -- (6,0) node[right] {\large{$\epsilon$}};
+\draw[->] (0,0) -- (0,5) node[above] {\large{$\sigma$}};
+\draw(0,0) -- (Y) -- (2,4) .. controls (5,5) .. (6,4);
+\draw[dashed](0,4) -- (Y);
+\node at (-0.2,4) [align=right] {$f_y$};
+\draw(0.25,1) -- (0.5,1) -- (0.5,2);
+\node at (0.75,1.5) {$E$};
+\node at (0.8,2.5) [anchor=west] {$\sigma = E \epsilon$ if $\sigma \le f_y$};
+\end{tikzpicture}
+\caption{Engineering stress-strain curve of ductile steel (not to scale).}
+\label{fig:sscurve}
+\end{figure}
+
+In Figure \ref{fig:sscurve}, $\sigma$ is stress, $E$ is Youngs modulus and $f_y$ is yield stress.
+Engineering stress and strain mean that original dimensions are used in stress calculation,
+\cite{dowling}.
+%\citet[p.~108]{dowling}.
+The stress-strain curve is not drawn to scale as elastic strain could not be seen as it is typically 
+0.001 to 0.005 and fracture strain can be 100 times larger.
+In practice this means that elastic displacement due to axial forces is usually not visible.
+Visible elastic displacement is usually due to bending.
+
+In this work, an elastic-fully plastic material model is used in most scenarios.
+Having elastic part allows elastic displacements for slender structures. 
+Elastic material behavior is ignored in approach introduced in this work if
+the deformation is related to a higher frequency
+than integration stability would allow.
+It should be noted that geometry
+of bodies is not updated during analysis and thus engineering stress-strain properties are used.
+
+In this work, strain hardening is taken into account by assuming that plastic volume in bending
+expands, 
+\cite{dowling}.
+%\citet[p.~672]{dowling}.
+Material that starts to yield first is hardened and as a result of which yielding moves.
+
+The difference between the elastic and plastic section modulus is depicted in Figure \ref{fig:wp}.
+
+\begin{figure}[htb!]
+\centering
+\begin{tikzpicture}
+\coordinate (S) at (2.5,5);
+\draw (0,5) -- (4,5) ;
+\draw (0,0) -- (4,0) ;
+\draw (2,0) -- (2,5) ;
+\draw (1.5,0) -- (S); 
+\node[above] at (S) [align=center] {\large{$\sigma<f_y$}};
+\node[anchor=west] at (3,3) {
+\begin{tabular}{l}
+Under elastic load\\
+stress increases\\
+linearly from zero\\
+at neutral axis to\\
+maximum value at \\
+surface of body
+\end{tabular}
+};
+\end{tikzpicture}
+\hspace{1cm}
+\begin{tikzpicture}
+\coordinate (S) at (3,5);
+\draw (0,5) -- (4,5) ;
+\draw (0,0) -- (4,0) ;
+\draw (2,0) -- (2,5) ;
+\draw (1,0) -- (1,2.5) -- (3,2.5) -- (S); 
+\node[above] at (S) [align=center] {\large{$\sigma=f_y$}};
+\node[anchor=west] at (3,3) {
+\begin{tabular}{l}
+Under fully plastic load\\
+stress is at yield\\
+level over full\\
+cross section
+\end{tabular}
+};
+\end{tikzpicture}
+\caption{Axial stress distribution over a cross section for bending under elastic and fully plastic loads.}
+\label{fig:wp}
+\end{figure}
+
+As shown in Figure \ref{fig:wp}, if stress is below yield limit $f_y$, stress and strain are linear within the material.
+If cross section is fully plastic, stress is assumed to be at yield level over the whole cross section such that 
+the plastic section modulus is higher than the elastic section modulus.
+
+\paragraph{Plastic capacities}
+In this work, plasticity is handled by defining maximum forces using plastic capacities, which are defined below.
+
+Maximum force acting in a direction of $\vec{r}_{anc}^{\,i} $
+is product of area and yield stress as follows:
+
+\begin{equation} \label{eq:fN}
+N_{max}= \int_A f_y.
+\end{equation}
+
+Maximum forces acting perpendicular to $\vec{r}_{anc}^{\,i} $
+are a product of area and shear yield stress $\tau_y$ as follows:
+\begin{equation} \label{eq:fQ}
+Q_{max}= \int_A \tau_y.
+\end{equation}
+
+Maximum moments acting around the axis perpendicular to $\vec{r}_{anc}^{\,i} $
+are integrals of the perpdendicular distance 
+and yield stress $f_y$ as given for the moment around the $x$-axis 
+and moment around the $z$-axis, respectively:
+
+\begin{equation} \label{eq:Mx}
+M_{max}^x= \int_A z f_y,
+\end{equation}
+
+\begin{equation} \label{eq:Mz}
+M_{max}^z= \int_A x f_y.
+\end{equation}
+
+Maximum moment around $\vec{r}_{anc}^{\,i} $
+is an integral of distance $d$ from the joint point
+and shear yield stress $\tau_y$ as: 
+
+\begin{equation} \label{eq:My}
+M_{max}^y= \int_A d \tau_y.
+\end{equation}
+
+Maximum forces and moments for a
+rectangular section with width $b$ and height $h$ using constant yield stress
+are given in Table \ref{tab:maxForces}.
+Yield shear stress is assumed to be $ 0.5\, f_y$ using the Tresca yield critetion.
+If the von Mises yield criterion is used 0.5 is replaced by 0.58 ($1/\sqrt{3}$), \cite{dowling}.
+% p. 262, p. 268
+These are not exact values in a multiaxial stress state but they
+should be acceptable in most gaming scenarios.
+
+\begin {table}
+\tbl {Maximum forces and moments for 
+rectangular section with width $b$ and height $h$ using constant yield stress $f_y$}{
+\begin{tabular}{| c| c|}
+\hline
+{\bf Direction} & {\bf Maximum value}  \\ \hline
+maximum shear force & $0.5\, b\, h f_y$ \\ \hline
+maximum normal force & $b\, h\, f_y$  \\ \hline
+maximum bending moment in direction of $h$& $0.25\, b\, h^2 \, f_y$  \\ \hline
+maximum bending moment in direction of $b$ & $0.25\, b^2\, h\, f_y$  \\ \hline
+maximum torque & $ \approx 0.19\, b\, h\, \frac{b\, + h}{2} f_y$  \\ \hline
+\end{tabular}}
+\label{tab:maxForces} 
+\end {table}
+
+For torque there is a closed form solution only for
+circular cross sections.
+Given approximation is 
+best suited for cases where $b$ and $h$ are similar.
+Better approximation for any given $b$ and $h$ can be obtained 
+by integrating distance from the center of the joint over cross section and
+multiplying it with the yield shear stress e.g. using Octave, \cite{octave}.
+An example of calculation of the maximum moment  around $\vec{r}_{anc}^{\,i} $
+is shown in Figure \ref{fig:octave-mp}.
+
+\lstset{language=octave}
+\begin{lstlisting}[caption={Calculation of maximum moment  around $\vec{r}_{anc}^{\,i} $ using Octave.}, 
+label={lst:octave-mp}, float]
+b=0.01; h=0.01; fy=200e6;
+wpy=fy/2*dblquad(@(x,z)...
+ sqrt(x.*x+z.*z),-b/2,b/2,-h/2,h/2)
+38.2
+\end{lstlisting}
+
+\paragraph{Joint breaking}
+
+
+\section{Implementation for Box2D}
+
+\section{Implementation for \cbullet\}
+
+\small
+\bibliographystyle{jcgt}
+\bibliography{paper}
+
+\section*{Index of Supplemental Materials}
+
+\section*{Author Contact Information}
+
+\hspace{-2mm}\begin{tabular}{p{0.5\textwidth}p{0.5\textwidth}}
+Simo Nikula\newline
+\href{mailto:Simo.Nikula@gmail.com}{Simo.Nikula@gmail.com}
+&
+Aki Mikkola\newline
+\href{mailto:Aki.Mikkola@lut.fi}{Aki.Mikkola@lut.fi}
+&
+Timo Björk\newline
+\href{mailto:Timo.Bjork@lut.fi}{Timo.Bjork@lut.fi}
+
+\end{tabular}
+
+
+\afterdoc
+
+\end{document}
