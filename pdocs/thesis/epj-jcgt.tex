@@ -1,19 +1,22 @@
 % Simo.Nikula@gmail.com
 \def\mytitle{Breakable Elastic-plastic Constraint for Rigid Body Simulation}
 \def\lut{Lappeenranta University of Technology}
-\def\
 
 \documentclass{jcgt}
-
+\usepackage{tikz}
+\usepackage{verbatim}
+\usepackage[utf8]{inputenc}
+\usetikzlibrary{arrows}
+\usetikzlibrary{arrows.meta}
 \setciteauthor{Simo Nikula, Aki Mikkola and Timo Björk}
-\setcitetitle{\\mytitle}
+\setcitetitle{\mytitle}
 
 % Mark submissions with the date of submission using the following line:
-\submitted{\today}
+%\submitted{\today}
 
 % Once an article is accepted accepted, switch to the following line and comment the preceding one. The editor will supply the argument values.
-%\accepted{2014-02-07}{2014-02-07}{2014-02-07}{Editor Name}{3}{1}{1}{1}{2014}
-%\seturl{http://jcgt.org/published/0003/01/01/}
+\accepted{2014-02-07}{2014-02-07}{2014-02-07}{Editor Name}{3}{1}{1}{1}{2014}
+\seturl{http://jcgt.org/published/0003/01/01/}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -21,18 +24,16 @@
 
 \begin{document}
 \newcommand{\cbullet}[0]{Bullet Physics}
-\title{\\mytitle}
+\title{Breakable Elastic-plastic Constraint for\\Rigid Body Simulation}
 
 \author
-       {SIMO NIKULA {\upshape and} AKI MIKKOLA {\upshape and} TIMO BJÖRK\\\lut
+       {Simo Nikula  Aki Mikkola Timo Björk\\\lut
        }
 
 \teaser{
-  \includegraphics[width=2in]{figs/demolisher-done.PNG}
+  \includegraphics[width=5cm]{figs/demolisher-done}
   \label{fig:teaser}
-  \caption{Adding ductile breakable constraint to popular open source physics engines \cbullet\ and Box2D
-allows more realistic simulation of many scenarios.
-}
+  \caption{Adding ductile breakable constraint to popular open source physics engines \cbullet\ and Box2D allows more realistic simulation of many scenarios.}
 }
 
 \maketitle
@@ -48,6 +49,7 @@ Constraints are described using body dimensions and material parameters.
 Sample programs with source code are made available to allow developers already using \cbullet\
 and Box2D to add plasticity into their simulations.
 \end{abstract}
+
 
 
 %-------------------------------------------------------------------------
@@ -80,9 +82,9 @@ Forces are calculated by dividing impulse by timestep and maximum impulse is cal
 by multiplying maximum force by timestep. 
 This means that simulation of quick interactions requires small timestep.
 This limitation is not introduced by this approach but is build in feature of impulse-based simulation.
-
-Multiaxial stress is not taken into account. 
-
+Bending moment - normal force interactions and multiaxial stress are not taken into account. 
+Basically these limitations just state that results from these simulations cannot not be used
+for structural analysis.
 
 \section{Description of plasticity in the framework of physics engines}
 
@@ -92,6 +94,7 @@ to multiple bodies that are connected by energy absorbing joints.
 
 \paragraph{Stress-strain behaviour of ductile steel}
 A typical engineering stress-strain curve of ductile steel is shown in Figure \ref{fig:sscurve}.
+
 
 \begin{figure}
 \centering
@@ -132,7 +135,7 @@ expands,
 \cite{dowling}.
 %\citet[p.~672]{dowling}.
 Material that starts to yield first is hardened and as a result of which yielding moves.
-
+%
 The difference between the elastic and plastic section modulus is depicted in Figure \ref{fig:wp}.
 
 \begin{figure}[htb!]
@@ -227,8 +230,8 @@ These are not exact values in a multiaxial stress state but they
 should be acceptable in most gaming scenarios.
 
 \begin {table}
-\tbl {Maximum forces and moments for 
-rectangular section with width $b$ and height $h$ using constant yield stress $f_y$}{
+\small
+\begin{center}
 \begin{tabular}{| c| c|}
 \hline
 {\bf Direction} & {\bf Maximum value}  \\ \hline
@@ -237,7 +240,10 @@ maximum normal force & $b\, h\, f_y$  \\ \hline
 maximum bending moment in direction of $h$& $0.25\, b\, h^2 \, f_y$  \\ \hline
 maximum bending moment in direction of $b$ & $0.25\, b^2\, h\, f_y$  \\ \hline
 maximum torque & $ \approx 0.19\, b\, h\, \frac{b\, + h}{2} f_y$  \\ \hline
-\end{tabular}}
+\end{tabular}
+\end{center}
+\caption{Maximum forces and moments for 
+rectangular section with width $b$ and height $h$ using constant yield stress $f_y$}
 \label{tab:maxForces} 
 \end {table}
 
@@ -260,22 +266,23 @@ wpy=fy/2*dblquad(@(x,z)...
 38.2
 \end{lstlisting}
 
+
 \paragraph{Joint breaking}
 
 
 \section{Implementation for Box2D}
 
-\section{Implementation for \cbullet\}
+\section{Implementation for \cbullet}
 
 \small
 \bibliographystyle{jcgt}
-\bibliography{paper}
+\bibliography{ref}
 
 \section*{Index of Supplemental Materials}
 
 \section*{Author Contact Information}
 
-\hspace{-2mm}\begin{tabular}{p{0.5\textwidth}p{0.5\textwidth}}
+\hspace{-2mm}\begin{tabular}{p{0.3\textwidth}p{0.3\textwidth}p{0.3\textwidth}}
 Simo Nikula\newline
 \href{mailto:Simo.Nikula@gmail.com}{Simo.Nikula@gmail.com}
 &
@@ -284,7 +291,6 @@ Aki Mikkola\newline
 &
 Timo Björk\newline
 \href{mailto:Timo.Bjork@lut.fi}{Timo.Bjork@lut.fi}
-
 \end{tabular}
 
 
