@@ -1,4 +1,3 @@
 rem build plasticity extensions
-..\pbin\premake4  vs2013
-mkdir vs2013\cache
-vs2013\0_BulletPlasticity.sln
+..\pbin\premake5  vs2017
+vs2017\0_Bullet-EP.sln

@@ -38,7 +38,6 @@ http://gimpact.sf.net
 */
 
 
-#define _CRT_SECURE_NO_WARNINGS
 #include "bt6DofElasticPlastic2Constraint.h"
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 #include "LinearMath/btTransformUtil.h"

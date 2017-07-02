@@ -2,63 +2,107 @@
 -- https://premake.github.io/
 
 workspace "0_Bullet-EP"
-	location ( "Build/" .. _ACTION )
+	location ( _ACTION )
 	architecture "x86_64"
 	configurations { "Debug", "Release" }
 	
 	configuration "vs*"
 		defines { "_CRT_SECURE_NO_WARNINGS",
 		"DONT_USE_GLUT",
-		"GWEN_COMPILE_STATIC"
-		}	
+		"GLEW_STATIC",
+		"GWEN_COMPILE_STATIC",
+		"_VARIADIC_MAX=10"
+		}
+		flags {
+		"MultiProcessorCompile"
+		}
 		
 	filter "configurations:Debug"
-		targetdir ( "Build/" .. _ACTION .. "/bin/Debug" )
+		targetdir ( _ACTION .. "/bin/Debug" )
 	 	defines { "DEBUG","_DEBUG=1","CDBG_CALLBACK" }
 		symbols "On"
 
 	filter "configurations:Release"
-		targetdir ( "Build/" .. _ACTION .. "/bin/Release" )
+		targetdir (  _ACTION .. "/bin/Release" )
 		defines { "NDEBUG" }
 		optimize "On"
 
-project "ep"
+project "0_ep"
 	kind "ConsoleApp"
 	language "C++"
+	files {
+	"../examples/plasticity/main.cpp",
+	}
+	includedirs { ".",
+	"../src",
+	}
+	links {
+	"BLIB"
+	}
+	configuration { "windows" }
+		links { "glu32", "opengl32"}	
+
+project "0_ep-test"
+	kind "ConsoleApp"
+	language "C++"
+	files {
+	"../test/plasticity/main.cpp",
+	}
+	includedirs {
+	"../src",
+	"../test/gtest-1.7.0/include",
+	"../examples"
+	}
+	links {
+	"BLIB"
+	}
+		
+		
+project "BLIB"
+	kind "StaticLib"
+	language "C++"		
 	files { 
 	"../examples/plasticity/**.h", 
 	"../examples/plasticity/**.cpp",
 	"../examples/ExampleBrowser/**.h", 
 	"../examples/ExampleBrowser/**.cpp",
 	"../examples/CommonInterfaces/*", 
+	"../examples/RenderingExamples/*",
 	"../examples/CharpyDemo/*", 
 	"../examples/Utils/b3Clock.*",
-	"../examples/OpenGLWindow/*.c",
+	"../examples/OpenGLWindow/*.cpp",
 	"../examples/OpenGLWindow/*.h",
 	"../examples/OpenGLWindow/GL/*.h",
 	"../examples/ThirdPartyLibs/Gwen/**.cpp",
 	"../examples/ThirdPartyLibs/Gwen/**.h",
+	"../examples/ThirdPartyLibs/Glew/glew.c",
 	"../src/BulletCollision/**.h",
 	"../src/BulletCollision/**.cpp",
 	"../src/BulletDynamics/**.h",
 	"../src/BulletDynamics/**.cpp",	
 	"../src/LinearMath/**.h",
 	"../src/LinearMath/**.cpp",	
+	"../src/Bullet3Common/**.h",
+	"../src/Bullet3Common/**.cpp",	
+	"../test/gtest-1.7.0/src/gtest-all.cc",	
 	}
-	excludes {
+	removefiles {
 	"../examples/ExampleBrowser/OpenGLExampleBrowser.*",
 	"../examples/ExampleBrowser/ExampleEntries.*",
 	"../examples/ExampleBrowser/InProcessExampleBrowser.*",
-	"../examples/ExampleBrowser/main.*",
+	"../examples/*/main.*",
 	"../examples/RenderingExamples/TinyRenderer*",
 	"../examples/RenderingExamples/TinyVRGui*",
 	"../examples/RenderingExamples/DynamicTexturedCubeDemo*",
 	"../examples/OpenGLWindow/X11OpenGLWindow*",
 	"../examples/OpenGLWindow/MacOpenGLWindow*",
 	}
-	
 	includedirs { ".",
 	"../src",
+	"../examples/ThirdPartyLibs",
+	"../examples/ThirdPartyLibs/Glew",
+	"../test/gtest-1.7.0/include",	
+	"../test/gtest-1.7.0",	
 	}
 	configuration { "windows" }
 		links { "glu32", "opengl32", "winmm" }

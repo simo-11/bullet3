@@ -3,6 +3,6 @@
 *.pdb
 bin
 lib
-vs2010
-vs2012
-vs2013
+vs20??
+obj
+0_PBulletDemo.txt
