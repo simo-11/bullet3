@@ -27,7 +27,7 @@
 \title{Breakable Elastic-plastic Constraint for\\Rigid Body Simulation}
 
 \author
-       {Simo Nikula  Aki Mikkola Timo Björk\\\lut
+       {Simo Nikula,  Aki Mikkola, Timo Björk\\\lut
        }
 
 \teaser{
@@ -44,7 +44,8 @@
 This paper introduces simple and efficient method to simulate ductile fracture in existing 
 impulse-based physics engines.
 Method is based on technique of splitting bodies to multiple pieces and joining them with constraints.
-Constraints are described using body dimensions and material parameters.
+Procedure to provide realistic parameters for constraints is described.
+Procedure is based on body dimensions and material parameters.
 
 Sample programs with source code are made available to allow developers already using \cbullet\
 and Box2D to add plasticity into their simulations.
@@ -255,7 +256,7 @@ Better approximation for any given $b$ and $h$ can be obtained
 by integrating distance from the center of the joint over cross section and
 multiplying it with the yield shear stress e.g. using Octave, \cite{octave}.
 An example of calculation of the maximum moment  around $\vec{r}_{anc}^{\,i} $
-is shown in Figure \ref{fig:octave-mp}.
+is shown in Listing \ref{lst:octave-mp}.
 
 \lstset{language=octave}
 \begin{lstlisting}[caption={Calculation of maximum moment  around $\vec{r}_{anc}^{\,i} $ using Octave.}, 
