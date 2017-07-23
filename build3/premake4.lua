@@ -158,11 +158,21 @@ end
 		description = "Double precision version of Bullet"
 	}
 	
+	newoption
+	{
+		trigger = "serial",
+		description = "Enable serial, for testing the VR glove in C++"
+	}
+	
+	newoption
+	{
+		trigger = "audio",
+		description = "Enable audio"
+	}
 	if _OPTIONS["double"] then
 		defines {"BT_USE_DOUBLE_PRECISION"}
 	end
 
-	
 	configurations {"Release", "Debug"}
 	configuration "Release"
 		flags { "Optimize", "EnableSSE2","StaticRuntime", "NoMinimalRebuild", "FloatFast"}
@@ -250,6 +260,14 @@ end
 
 	language "C++"
 
+
+	if _OPTIONS["audio"] then
+		include "../examples/TinyAudio"
+	end
+
+	if _OPTIONS["serial"] then
+		include "../examples/ThirdPartyLibs/serial"
+	end
 
 	if not _OPTIONS["no-demos"] then
 		include "../examples/ExampleBrowser"

@@ -32,6 +32,7 @@ SET(RobotSimulator_SRCS
 		../../examples/SharedMemory/PhysicsServer.cpp
 		../../examples/SharedMemory/PhysicsServer.h
 		../../examples/SharedMemory/PhysicsServerExample.cpp
+		../../examples/SharedMemory/PhysicsServerExampleBullet2.cpp
 		../../examples/SharedMemory/SharedMemoryInProcessPhysicsC_API.cpp
 		../../examples/SharedMemory/PhysicsServerSharedMemory.cpp
 		../../examples/SharedMemory/PhysicsServerSharedMemory.h
@@ -99,11 +100,7 @@ ELSE(WIN32)
 	ENDIF(BUILD_ENET)
 
 	IF(BUILD_CLSOCKET)	
-		IF(APPLE)
-			ADD_DEFINITIONS(-D_DARWIN)
-		ELSE()
-			ADD_DEFINITIONS(-D_LINUX)
-		ENDIF()
+		ADD_DEFINITIONS(${OSDEF})
 	ENDIF(BUILD_CLSOCKET)
 ENDIF(WIN32)
 
@@ -160,7 +157,7 @@ ELSE(WIN32)
 		ADD_DEFINITIONS("-DGLEW_STATIC")
 		ADD_DEFINITIONS("-DGLEW_DYNAMIC_LOAD_ALL_GLX_FUNCTIONS=1")
 
-		LINK_LIBRARIES(  pthread dl )
+		LINK_LIBRARIES(  pthread ${DL} )
 	ENDIF(APPLE)
 ENDIF(WIN32)
 

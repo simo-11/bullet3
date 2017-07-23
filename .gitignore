@@ -5,3 +5,6 @@ bin
 lib
 vs2010
 bulletDemo.txt
+/bin
+/build3/gmake
+/build_cmake/

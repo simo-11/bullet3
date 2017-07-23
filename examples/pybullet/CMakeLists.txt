@@ -33,6 +33,7 @@ SET(pybullet_SRCS
 		../../examples/SharedMemory/PhysicsServer.cpp
 		../../examples/SharedMemory/PhysicsServer.h
 		../../examples/SharedMemory/PhysicsServerExample.cpp
+		../../examples/SharedMemory/PhysicsServerExampleBullet2.cpp
 		../../examples/SharedMemory/SharedMemoryInProcessPhysicsC_API.cpp
 		../../examples/SharedMemory/PhysicsServerSharedMemory.cpp
 		../../examples/SharedMemory/PhysicsServerSharedMemory.h
@@ -101,11 +102,7 @@ ELSE(WIN32)
 	ENDIF(BUILD_PYBULLET_ENET)
 
 	IF(BUILD_PYBULLET_CLSOCKET)	
-		IF(APPLE)
-			ADD_DEFINITIONS(-D_DARWIN)
-		ELSE()
-			ADD_DEFINITIONS(-D_LINUX)
-		ENDIF()
+		ADD_DEFINITIONS(${OSDEF})
 	ENDIF(BUILD_PYBULLET_CLSOCKET)
 ENDIF(WIN32)
 
