@@ -195,7 +195,7 @@ public:
 		float pitch = -45;
 		float yaw = 32;
 		float targetPos[3] = { 0, 0, 0 };
-		m_guiHelper->resetCamera(dist, pitch, yaw, targetPos[0], targetPos[1], targetPos[2]);
+		m_guiHelper->resetCamera(dist, yaw, pitch, targetPos[0], targetPos[1], targetPos[2]);
 		CommonCameraInterface* camera =
 			PlasticityExampleBrowser::getRenderer()->getActiveCamera();
 	}

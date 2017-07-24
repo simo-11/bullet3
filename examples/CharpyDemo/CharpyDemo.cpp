@@ -423,7 +423,7 @@ public:
 		m_option = options.m_option;
 		initOptions();
 		initParameterUi();
-		m_guiHelper->resetCamera(0.5, -70, 15, 0, 0.2, 0.0);
+		m_guiHelper->resetCamera(2.5, -45, -21, 0, 0.2, 0.0);
 	}
 	void initOptions(){
 		int option = m_option;
