@@ -1,5 +1,5 @@
 %  Simo.Nikula@gmail.com
-\def\mytitle{Breakable Elastic-plastic Constraint for Rigid Body Simulation}
+\def\mytitle{Breakable Elastic-plastic Constraint for Rigid Body Simulation with Impulse based Physics}
 \def\lut{Lappeenranta University of Technology}
 
 \documentclass{jcgt}
@@ -61,9 +61,10 @@ Theory for handling of plasticity in computer graphics has been presented alread
 Recent paper by Jones  provides extensive listing of related work during past decades, \cite{Jones:2016:EPD}.
 
 In impulse-based phycis engines most breakable scenarios  are implemented by destructing various bodies based on collision
-or impulse exceeding predefined limit.
+or impulse exceeding predefined limit. This provides simple means for visualization of explosions and high speed collisions 
+on brittle structures.  
 Nevertheless, breaking of steel or reinforced concrete structures using this approach 
-is not appropriate if the simulation is to look realistic. 
+is not appropriate if the simulation is to look realistic or structures should not fail completely.
 
 More realistic simulation of ductile destructable bodies is possible but in many cases it would require selecting of new physics engine.
 
@@ -73,9 +74,10 @@ Presented methodology does not require significant software development efforts 
 game vendors and is thus easily adoptable. 
 In the introduced method, plastic deformation takes place if the force or moment exceeds a predefined 
 limit, deformation absorbs energy and joint breaks if plastic capacity is exceeded. 
-Maximum forces and moments are estimated based on the plastic section modulus.
+Maximum forces and moments can be estimated based on the plastic section modulus or
+by defining maximum elastic displacement.
 Joint breaking is based on summing plastic deformation and comparing it to a
-predefined material based limit. The elastic part of deformation is modelled by employing 
+predefined material and geometry based limit. The elastic part of deformation is modelled by employing 
 modification of an existing constraints.
 
 \paragraph{Limitations}
@@ -85,7 +87,7 @@ This means that simulation of quick interactions requires small timestep.
 This limitation is not introduced by this approach but is build in feature of impulse-based simulation.
 Bending moment - normal force interactions and multiaxial stress are not taken into account. 
 Basically these limitations just state that results from these simulations cannot not be used
-for structural analysis.
+for structural analysis. 
 
 \section{Description of plasticity in the framework of physics engines}
 
@@ -269,9 +271,25 @@ wpy=fy/2*dblquad(@(x,z)...
 
 
 \paragraph{Joint breaking}
+Joint breaking is based on summing of plastic displacement or rotation.
+Process can be subdivided few phases.
 
+\begin{enumerate}
+\item Hitting maximum impulse value triggers additional processing.
+\item New neutral position is calculated so that elastic part is subtracted from current position.
+\item Plastic strain or rotation is incremented.
+\item Current plastic strain or rotation is compared to maximum value and joint is broken if 
+current value exceeds predefined maximum value. This part can be finetuned e.g. so that joint is 
+not broken during compression if connected parts are made of material which can handle large
+strains due to compressive forces. 
+\end{enumerate}
 
 \section{Implementation for Box2D}
+b2ElasticPlastic joint implementation is based on b2WeldJoint which implements rigid and flexible joints as
+described in Catto's paper~\shortcite{ecsc} on soft constraints. Main idea is that game designer should not have
+find suitable values to get desired functionality but constraint is configured by giving desired  damping ratio and frequency.
+This principle leads in many cases to quite soft constraints to keep simulation stable. 
+b2WeldJoint supports also rigid joint in which case iterative solver creates some flexibility.
 
 \section{Implementation for \cbullet}
 
@@ -280,6 +298,17 @@ wpy=fy/2*dblquad(@(x,z)...
 \bibliography{ref}
 
 \section*{Index of Supplemental Materials}
+
+\begin{enumerate}
+\item Box2D source with plasticity extensions 
+ \href{https://github.com/simo-11/Box2D}{https://github.com/simo-11/Box2D}
+
+\item \cbullet source with plasticity extensions 
+ \href{https://github.com/simo-11/bullet3}{https://github.com/simo-11/bullet3}
+\item two minute video demonstrating \cbullet implementation 
+ \href{https://youtu.be/_QNbv1-f_ao}{https://youtu.be/_QNbv1-f_ao}
+\item 2 MB executable used for \cbullet video {https://github.com/simo-11/bullet3/blob/master/pbin/App_PlasticityExampleBrowser_vs2013.exe?raw=true}{https://github.com/simo-11/bullet3/blob/master/pbin/App_PlasticityExampleBrowser_vs2013.exe?raw=true}
+\end{enumerate}
 
 \section*{Author Contact Information}
 

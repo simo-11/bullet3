@@ -867,6 +867,7 @@ public:
 	void addUseCcd(){
 		Gwen::Controls::Label* label = addLabel("useCcd");
 		Gwen::Controls::CheckBox* gc = new Gwen::Controls::CheckBox(pPage);
+		gc->SetText("");
 		gc->SetToolTip("use continous collision detection");
 		gc->SetPos(gxi, gy);
 		gc->SetChecked(useCcd);
