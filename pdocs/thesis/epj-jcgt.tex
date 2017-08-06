@@ -1,5 +1,5 @@
 %  Simo.Nikula@gmail.com
-\def\mytitle{Breakable Elastic-plastic Constraint for Rigid Body Simulation with Impulse based Physics}
+\def\mytitle{Breakable Elastic-plastic Constraint for Rigid Body Simulation with Impulse-based Physics}
 \def\lut{Lappeenranta University of Technology}
 
 \documentclass{jcgt}
@@ -284,12 +284,42 @@ not broken during compression if connected parts are made of material which can 
 strains due to compressive forces. 
 \end{enumerate}
 
+\paragraph{Analysis of results}
+Unexpected results is typical issue when new kind of structures are analyzed or new methods are are
+used. In gaming results do not have to match real world results but main focus of implementations
+in this work is to provide more realistic simulations.
+
 \section{Implementation for Box2D}
-b2ElasticPlastic joint implementation is based on b2WeldJoint which implements rigid and flexible joints as
+b2ElasticPlasticJoint implementation is based on b2WeldJoint which implements rigid and flexible joints as
 described in Catto's paper~\shortcite{ecsc} on soft constraints. Main idea is that game designer should not have
 find suitable values to get desired functionality but constraint is configured by giving desired  damping ratio and frequency.
 This principle leads in many cases to quite soft constraints to keep simulation stable. 
 b2WeldJoint supports also rigid joint in which case iterative solver creates some flexibility.
+If maximum forces and moment are set to very high value b2ElasticPlasticJoint behaves like b2WeldJoint but is slighly slower.
+
+\paragraph{Changes to define maximum forces} 
+
+\paragraph{Neutral position update} 
+
+\paragraph{Debugging tools} 
+
+\subsection{Test cases} 
+
+\paragraph{Cantilever beam} 
+
+\paragraph{Multifloor frame} 
+
+
+\begin{enumerate}
+\item H
+\item New neutral position is calculated so that elastic part is subtracted from current position.
+\item Plastic strain or rotation is incremented.
+\item Current plastic strain or rotation is compared to maximum value and joint is broken if 
+current value exceeds predefined maximum value. This part can be finetuned e.g. so that joint is 
+not broken during compression if connected parts are made of material which can handle large
+strains due to compressive forces. 
+\end{enumerate}
+
 
 \section{Implementation for \cbullet}
 
