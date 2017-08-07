@@ -297,11 +297,25 @@ This principle leads in many cases to quite soft constraints to keep simulation 
 b2WeldJoint supports also rigid joint in which case iterative solver creates some flexibility.
 If maximum forces and moment are set to very high value b2ElasticPlasticJoint behaves like b2WeldJoint but is slighly slower.
 
-\paragraph{Changes to define maximum forces} 
+\paragraph{Changes to processing} 
+In addition to allowing definition of maximum forces and moment during initialization 
+b2ElasticPlasticJoint allows definition of maximum moment by giving maximum elastic rotation.
 
-\paragraph{Neutral position update} 
+For each step maximum rotational impulse and linear impulses are calculated using step length and 
+current orientation of the joint.
+
+During solution phase impulse is clamped so that it does not too big.
+If clamping is activated additional processing is done at the beginnig of next step to update neutral position and
+increment plasticity values.
 
 \paragraph{Debugging tools} 
+Box2D testbed offers many useful tools and only few additions were made for testing of plasticity.
+\begin{enumerate}
+\item Tunable visualization of joint forces
+\item Numerical output of joint forces as absolute values and as percentage of maximum forces
+\item Numerical output of usage of plastic capacity
+\item Selection of joints for display of numerical values
+\end{enumerate}
 
 \subsection{Test cases} 
 
