@@ -8,3 +8,4 @@ bulletDemo.txt
 /bin
 /build3/gmake
 /build_cmake/
+*.pyc
