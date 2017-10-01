@@ -92,8 +92,7 @@ by multiplying maximum force by timestep.
 This means that simulation of quick interactions requires small timestep.
 This limitation is not introduced by this approach but is build in feature of impulse-based simulation.
 Bending moment - normal force interactions and multiaxial stress are not taken into account. 
-Basically these limitations just state that results from these simulations cannot not be used
-for structural analysis. 
+Simulation of many bodies connected by constraints
 
 \section{Description of plasticity in the framework of physics engines}
 
@@ -192,7 +191,7 @@ As shown in Figure \ref{fig:wp}, if stress is below yield limit $f_y$, stress an
 If cross section is fully plastic, stress is assumed to be at yield level over the whole cross section such that 
 the plastic section modulus is higher than the elastic section modulus.
 
-\paragraph{Plastic capacities}
+\paragraph{Plastic capacities based on dimensions and material}
 In this work, plasticity is handled by defining maximum forces using plastic capacities, which are defined below.
 
 Maximum force acting in a direction of $\vec{r}_{anc}^{\,i} $
@@ -241,6 +240,17 @@ rectangular section with width $b$ and height $h$ using constant yield stress $f
 \label{tab:maxForces} 
 \end {table}
 
+\paragraph{Plastic capacities based on desired behaviour}
+Capacities can also be defined directly based on desired scenarios.
+E.g. joints for bridge can designed so that maximum shear force is larger than
+weight of heaviest vehicle so that all vehicles can drive to bridge. Maximum 
+bending moment could be set so that joint will start to rotate when heaviest vehicle is
+near the middle of bridge.
+
+For elastic-plastic cases maximum capacity can also be defined by setting maximum elastic 
+displacement or rotation.
+
+
 \paragraph{Joint breaking}
 Joint breaking is based on summing of plastic displacement or rotation.
 Process can be subdivided few phases.
@@ -255,11 +265,6 @@ not broken during compression if connected parts are made of material which can 
 strains due to compressive forces. 
 \end{enumerate}
 
-
-\paragraph{Analysis of results}
-Unexpected results is typical issue when new kind of structures are analyzed or new methods are are
-used. In gaming results do not have to match real world results but main focus of implementations
-in this work is to provide more realistic simulations.
 
 \section{Implementation for Box2D}
 b2ElasticPlasticJoint implementation is based on b2WeldJoint which implements rigid and flexible joints as
@@ -289,7 +294,7 @@ Box2D testbed offers many useful tools and only few additions were made for test
 \item Selection of joints for display of numerical values
 \end{enumerate}
 
-\subsection{Test cases} 
+\subsection{Examples} 
 
 \paragraph{Cantilever beam} 
 
