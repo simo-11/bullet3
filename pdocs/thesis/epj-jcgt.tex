@@ -30,9 +30,9 @@
        }
 
 \teaser{
-  \includegraphics[width=5cm]{figs/demolisher-done}
+  \includegraphics[width=5cm]{figs/CarAtRamp}
   \label{fig:teaser}
-  \caption{Adding ductile breakable constraint to popular open source physics engine Box2D allows more realistic simulation of many scenarios.}
+  \caption{Adding ductile breakable constraint to popular open source physics engine Box2D allows more realistic simulation of many scenarios. In picture above ramp is under elastic loading.}
 }
 
 \maketitle
@@ -44,7 +44,7 @@ This paper introduces simple and efficient method to simulate ductile fracture i
 impulse-based physics engines.
 Method is based on technique of splitting bodies to multiple pieces and joining them with constraints.
 Procedure to provide realistic parameters for constraints is described.
-Procedure is based on body dimensions and material parameters.
+Procedure may be based on body dimensions and material parameters or desired bahviour.
 
 Sample program with source code are made available to allow developers already using 
 Box2D to add plasticity into their simulations.
@@ -83,7 +83,7 @@ modification of an existing constraints.
 This paper follows idea of
 allowing game designers to get desired behaviour without diving into details of structural engineering.
 Idea was presented by Catto, \cite{ecsc}. Basic idea is that game designer selects spring frequency so that
-integration is stable. Downside is that constraints will be quite soft. In out method game designers get new option
+integration is stable. Downside is that constraints will be quite soft. In our method game designers get new option
 to use rigid-plastic constraints.
 
 \paragraph{Limitations}
@@ -102,7 +102,6 @@ to multiple bodies that are connected by energy absorbing joints.
 
 \paragraph{Stress-strain behaviour of ductile steel}
 A typical engineering stress-strain curve of ductile steel is shown in Figure \ref{fig:sscurve}.
-
 
 \begin{figure}
 \centering
@@ -250,7 +249,6 @@ near the middle of bridge.
 For elastic-plastic cases maximum capacity can also be defined by setting maximum elastic 
 displacement or rotation.
 
-
 \paragraph{Joint breaking}
 Joint breaking is based on summing of plastic displacement or rotation.
 Process can be subdivided few phases.
@@ -281,7 +279,7 @@ b2ElasticPlasticJoint allows definition of maximum moment by giving maximum elas
 For each step maximum rotational impulse and linear impulses are calculated using step length and 
 current orientation of the joint.
 
-During solution phase impulse is clamped so that it does not too big.
+During solution phase impulse is clamped so that it does exceed predefined limit.
 If clamping is activated additional processing is done at the beginnig of next step to update neutral position and
 increment plasticity values.
 
@@ -301,7 +299,12 @@ Box2D testbed offers many useful tools and only few additions were made for test
 \paragraph{Multifloor frame} 
 
 \paragraph{Car} 
-
+Dynamic bodies are car (680 kg), wheels (50 kg for each axel), and ramp (2160 kg). 
+Ramp is joined to fixed part with b2ElasticPlasticJoint having frequency of 1 Hz.
+Maximum elastic rotation is set to 0.12 and maximum plastic rotation to 0.4.
+With this configuration own weight or ramp uses about 13 \% of plastic capacity.
+After first jump about 50 \% of  plastic capacity is used. Each additional jump uses about 
+7 \% of plastic capacity.
 
 
 \small
