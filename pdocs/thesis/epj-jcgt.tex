@@ -263,6 +263,13 @@ not broken during compression if connected parts are made of material which can 
 strains due to compressive forces. 
 \end{enumerate}
 
+\paragraph{Joint breaking in one simulation step} High velocity collisions may cause joints to break within one step.
+In such cases joints can cause too large impulse. Making simulation step smaller is not desired solution.
+In this paper following procedure is suggested.
+
+\begin{enumerate}
+\item 
+\end{enumerate}
 
 \section{Implementation for Box2D}
 b2ElasticPlasticJoint implementation is based on b2WeldJoint which implements rigid and flexible joints as
@@ -292,13 +299,13 @@ Box2D testbed offers many useful tools and only few additions were made for test
 \item Selection of joints for display of numerical values
 \end{enumerate}
 
-\subsection{Examples} 
+\section{Examples} 
 
-\paragraph{Cantilever beam} 
+\subsection{Cantilever beam} 
 
-\paragraph{Multifloor frame} 
+\subsection{Multifloor frame} 
 
-\paragraph{Car} 
+\subsection{Car} 
 Dynamic bodies are car (680 kg), wheels (50 kg for each axel), and ramp (2160 kg). 
 Ramp is joined to fixed part with b2ElasticPlasticJoint having frequency of 1 Hz.
 Maximum elastic rotation is set to 0.12 and maximum plastic rotation to 0.4.
