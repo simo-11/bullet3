@@ -264,7 +264,17 @@ strains due to compressive forces.
 \end{enumerate}
 
 \paragraph{Joint breaking in one simulation step} High velocity collisions may cause joints to break within one step.
-In such cases joints can cause too large impulse. Making simulation step smaller is not desired solution.
+In such cases joints can cause too large impulse as shown in  Figure~\ref{fig:tippingCar}.
+
+\begin{figure}[htb]
+  \centering
+   \includegraphics[height=5cm]{figs/tippingCar1.png}
+   \includegraphics[height=5cm]{figs/tippingCar2.png}
+   \includegraphics[height=5cm]{figs/tippingCar3.png}
+   \caption{\label{fig:tippingCar}
+     Large impulse turns car over.}
+\end{figure}
+Making simulation step smaller is not desired solution.
 In this paper following procedure is suggested.
 
 \begin{enumerate}
