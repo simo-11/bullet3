@@ -91,8 +91,9 @@ Forces are calculated by dividing impulse by timestep and maximum impulse is cal
 by multiplying maximum force by timestep. 
 This means that simulation of quick interactions requires small timestep.
 This limitation is not introduced by this approach but is build in feature of impulse-based simulation.
+We discuss few methods to maximize realisticy of simulation of collisions but this issue will need further work.
 Bending moment - normal force interactions and multiaxial stress are not taken into account. 
-Simulation of many bodies connected by constraints
+Simulation of many bodies connected by constraints has convergence issues which will also need further work.
 
 \section{Description of plasticity in the framework of physics engines}
 
@@ -275,16 +276,22 @@ In such cases joints can cause too large impulse as shown in  Figure~\ref{fig:ti
      Large impulse turns car over.}
 \end{figure}
 Making simulation step smaller is not desired solution.
-In this paper following procedure is suggested.
+In this paper following procedure suggested.
 
 \begin{enumerate}
-\item 
+\item At start of each step predict outcome of current step for each joint using current velocities and
+maximum and current strains and rotations.
+\item If current impulse is about to break constraint within current step scale down maximum impulse
+so that joint does not exceed planned capacity. 
 \end{enumerate}
+
+\paragraph{Impulse initialization}
+Joint impulses should be initialized using suitable methods to minimize errors.
 
 \section{Implementation for Box2D}
 b2ElasticPlasticJoint implementation is based on b2WeldJoint which implements rigid and flexible joints as
 described in Catto's paper~\shortcite{ecsc} on soft constraints. Main idea is that game designer should not have
-find suitable values to get desired functionality but constraint is configured by giving desired  damping ratio and frequency.
+to find suitable values to get desired functionality but constraint is configured by giving desired  damping ratio and frequency.
 This principle leads in many cases to quite soft constraints to keep simulation stable. 
 b2WeldJoint supports also rigid joint in which case iterative solver creates some flexibility.
 If maximum forces and moment are set to very high value b2ElasticPlasticJoint behaves like b2WeldJoint but is slighly slower.
@@ -319,7 +326,7 @@ Box2D testbed offers many useful tools and only few additions were made for test
 Dynamic bodies are car (680 kg), wheels (50 kg for each axel), and ramp (2160 kg). 
 Ramp is joined to fixed part with b2ElasticPlasticJoint having frequency of 1 Hz.
 Maximum elastic rotation is set to 0.12 and maximum plastic rotation to 0.4.
-With this configuration own weight or ramp uses about 13 \% of plastic capacity.
+With this configuration own weight of ramp uses about 13 \% of plastic capacity during initialization phase.
 After first jump about 50 \% of  plastic capacity is used. Each additional jump uses about 
 7 \% of plastic capacity.
 
