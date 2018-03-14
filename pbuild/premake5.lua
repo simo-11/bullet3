@@ -75,7 +75,8 @@ project "BLIB"
 	"../examples/OpenGLWindow/GL/*.h",
 	"../examples/ThirdPartyLibs/Gwen/**.cpp",
 	"../examples/ThirdPartyLibs/Gwen/**.h",
-	"../examples/ThirdPartyLibs/Glew/glew.c",
+	"../examples/ThirdPartyLibs/glad/glad.c",
+	"../examples/ThirdPartyLibs/glad/glad/glad.h",
 	"../src/BulletCollision/**.h",
 	"../src/BulletCollision/**.cpp",
 	"../src/BulletDynamics/**.h",
@@ -100,7 +101,7 @@ project "BLIB"
 	includedirs { ".",
 	"../src",
 	"../examples/ThirdPartyLibs",
-	"../examples/ThirdPartyLibs/Glew",
+	"../examples/ThirdPartyLibs/glad",
 	"../test/gtest-1.7.0/include",	
 	"../test/gtest-1.7.0",	
 	}

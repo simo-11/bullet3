@@ -519,8 +519,8 @@ struct btWheelContactPoint
 
 };
 
-btScalar calcRollingFriction(btWheelContactPoint& contactPoint);
-btScalar calcRollingFriction(btWheelContactPoint& contactPoint)
+btScalar calcRollingFriction(btWheelContactPoint& contactPoint, int numWheelsOnGround);
+btScalar calcRollingFriction(btWheelContactPoint& contactPoint, int numWheelsOnGround)
 {
 
 	btScalar j1=0.f;
@@ -539,7 +539,7 @@ btScalar calcRollingFriction(btWheelContactPoint& contactPoint)
 	btScalar vrel = contactPoint.m_frictionDirectionWorld.dot(vel);
 
 	// calculate j that moves us to zero relative velocity
-	j1 = -vrel * contactPoint.m_jacDiagABInv;
+	j1 = -vrel * contactPoint.m_jacDiagABInv/btScalar(numWheelsOnGround);
 	btSetMin(j1, maxImpulse);
 	btSetMax(j1, -maxImpulse);
 
@@ -641,7 +641,8 @@ void	btRaycastVehicle::updateFriction(btScalar	timeStep)
 					btScalar defaultRollingFrictionImpulse = 0.f;
 					btScalar maxImpulse = wheelInfo.m_brake ? wheelInfo.m_brake : defaultRollingFrictionImpulse;
 					btWheelContactPoint contactPt(m_chassisBody,groundObject,wheelInfo.m_raycastInfo.m_contactPointWS,m_forwardWS[wheel],maxImpulse);
-					rollingFriction = calcRollingFriction(contactPt);
+					btAssert(numWheelsOnGround > 0);
+					rollingFriction = calcRollingFriction(contactPt, numWheelsOnGround);
 				}
 			}
 

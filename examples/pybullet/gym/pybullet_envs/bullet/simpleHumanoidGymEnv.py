@@ -1,4 +1,8 @@
-import os
+import os,  inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parentdir = os.path.dirname(os.path.dirname(currentdir))
+os.sys.path.insert(0,parentdir)
+
 import math
 import gym
 from gym import spaces
@@ -8,6 +12,10 @@ import time
 import pybullet as p
 from . import simpleHumanoid
 import random
+from pkg_resources import parse_version
+
+import pybullet_data
+
 
 class SimpleHumanoidGymEnv(gym.Env):
   metadata = {
@@ -16,7 +24,7 @@ class SimpleHumanoidGymEnv(gym.Env):
   }
 
   def __init__(self,
-               urdfRoot="",
+               urdfRoot=pybullet_data.getDataPath(),
                actionRepeat=50,
                isEnableSelfCollision=True,
                renders=True):
@@ -38,8 +46,8 @@ class SimpleHumanoidGymEnv(gym.Env):
     observationDim = len(self.getExtendedObservation())
     #print("observationDim")
     #print(observationDim)
-    
-    observation_high = np.array([np.finfo(np.float32).max] * observationDim)    
+
+    observation_high = np.array([np.finfo(np.float32).max] * observationDim)
     self.action_space = spaces.Discrete(9)
     self.observation_space = spaces.Box(-observation_high, observation_high)
     self.viewer = None
@@ -48,15 +56,15 @@ class SimpleHumanoidGymEnv(gym.Env):
     p.resetSimulation()
     #p.setPhysicsEngineParameter(numSolverIterations=300)
     p.setTimeStep(self._timeStep)
-    p.loadURDF(os.path.join(os.path.dirname(__file__),"../data","plane.urdf"))
-    
+    p.loadURDF(os.path.join(self._urdfRoot,"plane.urdf"))
+
     dist = 5 +2.*random.random()
     ang = 2.*3.1415925438*random.random()
-    
+
     ballx = dist * math.sin(ang)
     bally = dist * math.cos(ang)
     ballz = 1
-        
+
     p.setGravity(0,0,-10)
     self._humanoid = simpleHumanoid.SimpleHumanoid(urdfRootPath=self._urdfRoot, timeStep=self._timeStep)
     self._envStepCounter = 0
@@ -74,7 +82,7 @@ class SimpleHumanoidGymEnv(gym.Env):
   def getExtendedObservation(self):
      self._observation = self._humanoid.getObservation()
      return self._observation
-     
+
   def _step(self, action):
     self._humanoid.applyAction(action)
     for i in range(self._actionRepeat):
@@ -88,7 +96,7 @@ class SimpleHumanoidGymEnv(gym.Env):
     reward = self._reward()
     done = self._termination()
     #print("len=%r" % len(self._observation))
-    
+
     return np.array(self._observation), reward, done, {}
 
   def _render(self, mode='human', close=False):
@@ -96,8 +104,14 @@ class SimpleHumanoidGymEnv(gym.Env):
 
   def _termination(self):
     return self._envStepCounter>1000
-    
+
   def _reward(self):
     reward=self._humanoid.distance
     print(reward)
     return reward
+
+  if parse_version(gym.__version__)>=parse_version('0.9.6'):
+    render = _render
+    reset = _reset
+    seed = _seed
+    step = _step

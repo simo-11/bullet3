@@ -65,11 +65,13 @@ sources = ["examples/pybullet/pybullet.c"]\
 +["examples/SharedMemory/PhysicsClientC_API.cpp"]\
 +["examples/SharedMemory/Win32SharedMemory.cpp"]\
 +["examples/SharedMemory/PosixSharedMemory.cpp"]\
-+["examples/SharedMemory/TinyRendererVisualShapeConverter.cpp"]\
++["examples/SharedMemory/plugins/tinyRendererPlugin/TinyRendererVisualShapeConverter.cpp"]\
++["examples/SharedMemory/plugins/tinyRendererPlugin/tinyRendererPlugin.cpp"]\
 +["examples/SharedMemory/PhysicsClientUDP.cpp"]\
 +["examples/SharedMemory/PhysicsClientUDP_C_API.cpp"]\
 +["examples/SharedMemory/PhysicsClientTCP.cpp"]\
 +["examples/SharedMemory/PhysicsClientTCP_C_API.cpp"]\
++["examples/SharedMemory/b3PluginManager.cpp"]\
 +["examples/Utils/b3ResourcePath.cpp"]\
 +["examples/Utils/RobotLoggingUtil.cpp"]\
 +["examples/Utils/ChromeTraceUtil.cpp"]\
@@ -273,6 +275,7 @@ sources = ["examples/pybullet/pybullet.c"]\
 +["Extras/Serialize/BulletFileLoader/bDNA.cpp"]\
 +["Extras/Serialize/BulletFileLoader/bFile.cpp"]\
 +["Extras/Serialize/BulletFileLoader/btBulletFile.cpp"]\
++["Extras/Serialize/BulletWorldImporter/btMultiBodyWorldImporter.cpp"]\
 +["Extras/Serialize/BulletWorldImporter/btBulletWorldImporter.cpp"]\
 +["Extras/Serialize/BulletWorldImporter/btWorldImporter.cpp"]\
 +["Extras/InverseDynamics/CloneTreeCreator.cpp"]\
@@ -385,7 +388,8 @@ if _platform == "linux" or _platform == "linux2":
     CXX_FLAGS += '-fno-inline-functions-called-once'
     sources = sources + ["examples/ThirdPartyLibs/enet/unix.c"]\
     +["examples/OpenGLWindow/X11OpenGLWindow.cpp"]\
-    +["examples/ThirdPartyLibs/Glew/glew.c"]
+    +["examples/ThirdPartyLibs/glad/glad.c"]\
+    +["examples/ThirdPartyLibs/glad/glad_glx.c"]
     include_dirs += ["examples/ThirdPartyLibs/optionalX11"]
 elif _platform == "win32":
     print("win32!")
@@ -395,7 +399,7 @@ elif _platform == "win32":
     sources = sources + ["examples/ThirdPartyLibs/enet/win32.c"]\
     +["examples/OpenGLWindow/Win32Window.cpp"]\
     +["examples/OpenGLWindow/Win32OpenGLWindow.cpp"]\
-    +["examples/ThirdPartyLibs/Glew/glew.c"]
+    +["examples/ThirdPartyLibs/glad/glad.c"]
 elif _platform == "darwin":
     print("darwin!")
     os.environ['LDFLAGS'] = '-framework Cocoa -framework OpenGL'
@@ -405,9 +409,11 @@ elif _platform == "darwin":
 #    CXX_FLAGS += '-framework Cocoa '
     sources = sources + ["examples/ThirdPartyLibs/enet/unix.c"]\
     +["examples/OpenGLWindow/MacOpenGLWindow.cpp"]\
+    +["examples/ThirdPartyLibs/glad/glad.c"]\
     +["examples/OpenGLWindow/MacOpenGLWindowObjC.m"]
 else:
     print("bsd!")
+    libraries = ['GL','GLEW','pthread']
     os.environ['LDFLAGS'] = '-L/usr/X11R6/lib'
     CXX_FLAGS += '-D_BSD '
     CXX_FLAGS += '-I/usr/X11R6/include '
@@ -415,20 +421,20 @@ else:
     CXX_FLAGS += '-fno-inline-functions-called-once'
     sources = ["examples/ThirdPartyLibs/enet/unix.c"]\
     +["examples/OpenGLWindow/X11OpenGLWindow.cpp"]\
-    +["examples/ThirdPartyLibs/Glew/glew.c"]\
+    +["examples/ThirdPartyLibs/glad/glad.c"]\
     + sources
 
 setup_py_dir = os.path.dirname(os.path.realpath(__file__))
 
 need_files = []
-datadir = "examples/pybullet/gym/pybullet_envs"
+datadir = "examples/pybullet/gym/pybullet_data"
 
 hh = setup_py_dir + "/" + datadir
 
 for root, dirs, files in os.walk(hh):
     for fn in files:
         ext = os.path.splitext(fn)[1][1:]
-        if ext and ext in 'png jpg urdf sdf obj mtl dae off stl STL xml '.split():
+        if ext and ext in 'png gif jpg urdf sdf obj mtl dae off stl STL xml '.split():
             fn = root + "/" + fn
             need_files.append(fn[1+len(hh):])
 
@@ -440,9 +446,9 @@ print("-----")
 
 setup(
 	name = 'pybullet',
-	version='1.2.4',
-	description='Official Python Interface for the Bullet Physics SDK Robotics Simulator',
-	long_description='pybullet is an easy to use Python module for physics simulation, robotics and machine learning based on the Bullet Physics SDK. With pybullet you can load articulated bodies from URDF, SDF and other file formats. pybullet provides forward dynamics simulation, inverse dynamics computation, forward and inverse kinematics and collision detection and ray intersection queries. Aside from physics simulation, pybullet supports to rendering, with a CPU renderer and OpenGL visualization and support for virtual reality headsets.',
+	version='1.9.3',
+	description='Official Python Interface for the Bullet Physics SDK specialized for Robotics Simulation and Reinforcement Learning',
+	long_description='pybullet is an easy to use Python module for physics simulation, robotics and deep reinforcement learning based on the Bullet Physics SDK. With pybullet you can load articulated bodies from URDF, SDF and other file formats. pybullet provides forward dynamics simulation, inverse dynamics computation, forward and inverse kinematics and collision detection and ray intersection queries. Aside from physics simulation, pybullet supports to rendering, with a CPU renderer and OpenGL visualization and support for virtual reality headsets.',
 	url='https://github.com/bulletphysics/bullet3',
 	author='Erwin Coumans, Yunfei Bai, Jasmine Hsu',
 	author_email='erwincoumans@google.com',
@@ -453,7 +459,7 @@ setup(
 	sources =  sources,
 	libraries = libraries,
 	extra_compile_args=CXX_FLAGS.split(),
-	include_dirs = include_dirs + ["src","examples/ThirdPartyLibs","examples/ThirdPartyLibs/Glew", "examples/ThirdPartyLibs/enet/include","examples/ThirdPartyLibs/clsocket/src"]
+	include_dirs = include_dirs + ["src","examples/ThirdPartyLibs","examples/ThirdPartyLibs/glad", "examples/ThirdPartyLibs/enet/include","examples/ThirdPartyLibs/clsocket/src"]
      ) ],
      classifiers=['Development Status :: 5 - Production/Stable',
                    'License :: OSI Approved :: zlib/libpng License',
@@ -467,9 +473,10 @@ setup(
                    'Programming Language :: Python :: 3.5',
                    'Programming Language :: Python :: 3.6',
                    'Topic :: Games/Entertainment :: Simulation',
+                   'Topic :: Scientific/Engineering :: Artificial Intelligence',
                    'Framework :: Robot Framework'],
     package_dir = { '': 'examples/pybullet/gym'},
     packages=[x for x in find_packages('examples/pybullet/gym')],
-    package_data = { 'pybullet_envs': need_files }
+    package_data = { 'pybullet_data': need_files }
 )
 

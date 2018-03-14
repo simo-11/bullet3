@@ -27,11 +27,10 @@ class SmallReactivePolicy:
         x = np.dot(x, weights_final_w) + weights_final_b
         return x
 
-def demo_run():
+def main():
     env = gym.make("InvertedPendulumSwingupBulletEnv-v0")
-
-    cid = p.connect(p.GUI)
-
+    env.render(mode="human")
+   
     pi = SmallReactivePolicy(env.observation_space, env.action_space)
 
     while 1:
@@ -41,7 +40,7 @@ def demo_run():
         obs = env.reset()
 
         while 1:
-            time.sleep(0.05)
+            time.sleep(1./60.)
             a = pi.act(obs)
             obs, r, done, _ = env.step(a)
             score += r
@@ -175,4 +174,4 @@ weights_final_w = np.array([
 weights_final_b = np.array([ +0.2753])
 
 if __name__=="__main__":
-    demo_run()
+    main()

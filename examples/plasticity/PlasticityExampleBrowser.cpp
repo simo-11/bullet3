@@ -780,7 +780,7 @@ struct QuickCanvas : public Common2dCanvasInterface
 		input->m_xPos = 10000;//GUI will clamp it to the right if too high (first)
 		input->m_yPos = 10000;//GUI will clamp it to bottom
 	}
-	virtual int createCanvas(const char* canvasName, int width, int height)
+	virtual int createCanvas(const char* canvasName, int width, int height, int xPos, int yPos)
 	{
 		if (m_curNumGraphWindows<MAX_GRAPH_WINDOWS)
 		{
@@ -795,6 +795,8 @@ struct QuickCanvas : public Common2dCanvasInterface
 			MyGraphInput input(gui->getInternalData());
 			input.m_width = width;
 			input.m_height = height;
+			input.m_xPos = xPos;
+			input.m_yPos = yPos;
 			input.m_name = canvasName;
 			input.m_texName = canvasName;
 			findPosition(&input);
@@ -949,7 +951,7 @@ bool PlasticityExampleBrowser::init(int argc, char* argv[])
     Gwen::Renderer::Base* gwenRenderer = 0;
     if (sUseOpenGL2 )
     {
-        gwenRenderer = new Gwen::Renderer::OpenGL_DebugFont();
+        gwenRenderer = new Gwen::Renderer::OpenGL_DebugFont(s_window->getRetinaScale());
     } 
 #ifndef NO_OPENGL3
 	else
