@@ -1,4 +1,3 @@
-
 [![Travis Build Status](https://api.travis-ci.org/bulletphysics/bullet3.png?branch=master)](https://travis-ci.org/bulletphysics/bullet3)
 [![Appveyor Build status](https://ci.appveyor.com/api/projects/status/6sly9uxajr6xsstq)](https://ci.appveyor.com/project/erwincoumans/bullet3)
 
@@ -80,9 +79,9 @@ Depending on your system (Linux 32bit, 64bit or Mac OSX) use one of the followin
 Using premake:
 ```
 	cd build3
-	./premake4_linux gmake --double
-	./premake4_linux64 gmake --double
-	./premake4_osx gmake --double --enable_pybullet
+	./premake4_linux --double gmake
+	./premake4_linux64 --double gmake
+	./premake4_osx --double --enable_pybullet gmake
 ```
 Then
 ```

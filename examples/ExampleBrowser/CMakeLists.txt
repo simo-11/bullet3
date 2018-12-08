@@ -80,6 +80,7 @@ ENDIF(BUILD_SHARED_LIBS)
 INCLUDE_DIRECTORIES(
         .
         ${BULLET_PHYSICS_SOURCE_DIR}/src
+	${BULLET_PHYSICS_SOURCE_DIR}/examples/SharedMemory
         ${BULLET_PHYSICS_SOURCE_DIR}/examples/ThirdPartyLibs
 )
 
@@ -144,6 +145,10 @@ SET(BulletExampleBrowser_SRCS
 	../TinyRenderer/tgaimage.cpp
 	../TinyRenderer/our_gl.cpp
 	../TinyRenderer/TinyRenderer.cpp
+	../SharedMemory/plugins/collisionFilterPlugin/collisionFilterPlugin.cpp
+	../SharedMemory/plugins/collisionFilterPlugin/collisionFilterPlugin.h
+	../SharedMemory/plugins/pdControlPlugin/pdControlPlugin.cpp
+	../SharedMemory/plugins/pdControlPlugin/pdControlPlugin.h
 	../SharedMemory/plugins/tinyRendererPlugin/tinyRendererPlugin.cpp
 	../SharedMemory/plugins/tinyRendererPlugin/TinyRendererVisualShapeConverter.cpp
 	../SharedMemory/IKTrajectoryHelper.cpp
@@ -174,10 +179,12 @@ SET(BulletExampleBrowser_SRCS
 	../SharedMemory/SharedMemoryCommands.h
 	../SharedMemory/SharedMemoryPublic.h
 	../SharedMemory/b3PluginManager.cpp
+	../SharedMemory/b3RobotSimulatorClientAPI_NoGUI.cpp
+	../SharedMemory/b3RobotSimulatorClientAPI_NoGUI.h
+	../SharedMemory/b3RobotSimulatorClientAPI_NoDirect.cpp
+	../SharedMemory/b3RobotSimulatorClientAPI_NoDirect.h
 	../RobotSimulator/b3RobotSimulatorClientAPI.cpp
 	../RobotSimulator/b3RobotSimulatorClientAPI.h
-	../RobotSimulator/b3RobotSimulatorClientAPI_NoGUI.cpp
-	../RobotSimulator/b3RobotSimulatorClientAPI_NoGUI.h
 	../BasicDemo/BasicExample.cpp
 	../BasicDemo/BasicExample.h
 	../InverseDynamics/InverseDynamicsExample.cpp
@@ -226,7 +233,6 @@ SET(BulletExampleBrowser_SRCS
 	../MultiThreading/b3PosixThreadSupport.cpp
 	../MultiThreading/b3Win32ThreadSupport.cpp
 	../MultiThreading/b3ThreadSupportInterface.cpp
-	../MultiThreading/btTaskScheduler.cpp
 	../RenderingExamples/TinyRendererSetup.cpp
 	../RenderingExamples/TimeSeriesCanvas.cpp
 	../RenderingExamples/TimeSeriesCanvas.h
@@ -322,6 +328,7 @@ SET(BulletExampleBrowser_SRCS
   ../MultiBody/InvertedPendulumPDControl.cpp
   ../MultiBody/InvertedPendulumPDControl.h
  ../MultiBody/MultiBodyConstraintFeedback.cpp
+  ../MultiBody/SerialChains.cpp
   ../MultiBody/MultiDofDemo.cpp
   ../MultiBody/MultiDofDemo.h
   ../RigidBody/RigidBodySoftContact.cpp
@@ -337,17 +344,10 @@ SET(BulletExampleBrowser_SRCS
 
 	../ThirdPartyLibs/stb_image/stb_image.cpp
 	../ThirdPartyLibs/stb_image/stb_image.h
-	
+	../ThirdPartyLibs/stb_image/stb_image_write.cpp
 	../ThirdPartyLibs/Wavefront/tiny_obj_loader.cpp
-	../ThirdPartyLibs/tinyxml/tinystr.cpp
-	../ThirdPartyLibs/tinyxml/tinyxml.cpp
-	../ThirdPartyLibs/tinyxml/tinyxmlerror.cpp
-	../ThirdPartyLibs/tinyxml/tinyxmlparser.cpp
-
-	../ThirdPartyLibs/tinyxml/tinystr.cpp
-	../ThirdPartyLibs/tinyxml/tinyxml.cpp
-	../ThirdPartyLibs/tinyxml/tinyxmlerror.cpp
-	../ThirdPartyLibs/tinyxml/tinyxmlparser.cpp
+	
+	../ThirdPartyLibs/tinyxml2/tinyxml2.cpp
 	InProcessExampleBrowser.cpp
 	${BULLET_PHYSICS_SOURCE_DIR}/build3/bullet.rc
 )

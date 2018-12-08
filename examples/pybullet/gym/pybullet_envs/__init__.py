@@ -9,17 +9,24 @@ def register(id,*args,**kvargs):
 # ------------bullet-------------
 
 register(
-	id='CartPoleBulletEnv-v0',
+        id='HumanoidDeepMimicBulletEnv-v1',
+        entry_point='pybullet_envs.deep_mimic:HumanoidDeepMimicGymEnv',
+        max_episode_steps=1000,
+        reward_threshold=20000.0,
+)
+
+register(
+	id='CartPoleBulletEnv-v1',
 	entry_point='pybullet_envs.bullet:CartPoleBulletEnv',
-	timestep_limit=1000,
-	reward_threshold=950.0,
+        max_episode_steps=200,
+	reward_threshold=190.0,
 )
 
 register(
     id='MinitaurBulletEnv-v0',
     entry_point='pybullet_envs.bullet:MinitaurBulletEnv',
     timestep_limit=1000,
-    reward_threshold=5.0,
+    reward_threshold=15.0,
 )
 
 register(
@@ -28,6 +35,52 @@ register(
     timestep_limit=1000,
     reward_threshold=5.0,
 )
+
+
+register(
+    id='MinitaurReactiveEnv-v0',
+    entry_point='pybullet_envs.minitaur.envs:MinitaurReactiveEnv',
+    timestep_limit=1000,
+    reward_threshold=5.0,
+)
+
+
+register(
+    id='MinitaurBallGymEnv-v0',
+    entry_point='pybullet_envs.minitaur.envs:MinitaurBallGymEnv',
+    timestep_limit=1000,
+    reward_threshold=5.0,
+)
+
+
+register(
+    id='MinitaurTrottingEnv-v0',
+    entry_point='pybullet_envs.minitaur.envs:MinitaurTrottingEnv',
+    timestep_limit=1000,
+    reward_threshold=5.0,
+)
+
+register(
+    id='MinitaurStandGymEnv-v0',
+    entry_point='pybullet_envs.minitaur.envs:MinitaurStandGymEnv',
+    timestep_limit=1000,
+    reward_threshold=5.0,
+)
+
+register(
+    id='MinitaurAlternatingLegsEnv-v0',
+    entry_point='pybullet_envs.minitaur.envs:MinitaurAlternatingLegsEnv',
+    timestep_limit=1000,
+    reward_threshold=5.0,
+)
+
+register(
+    id='MinitaurFourLegStandEnv-v0',
+    entry_point='pybullet_envs.minitaur.envs:MinitaurFourLegStandEnv',
+    timestep_limit=1000,
+    reward_threshold=5.0,
+)
+
 
 
 register(

@@ -6,8 +6,21 @@ project "App_BulletExampleBrowser"
         
         if os.is("Linux") then
 	        buildoptions{"-fPIC"}
-	    end
-        
+	    	end
+
+				if _OPTIONS["enable_grpc"] then
+					initGRPC()
+					defines{"ENABLE_STATIC_GRPC_PLUGIN"}
+					 files {
+                  "../../examples/SharedMemory/PhysicsClientGRPC.cpp",
+                  "../../examples/SharedMemory/PhysicsClientGRPC.h",
+                  "../../examples/SharedMemory/PhysicsClientGRPC_C_API.cpp",
+                  "../../examples/SharedMemory/PhysicsClientGRPC_C_API.h",
+                  "../../examples/SharedMemory/plugins/grpcPlugin/grpcPlugin.cpp",
+
+                }
+				end
+		        
         hasCL = findOpenCL("clew")
 
         if (hasCL) then
@@ -21,6 +34,7 @@ project "App_BulletExampleBrowser"
         includedirs {
                 ".",
                 "../../src",
+		"../../examples/SharedMemory",
                 "../ThirdPartyLibs",
                 }
 
@@ -114,10 +128,17 @@ project "App_BulletExampleBrowser"
 		"../SharedMemory/PhysicsServerCommandProcessor.cpp",
 		"../SharedMemory/PhysicsServerCommandProcessor.h",
 		"../SharedMemory/b3PluginManager.cpp",		
+		"../SharedMemory/plugins/collisionFilterPlugin/collisionFilterPlugin.cpp",
 		"../SharedMemory/plugins/tinyRendererPlugin/TinyRendererVisualShapeConverter.cpp",
 		"../SharedMemory/plugins/tinyRendererPlugin/tinyRendererPlugin.cpp",
+		"../SharedMemory/plugins/pdControlPlugin/pdControlPlugin.cpp",
+		"../SharedMemory/plugins/pdControlPlugin/pdControlPlugin.h",
 		"../SharedMemory/SharedMemoryCommands.h",
 		"../SharedMemory/SharedMemoryPublic.h",
+		"../SharedMemory/b3RobotSimulatorClientAPI_NoGUI.cpp",
+		"../SharedMemory/b3RobotSimulatorClientAPI_NoGUI.h",		
+		"../SharedMemory/b3RobotSimulatorClientAPI_NoDirect.cpp",
+		"../SharedMemory/b3RobotSimulatorClientAPI_NoDirect.h",		
 		"../MultiThreading/MultiThreadingExample.cpp",
 		"../MultiThreading/b3PosixThreadSupport.cpp",
 		"../MultiThreading/b3Win32ThreadSupport.cpp",
@@ -126,8 +147,6 @@ project "App_BulletExampleBrowser"
 		"../InverseDynamics/InverseDynamicsExample.h",
 		"../RobotSimulator/b3RobotSimulatorClientAPI.cpp",
 		"../RobotSimulator/b3RobotSimulatorClientAPI.h",		
-		"../RobotSimulator/b3RobotSimulatorClientAPI_NoGUI.cpp",
-		"../RobotSimulator/b3RobotSimulatorClientAPI_NoGUI.h",		
 		"../BasicDemo/BasicExample.*",
 		"../Tutorial/*",
 		"../ExtendedTutorials/*",
@@ -156,22 +175,20 @@ project "App_BulletExampleBrowser"
 		"../Vehicles/*",
 		"../Raycast/*",
 		"../MultiBody/MultiDofDemo.cpp",
+		"../MultiBody/SerialChains.cpp",
 		"../MultiBody/TestJointTorqueSetup.cpp",
 		"../MultiBody/Pendulum.cpp",
 		"../MultiBody/MultiBodySoftContact.cpp",
 		"../MultiBody/MultiBodyConstraintFeedback.cpp",
 		"../MultiBody/InvertedPendulumPDControl.cpp",
 		"../RigidBody/RigidBodySoftContact.cpp",
-		"../ThirdPartyLibs/stb_image/*",
+		"../ThirdPartyLibs/stb_image/stb_image.cpp",
 		"../ThirdPartyLibs/Wavefront/tiny_obj_loader.*",
-		"../ThirdPartyLibs/tinyxml/*",
 		"../ThirdPartyLibs/BussIK/*",
 		"../GyroscopicDemo/GyroscopicSetup.cpp",
 		"../GyroscopicDemo/GyroscopicSetup.h",
-        "../ThirdPartyLibs/tinyxml/tinystr.cpp",
-        "../ThirdPartyLibs/tinyxml/tinyxml.cpp",
-        "../ThirdPartyLibs/tinyxml/tinyxmlerror.cpp",
-        "../ThirdPartyLibs/tinyxml/tinyxmlparser.cpp",
+    "../ThirdPartyLibs/tinyxml2/tinyxml2.cpp",
+    "../ThirdPartyLibs/tinyxml2/tinyxml2.h",
         }
 if (hasCL and findOpenGL3()) then
 			files {

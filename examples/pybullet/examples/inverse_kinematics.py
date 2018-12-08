@@ -34,12 +34,12 @@ t=0.
 prevPose=[0,0,0]
 prevPose1=[0,0,0]
 hasPrevPose = 0
-useNullSpace = 0
+useNullSpace = 1
 
 useOrientation = 1
 #If we set useSimulation=0, it sets the arm pose to be the IK result directly without using dynamic control.
 #This can be used to test the IK result accuracy.
-useSimulation = 1
+useSimulation = 0
 useRealTimeSimulation = 1
 ikSolver = 0
 p.setRealTimeSimulation(useRealTimeSimulation)
@@ -48,6 +48,7 @@ p.setRealTimeSimulation(useRealTimeSimulation)
 trailDuration = 15
 	
 while 1:
+	p.getCameraImage(320,200, flags=p.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX, renderer=p.ER_BULLET_HARDWARE_OPENGL)
 	if (useRealTimeSimulation):
 		dt = datetime.now()
 		t = (dt.second/60.)*2.*math.pi
@@ -69,7 +70,7 @@ while 1:
 				jointPoses = p.calculateInverseKinematics(kukaId,kukaEndEffectorIndex,pos,lowerLimits=ll, upperLimits=ul, jointRanges=jr, restPoses=rp)
 		else:
 			if (useOrientation==1):
-				jointPoses = p.calculateInverseKinematics(kukaId,kukaEndEffectorIndex,pos,orn,jointDamping=jd,solver=ikSolver)
+				jointPoses = p.calculateInverseKinematics(kukaId,kukaEndEffectorIndex,pos,orn,jointDamping=jd,solver=ikSolver, maxNumIterations=100, residualThreshold=.01)
 			else:
 				jointPoses = p.calculateInverseKinematics(kukaId,kukaEndEffectorIndex,pos,solver=ikSolver)
 	
