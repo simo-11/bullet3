@@ -86,7 +86,10 @@ public:
 		float targetPos[3] = {0, 0.46, 0};
 		m_guiHelper->resetCamera(dist, yaw, pitch, targetPos[0], targetPos[1], targetPos[2]);
 	}
+	static int pNumObjects;
 };
+
+int FractureDemo::pNumObjects;
 
 void FractureDemo::initPhysics()
 {
@@ -127,11 +130,11 @@ void FractureDemo::initPhysics()
 
 	{
 		///create a few basic rigid bodies
-		btCollisionShape* shape = new btBoxShape(btVector3(1, 1, 1));
+		btCollisionShape* shape = new btBoxShape(btVector3(1, 5, 1));
 		m_collisionShapes.push_back(shape);
 		btTransform tr;
 		tr.setIdentity();
-		tr.setOrigin(btVector3(5, 2, 0));
+		tr.setOrigin(btVector3(0, 2, 0));
 		createRigidBody(0.f, tr, shape);
 	}
 
@@ -156,15 +159,18 @@ void FractureDemo::initPhysics()
 		btVector3 localInertia(0, 0, 0);
 		if (isDynamic)
 			colShape->calculateLocalInertia(mass, localInertia);
-
-		int gNumObjects = 10;
-
+		if (pNumObjects < 1)
+		{
+			pNumObjects = 20;
+		}
+		int gNumObjects = pNumObjects;
+		btScalar shift(-(pNumObjects+0.3f)*CUBE_HALF_EXTENTS);
 		for (int i = 0; i < gNumObjects; i++)
 		{
 			btTransform trans;
 			trans.setIdentity();
 
-			btVector3 pos(i * 2 * CUBE_HALF_EXTENTS, 20, 0);
+			btVector3 pos(i * 2 * CUBE_HALF_EXTENTS+shift, 20, 0);
 			trans.setOrigin(pos);
 
 			//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
